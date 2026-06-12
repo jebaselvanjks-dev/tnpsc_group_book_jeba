@@ -411,9 +411,9 @@ class AppLanguage {
       case 'notif_body':
         return ta ? 'இன்றைய TNPSC சவாலில் கலந்துகொண்டு உங்கள் அறிவைச் சோதியுங்கள்!' : 'Take today\'s TNPSC challenge and test your knowledge!';
       case 'reminder_title':
-        return ta ? 'தினசரி படிப்பு நினைவூட்டல்' : 'Daily Study Reminder';
+        return ta ? 'குழுத் தேர்வு நேரம்! ⚔️' : 'Group Test Time! ⚔️';
       case 'reminder_body':
-        return ta ? 'உங்கள் படிப்பு இலக்கைத் தொடங்க இதுவே சரியான நேரம்!' : 'It\'s the perfect time to start your study goal!';
+        return ta ? 'உங்கள் நண்பர்களுடன் இணைந்து குழுத் தேர்வை இப்போதே தொடங்குங்கள்!' : 'Join with your friends and start the group test now!';
       case 'study_challenge':
         return ta ? 'TNPSC Master - இன்றைய சவால்!' : 'TNPSC Master - Today\'s Challenge!';
       case 'start_quiz_now':

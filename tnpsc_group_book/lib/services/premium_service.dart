@@ -20,7 +20,8 @@ class PremiumService {
 
     try {
       final ref = _db.collection('users').doc(uid);
-      final snap = await ref.get(const GetOptions(source: Source.server));
+      // Try fetching from cache first for speed, then sync with server in background
+      final snap = await ref.get();
       if (!snap.exists) {
         debugPrint('PremiumService: No user document for uid=$uid');
         return;

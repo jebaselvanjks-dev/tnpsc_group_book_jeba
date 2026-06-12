@@ -497,7 +497,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
       ),
-      body: _isLoading 
+      body: _isLoading
           ? Expanded(
         child: _teaserQuestions.isEmpty || _teaserController == null
             ? const Center(child: CircularProgressIndicator())
@@ -515,9 +515,9 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                 children: [
                   Center(
                     child: Container(
-                    height: 120,
+                    height: 150,
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      // mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -526,9 +526,9 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                         Text(
                           AppLanguage.getString('loading_quiz'),
                           style: GoogleFonts.outfit(
-                            fontSize: 18,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryColor,
+                            color: isDark ? AppTheme.secondaryColor : AppTheme.textSecondaryColor,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -540,7 +540,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                     ),
                   )
                   ),
-                  const SizedBox(height: 60),
+                  const SizedBox(height: 40),
                   Text(
                     q.question.replaceAll('\\n', '\n'),
                     style: AppTheme.getStyle(

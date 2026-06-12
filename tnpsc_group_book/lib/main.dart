@@ -27,7 +27,8 @@ final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<Scaffol
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await MobileAds.instance.initialize();
+  
+  // 1. Critical initializations (Fast & Local)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -38,15 +39,21 @@ void main() async {
   await HiveService.init();
   await AppTheme.loadThemePreference();
   await AppTheme.loadFontSizePreference();
-  await NotificationService.init();
-  await TtsService.init();
-  RewardService.loadRewardedAd();
-  await PremiumService.syncCurrentUserPremium();
-  
-  // Temporarily added to upload subjects to Firestore
-  await FirestoreService().uploadAllSubjects();
+
+  // 2. Start heavy/network initializations in background
+  _initServicesInBackground();
   
   runApp(const TNPSCPrepApp());
+}
+
+// Background initializations to speed up startup
+Future<void> _initServicesInBackground() async {
+  // These don't need to block the UI from starting
+  MobileAds.instance.initialize();
+  NotificationService.init();
+  TtsService.init();
+  RewardService.loadRewardedAd();
+  PremiumService.syncCurrentUserPremium();
 }
 
 class TNPSCPrepApp extends StatelessWidget {

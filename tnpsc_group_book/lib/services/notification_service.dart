@@ -75,8 +75,24 @@ class NotificationService {
     // 5. Get and save Token
     await saveFCMToken();
 
-    // 6. Schedule Automatic Daily Reminder at 8:00 PM
-    await scheduleDailyReminder(hour: 20, minute: 0);
+    // 6. Schedule Automatic Reminders
+    // Morning 8:00 AM - Daily Quiz Reminder
+    await scheduleDailyReminder(
+      id: 100,
+      hour: 8,
+      minute: 0,
+      titleKey: 'notif_daily_quiz_ready_title',
+      bodyKey: 'notif_daily_quiz_ready_body',
+    );
+
+    // Evening 8:00 PM - Group Test Reminder
+    await scheduleDailyReminder(
+      id: 200,
+      hour: 20,
+      minute: 0,
+      titleKey: 'reminder_title',
+      bodyKey: 'reminder_body',
+    );
   }
 
   static Future<void> _showLocalNotificationFromFCM(RemoteMessage message) async {
@@ -136,22 +152,32 @@ class NotificationService {
     );
   }
 
-  static Future<void> scheduleDailyReminder({required int hour, required int minute}) async {
+  static Future<void> scheduleDailyReminder({
+    required int id,
+    required int hour,
+    required int minute,
+    required String titleKey,
+    required String bodyKey,
+  }) async {
     await _notificationsPlugin.zonedSchedule(
-      id: 1,
-      title: AppLanguage.getString('reminder_title'),
-      body: AppLanguage.getString('reminder_body'),
+      id: id,
+      title: AppLanguage.getString(titleKey),
+      body: AppLanguage.getString(bodyKey),
       scheduledDate: _nextInstanceOfTime(hour, minute),
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           'daily_reminder_channel',
-          'daily_rem_channel',
-          channelDescription: 'daily_rem_desc',
+          'Daily Reminders',
+          channelDescription: 'Scheduled study reminders',
+          importance: Importance.max,
+          priority: Priority.high,
         ),
+        iOS: DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
+    debugPrint("AI_DEBUG: Scheduled notification $id at $hour:$minute");
   }
 
   // --- NEW: Send notification to all users via FCM Topic (v1 API) ---

@@ -68,12 +68,34 @@ class _HomeScreenState extends State<HomeScreen> {
                   userName = data['name'] ?? AppLanguage.getString('user_fallback');
                   streak = data['streak'] ?? 0;
                   totalPoints = data['totalScore'] ?? 0;
+
+                  // Broken streak check
+                  String lastActive = data['lastActiveDate'] ?? "";
+                  String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                  if (lastActive != "" && lastActive != today) {
+                    try {
+                      DateTime lastDate = DateFormat('yyyy-MM-dd').parse(lastActive);
+                      int diff = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day).difference(lastDate).inDays;
+                      if (diff > 1) streak = 0;
+                    } catch (_) {}
+                  }
                 } else {
                   var cachedData = HiveService.getCachedUserData();
                   if (cachedData != null) {
                     userName = cachedData['name'] ?? AppLanguage.getString('user_fallback');
                     streak = cachedData['streak'] ?? 0;
                     totalPoints = cachedData['totalScore'] ?? 0;
+
+                    // Broken streak check for offline cache
+                    String lastActive = cachedData['lastActiveDate'] ?? "";
+                    String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                    if (lastActive != "" && lastActive != today) {
+                      try {
+                        DateTime lastDate = DateFormat('yyyy-MM-dd').parse(lastActive);
+                        int diff = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day).difference(lastDate).inDays;
+                        if (diff > 1) streak = 0;
+                      } catch (_) {}
+                    }
                   }
                 }
 
@@ -97,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     style: AppTheme.getStyle(
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
-                                      color: isDark ? AppTheme.secondaryColor : AppTheme.textMainColor,
+                                      color: isDark ? Colors.white : AppTheme.textMainColor,
                                     ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
@@ -116,10 +138,27 @@ class _HomeScreenState extends State<HomeScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                _buildHeaderStat(
-                                  icon: Icons.local_fire_department_rounded,
-                                  label: "$streak ${AppLanguage.getString('days')}",
-                                  colors: [Colors.orange, Colors.deepOrange],
+                                ValueListenableBuilder(
+                                  valueListenable: Hive.box(HiveService.userBoxName).listenable(),
+                                  builder: (context, box, child) {
+                                    int s = box.get('streak', defaultValue: streak) as int;
+                                    // Broken streak check for real-time Hive listener
+                                    String lastActive = box.get('lastActiveDate', defaultValue: "") as String;
+                                    String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                                    if (lastActive != "" && lastActive != today) {
+                                      try {
+                                        DateTime lastDate = DateFormat('yyyy-MM-dd').parse(lastActive);
+                                        int diff = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day).difference(lastDate).inDays;
+                                        if (diff > 1) s = 0;
+                                      } catch (_) {}
+                                    }
+
+                                    return _buildHeaderStat(
+                                      icon: Icons.local_fire_department_rounded,
+                                      label: "$s ${AppLanguage.getString('days')}",
+                                      colors: [Colors.orange, Colors.deepOrange],
+                                    );
+                                  },
                                 ),
                                 const SizedBox(height: 12),
                                 ValueListenableBuilder(
@@ -128,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ).listenable(),
                                     builder: (context, box, child) {
                                       int points =
-                                      box.get('totalScore', defaultValue: 0) as int;
+                                      box.get('totalScore', defaultValue: totalPoints) as int;
                                       return _buildHeaderStat(
                                         icon: Icons.stars_rounded,
                                         label: "$points pts",

@@ -101,7 +101,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
                                 style: AppTheme.getStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
-                                  color: isDark ? AppTheme.secondaryColor : AppTheme.textMainColor,
+                                  color: isDark ? Colors.white : AppTheme.textMainColor,
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,

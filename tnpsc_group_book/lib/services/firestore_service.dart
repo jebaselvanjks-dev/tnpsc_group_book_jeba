@@ -105,12 +105,18 @@ class FirestoreService {
         await HiveService.cacheUserData(data);
         await _syncCompletedQuizzesToHive(data);
         
-        // Sync totalScore and quizzesCompleted to Hive
+        // Sync totalScore, quizzesCompleted and streak to Hive
         if (data.containsKey('totalScore')) {
           await Hive.box(HiveService.userBoxName).put('totalScore', data['totalScore']);
         }
         if (data.containsKey('quizzesCompleted')) {
           await Hive.box(HiveService.userBoxName).put('quizzesCompleted', data['quizzesCompleted']);
+        }
+        if (data.containsKey('streak')) {
+          await Hive.box(HiveService.userBoxName).put('streak', data['streak']);
+        }
+        if (data.containsKey('lastActiveDate')) {
+          await Hive.box(HiveService.userBoxName).put('lastActiveDate', data['lastActiveDate']);
         }
         return doc;
       }
@@ -128,6 +134,12 @@ class FirestoreService {
           }
           if (data.containsKey('quizzesCompleted')) {
             await Hive.box(HiveService.userBoxName).put('quizzesCompleted', data['quizzesCompleted']);
+          }
+          if (data.containsKey('streak')) {
+            await Hive.box(HiveService.userBoxName).put('streak', data['streak']);
+          }
+          if (data.containsKey('lastActiveDate')) {
+            await Hive.box(HiveService.userBoxName).put('lastActiveDate', data['lastActiveDate']);
           }
         }
         return doc;
@@ -537,6 +549,7 @@ class FirestoreService {
     if (uid == null) return;
 
     try {
+      final userBox = Hive.box(HiveService.userBoxName);
       DocumentReference userRef = _db.collection('users').doc(uid);
       DocumentSnapshot userDoc = await userRef.get();
 
@@ -547,24 +560,35 @@ class FirestoreService {
           'streak': 1,
           'lastActiveDate': today,
         }, SetOptions(merge: true));
+        await userBox.put('streak', 1);
+        await userBox.put('lastActiveDate', today);
         return;
       }
 
       var data = userDoc.data() as Map<String, dynamic>;
       String lastActive = data['lastActiveDate'] ?? "";
 
-      if (lastActive == today) return;
+      if (lastActive == today) {
+        // Already updated today, just ensure Hive is synced
+        await userBox.put('streak', data['streak'] ?? 0);
+        await userBox.put('lastActiveDate', today);
+        return;
+      }
 
       DateTime now = DateTime.now();
       DateTime lastDate = DateFormat('yyyy-MM-dd').parse(lastActive == "" ? today : lastActive);
       int diff = DateTime(now.year, now.month, now.day).difference(lastDate).inDays;
 
+      int newStreak = data['streak'] ?? 0;
+
       if (diff == 1) {
+        newStreak += 1;
         await userRef.update({
           'streak': FieldValue.increment(1),
           'lastActiveDate': today,
         });
       } else if (diff > 1) {
+        newStreak = 1;
         await userRef.update({
           'streak': 1,
           'lastActiveDate': today,
@@ -574,6 +598,11 @@ class FirestoreService {
           'lastActiveDate': today,
         });
       }
+
+      // Sync to Hive
+      await userBox.put('streak', newStreak);
+      await userBox.put('lastActiveDate', today);
+
     } catch (e) {
       debugPrint("Error updating streak: $e");
     }

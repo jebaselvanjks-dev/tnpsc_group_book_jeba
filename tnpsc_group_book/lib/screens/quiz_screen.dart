@@ -457,6 +457,8 @@ class _QuizScreenState extends State<QuizScreen> {
     return ValueListenableBuilder<String>(
       valueListenable: AppLanguage.languageNotifier,
       builder: (context, lang, child) {
+        bool isDark = Theme.of(context).brightness == Brightness.dark;
+
         if (_isLoading) {
           return Scaffold(
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -466,29 +468,33 @@ class _QuizScreenState extends State<QuizScreen> {
                   child: _teaserQuestions.isEmpty || _teaserController == null
                     ? const Center(child: CircularProgressIndicator())
                     : PageView.builder(
-                        controller: _teaserController,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _teaserQuestions.length,
-                        itemBuilder: (context, index) {
-                          final q = _teaserQuestions[index];
-                          return SingleChildScrollView(
-                            padding: const EdgeInsets.all(32.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 100),
-                                Center(
+                    controller: _teaserController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _teaserQuestions.length,
+                    itemBuilder: (context, index) {
+                      final q = _teaserQuestions[index];
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.all(32.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                                child: Container(
+                                  height: 150,
                                   child: Column(
+                                    // mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
                                       const CircularProgressIndicator(),
                                       const SizedBox(height: 24),
                                       Text(
                                         AppLanguage.getString('loading_quiz'),
                                         style: GoogleFonts.outfit(
-                                          fontSize: 18,
+                                          fontSize: 15,
                                           fontWeight: FontWeight.bold,
-                                          color: AppTheme.primaryColor,
+                                          color: isDark ? AppTheme.secondaryColor : AppTheme.textSecondaryColor,
                                         ),
                                       ),
                                       const SizedBox(height: 8),
@@ -498,55 +504,56 @@ class _QuizScreenState extends State<QuizScreen> {
                                       ),
                                     ],
                                   ),
-                                ),
-                                const SizedBox(height: 60),
-                                Text(
-                                  q.question.replaceAll('\\n', '\n'),
-                                  style: AppTheme.getStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                                )
+                            ),
+                            const SizedBox(height: 40),
+                            Text(
+                              q.question.replaceAll('\\n', '\n'),
+                              style: AppTheme.getStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            ...List.generate(q.options.length, (optIndex) {
+                              bool isCorrect = optIndex == q.correctOptionIndex;
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: isCorrect ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isCorrect ? Colors.green : Colors.transparent,
+                                    width: 1.5,
                                   ),
                                 ),
-                                const SizedBox(height: 24),
-                                ...List.generate(q.options.length, (optIndex) {
-                                  bool isCorrect = optIndex == q.correctOptionIndex;
-                                  return Container(
-                                    margin: const EdgeInsets.only(bottom: 12),
-                                    padding: const EdgeInsets.all(14),
-                                    decoration: BoxDecoration(
-                                      color: isCorrect ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.05),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: isCorrect ? Colors.green : Colors.transparent,
-                                        width: 1.5,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isCorrect ? Icons.check_circle : Icons.circle_outlined,
+                                      color: isCorrect ? Colors.green : Colors.grey,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        _localizedOption(q.options[optIndex]),
+                                        style: TextStyle(
+                                          color: isCorrect ? Colors.green.shade700 : null,
+                                          fontWeight: isCorrect ? FontWeight.bold : null,
+                                        ),
                                       ),
                                     ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          isCorrect ? Icons.check_circle : Icons.circle_outlined,
-                                          color: isCorrect ? Colors.green : Colors.grey,
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            _localizedOption(q.options[optIndex]),
-                                            style: TextStyle(
-                                              color: isCorrect ? Colors.green.shade700 : null,
-                                              fontWeight: isCorrect ? FontWeight.bold : null,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -597,7 +604,6 @@ class _QuizScreenState extends State<QuizScreen> {
 
         final question = _visibleQuestions[_currentQuestionIndex];
         double progress = (_currentQuestionIndex + 1) / _loadedQuestions.length;
-        bool isDark = Theme.of(context).brightness == Brightness.dark;
 
         String displayTitle = widget.subjectTitle;
         if (displayTitle == "Daily Quiz" || displayTitle == "daily_quiz") {
