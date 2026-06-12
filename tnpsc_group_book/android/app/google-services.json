@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "384136070006",
+    "project_id": "tnpsc-prepare-app-koilra-c9998",
+    "storage_bucket": "tnpsc-prepare-app-koilra-c9998.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:384136070006:android:44e37a92b196737dfd7057",
+        "android_client_info": {
+          "package_name": "com.tnpsc.groupbook.tnpsc_group_book"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "384136070006-v0uid13frc64l7bbtmb3n86vob58sld5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tnpsc.groupbook.tnpsc_group_book",
+            "certificate_hash": "d59d721f42849f5d4bb480e98d3a64b0e23f43c9"
+          }
+        },
+        {
+          "client_id": "384136070006-mk6ul67oeqanp7qe7i61lcdr1k89ac5n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBEhEZzEfhiQo4LhGdwDhJfIsv1Y4CjKDs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "384136070006-mk6ul67oeqanp7qe7i61lcdr1k89ac5n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "384136070006-gbj5afrr9b6gchr4c5tc5c4cpim9nsgs.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.tnpsc.groupbook.tnpscGroupBook"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

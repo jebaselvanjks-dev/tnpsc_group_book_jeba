@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>தமிழ் க்விஸ் பயன்பாடு</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-container">
+    <!-- Logo -->
+    <img src="file:///C:/Users/ADMIN/.gemini/antigravity/brain/22aed733-b39d-4613-99d8-3cddc9201b28/quiz_app_logo_1780293486801.png" alt="Quiz Logo" class="app-logo" />
+    <h1 class="title">தமிழ் க்விஸ்</h1>
+    <div class="quiz-card">
+      <div class="question">1. உலகின் மிக உயர்ந்த பருவநிலை எது?</div>
+      <ul class="options">
+        <li class="option" data-correct="false">அதிகம்</li>
+        <li class="option" data-correct="true">மழை</li>
+        <li class="option" data-correct="false">குளிர்காலம்</li>
+        <li class="option" data-correct="false">வசந்தம்</li>
+      </ul>
+      <button class="check-btn" disabled>உறுதிபடுத்தும்</button>
+    </div>
+  </div>
+  <script>
+    const options = document.querySelectorAll('.option');
+    const button = document.querySelector('.check-btn');
+    let selected = null;
+    options.forEach(opt => {
+      opt.addEventListener('click', () => {
+        options.forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        selected = opt;
+        button.disabled = false;
+      });
+    });
+    button.addEventListener('click', () => {
+      if (!selected) return;
+      const isCorrect = selected.dataset.correct === 'true';
+      options.forEach(o => {
+        o.classList.remove('highlight');
+        if (o.dataset.correct === 'true') {
+          o.classList.add('highlight', 'correct');
+        } else if (o === selected) {
+          o.classList.add('highlight', isCorrect ? 'correct' : 'incorrect');
+        }
+      });
+      button.disabled = true;
+    });
+  </script>
+</body>
+</html>

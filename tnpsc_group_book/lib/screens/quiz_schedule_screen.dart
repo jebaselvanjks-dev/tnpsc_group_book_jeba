@@ -1,0 +1,64 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+import 'package:tnpsc_group_book/utils/app_theme.dart';
+
+class QuizScheduleScreen extends StatelessWidget {
+  const QuizScheduleScreen({Key? key}) : super(key: key);
+
+  Future<List<Map<String, dynamic>>> _fetchUpcomingQuizzes() async {
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final snapshot = await FirebaseFirestore.instance
+        .collection('quizzes')
+        .where('date', isGreaterThanOrEqualTo: todayStr)
+        .orderBy('date')
+        .get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Quiz Schedule'),
+        backgroundColor: const Color(0xFF0A0E21),
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _fetchUpcomingQuizzes(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No upcoming quizzes found.'));
+          }
+          final quizzes = snapshot.data!;
+          return ListView.separated(
+            itemCount: quizzes.length,
+            separatorBuilder: (_, __) => const Divider(height: 1, color: Colors.grey),
+            itemBuilder: (context, index) {
+              final quiz = quizzes[index];
+              final date = quiz['date'] ?? 'Unknown';
+              final title = quiz['title'] ?? 'Untitled Quiz';
+              return ListTile(
+                leading: const Icon(Icons.calendar_today, color: Colors.amberAccent),
+                title: Text(date, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                subtitle: Text(title, style: const TextStyle(color: Colors.white70)),
+                trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white70),
+                onTap: () {
+                  // Optionally navigate to a detail view later
+                },
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}

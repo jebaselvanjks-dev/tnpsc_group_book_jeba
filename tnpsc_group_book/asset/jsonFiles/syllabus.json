@@ -1,0 +1,19 @@
+{
+  "group4": {
+    "title": "Group 4 & VAO Syllabus",
+    "sections": [
+      {
+        "name": "General Tamil",
+        "topics": ["Section A: Grammar", "Section B: Literature", "Section C: Authors and Works"]
+      },
+      {
+        "name": "General Studies",
+        "topics": ["General Science", "Current Events", "Geography", "History and Culture", "Indian Polity", "Indian Economy"]
+      },
+      {
+        "name": "Aptitude and Mental Ability",
+        "topics": ["Simplification", "Percentage", "Highest Common Factor", "Lowest Common Multiple", "Ratio and Proportion"]
+      }
+    ]
+  }
+}
