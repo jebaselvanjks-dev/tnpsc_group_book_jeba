@@ -325,7 +325,31 @@ class HiveService {
     };
   }
 
-  // ------------------- Reward Ads -------------------
+  // ------------------- User Profile -------------------
+  static Future<void> updateUserName(String name) async {
+    await Hive.box(userBoxName).put('user_display_name', name);
+    await Hive.box(userBoxName).put('last_name_update_date', DateTime.now().toIso8601String());
+  }
+
+  static String? getUserName() {
+    return Hive.box(userBoxName).get('user_display_name') as String?;
+  }
+
+  static DateTime? getLastNameUpdateDate() {
+    String? dateStr = Hive.box(userBoxName).get('last_name_update_date') as String?;
+    if (dateStr != null) {
+      return DateTime.parse(dateStr);
+    }
+    return null;
+  }
+
+  static bool canUpdateName() {
+    DateTime? lastUpdate = getLastNameUpdateDate();
+    if (lastUpdate == null) return true;
+    
+    // Check if at least 30 days have passed
+    return DateTime.now().difference(lastUpdate).inDays >= 30;
+  }
   static int getRewardAdWatchCountToday() {
     var box = Hive.box(userBoxName);
     String today = DateTime.now().toString().split(' ')[0];

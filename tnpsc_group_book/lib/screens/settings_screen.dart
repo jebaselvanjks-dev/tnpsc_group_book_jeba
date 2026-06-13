@@ -23,6 +23,9 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  String _userName = "";
+  final FirestoreService _firestoreService = FirestoreService();
+
   bool get _isAdmin {
     final user = FirebaseAuth.instance.currentUser;
     return user?.phoneNumber == '+918754236411' || user?.email == 'admin@tnpscmaster.com' || user?.email == 'kjebaselvan987@gmail.com';
@@ -31,8 +34,148 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     // Pre-load rewarded ad when settings is opened
     RewardService.loadRewardedAd();
+  }
+
+  Future<void> _loadUserData() async {
+    // 1. Check Hive first
+    String? name = HiveService.getUserName();
+    if (name == null || name.isEmpty) {
+      final cachedData = HiveService.getCachedUserData();
+      if (cachedData != null) {
+        name = cachedData['name'] ?? "";
+      }
+    }
+
+    // 2. If still empty, check Firestore
+    if (name == null || name.isEmpty) {
+      final userDoc = await _firestoreService.getUserData();
+      if (userDoc != null && userDoc.exists) {
+        name = (userDoc.data() as Map<String, dynamic>)['name'] ?? "";
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _userName = name ?? AppLanguage.getString('user_fallback');
+      });
+    }
+  }
+
+  void _showEditNameDialog() {
+    if (!HiveService.canUpdateName()) {
+      DateTime? nextUpdate = HiveService.getLastNameUpdateDate()?.add(const Duration(days: 30));
+      String dateStr = nextUpdate != null ? DateFormat('dd MMM yyyy').format(nextUpdate) : "next month";
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLanguage.languageNotifier.value == 'ta'
+                ? 'பெயரை மாதம் ஒருமுறை மட்டுமே மாற்ற முடியும். அடுத்த மாற்றம்: $dateStr'
+                : 'Name can only be changed once a month. Next update available: $dateStr',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    final TextEditingController nameController = TextEditingController(text: _userName);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(AppLanguage.languageNotifier.value == 'ta' ? 'பெயரை மாற்றவும்' : 'Edit Name',
+          style: TextStyle(fontSize: 18,color: isDarkMode ? AppTheme.secondaryColor : Colors.black),),
+        content: TextField(
+          controller: nameController,
+          maxLength: 25,
+          decoration: InputDecoration(
+            hintText: AppLanguage.languageNotifier.value == 'ta' ? 'உங்கள் பெயரை உள்ளிடவும்' : 'Enter your name',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(AppLanguage.getString('cancel'))),
+          ElevatedButton(
+            onPressed: () async {
+              String newName = nameController.text.trim();
+              if (newName.isNotEmpty && newName != _userName) {
+                await HiveService.updateUserName(newName);
+                await _firestoreService.updateProfileName(newName);
+                if (mounted) {
+                  setState(() => _userName = newName);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(AppLanguage.languageNotifier.value == 'ta' ? 'பெயர் மாற்றப்பட்டது!' : 'Name updated successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(AppLanguage.languageNotifier.value == 'ta' ? 'சேமி' : 'Save', style: const TextStyle(color: Colors.white, fontSize: 14)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileSection(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5))
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 35,
+            backgroundColor: AppTheme.secondaryColorLight.withOpacity(0.1),
+            child: const Icon(Icons.person_rounded, size: 40, color: AppTheme.secondaryColor),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppLanguage.languageNotifier.value == 'ta' ? 'வணக்கம்,' : 'Hello,',
+                  style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey),
+                ),
+                Text(
+                  _userName.isEmpty ? AppLanguage.getString('user_fallback') : _userName,
+                  style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: _showEditNameDialog,
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: AppTheme.secondaryColor.withOpacity(0.1), shape: BoxShape.circle),
+              child: const Icon(Icons.edit_rounded, size: 20, color: AppTheme.cardColor),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -60,6 +203,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               return ListView(
                 padding: const EdgeInsets.all(16.0),
                 children: [
+                  _buildProfileSection(isDarkMode),
+
                   // VIP Premium Membership Banner (Deactivated / Promoted Free VIP)
                   // GestureDetector(
                   //   onTap: () {

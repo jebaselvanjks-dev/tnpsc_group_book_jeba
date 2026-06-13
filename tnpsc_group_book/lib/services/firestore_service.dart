@@ -13,6 +13,21 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  /// Updates user profile name in Firestore
+  Future<void> updateProfileName(String name) async {
+    String? uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      await _db.collection('users').doc(uid).set({
+        'name': name,
+        'lastNameUpdateDate': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint("AI_DEBUG: User profile name updated in Firestore: $name");
+    } catch (e) {
+      debugPrint("Error updating profile name: $e");
+    }
+  }
+
   /// Fetches relevant study content and questions to provide context to the AI
   Future<String> getSearchContext(String query) async {
     try {
