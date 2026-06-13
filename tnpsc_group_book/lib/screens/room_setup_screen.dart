@@ -481,22 +481,73 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red));
   }
 
+  Future<bool> _showExitConfirmation() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101F42) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          AppLanguage.languageNotifier.value == 'ta' ? 'வெளியேறவா?' : 'Exit Room Setup?',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          AppLanguage.languageNotifier.value == 'ta' 
+            ? 'குரூப் தேர்வு அமைப்பிலிருந்து வெளியேற விரும்புகிறீர்களா?' 
+            : 'Are you sure you want to exit the room setup?',
+          style: GoogleFonts.outfit(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppLanguage.getString('close_btn'), style: TextStyle(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(
+              AppLanguage.languageNotifier.value == 'ta' ? 'வெளியேறு' : 'Exit',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     String lang = AppLanguage.languageNotifier.value;
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
-          onPressed: () => Navigator.pop(context),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _showExitConfirmation();
+        if (shouldPop && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+            onPressed: () async {
+              if (await _showExitConfirmation()) {
+                if (mounted) Navigator.pop(context);
+              }
+            },
+          ),
+          title: Text(AppLanguage.getString('room_screen_title'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
         ),
-        title: Text(AppLanguage.getString('room_screen_title'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
-      ),
       body: _isLoading
           ? Expanded(
         child: _teaserQuestions.isEmpty || _teaserController == null
@@ -835,6 +886,6 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         backgroundColor: isDark ? AppTheme.secondaryColor : AppTheme.primaryColor,
         child: const Icon(Icons.help_outline_rounded, color: Colors.white),
       ),
-    );
+    ));
   }
 }

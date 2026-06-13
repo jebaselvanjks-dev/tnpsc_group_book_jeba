@@ -68,6 +68,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
                   child: Text(
                     AppLanguage.getString('daily'),
                     textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12
+                    ),
                     maxLines: 2,
                   ),
                 ),
@@ -75,6 +78,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
                   child: Text(
                     AppLanguage.getString('mock'),
                     textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 12
+                    ),
                     maxLines: 2,
                   ),
                 ),

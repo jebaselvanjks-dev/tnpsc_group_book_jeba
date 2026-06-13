@@ -225,8 +225,8 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                     style: GoogleFonts.outfit(fontSize: 40, fontWeight: FontWeight.bold, letterSpacing: 8, color: AppTheme.secondaryColor),
                   ),
                 ),
-                const SizedBox(height: 30),
-                _buildEducationalTips(isDark),
+                // const SizedBox(height: 30),
+                // _buildEducationalTips(isDark),
                 const SizedBox(height: 20),
                 Expanded(
                   child: Container(

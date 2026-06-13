@@ -29,6 +29,52 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
   Timer? _timer;
   int _remainingSeconds = 600; // 10 mins total for 20 questions
 
+  // Helper to format bilingual text (English / Tamil)
+  String _formatBilingual(String raw) {
+    if (raw.isEmpty) return "";
+
+    // Normalize escaped newlines
+    raw = raw.replaceAll('\\n', '\n');
+    
+    // 1. Check for explicit separators first
+    if (raw.contains('\n') || raw.contains(' / ') || raw.contains(' | ')) {
+      List<String> parts;
+      if (raw.contains('\n')) {
+        parts = raw.split('\n');
+      } else if (raw.contains(' / ')) {
+        parts = raw.split(' / ');
+      } else {
+        parts = raw.split(' | ');
+      }
+
+      final en = parts[0].trim();
+      final ta = parts.length > 1 ? parts[1].trim() : en;
+
+      if (en == ta) return en;
+      return "$en\n$ta";
+    }
+
+    // 2. Smart detection: Split at the first Tamil character if no separator is found
+    int tamilIndex = -1;
+    for (int i = 0; i < raw.length; i++) {
+      int code = raw.codeUnitAt(i);
+      if (code >= 0x0B80 && code <= 0x0BFF) {
+        tamilIndex = i;
+        break;
+      }
+    }
+
+    if (tamilIndex > 0) {
+      String en = raw.substring(0, tamilIndex).trim();
+      String ta = raw.substring(tamilIndex).trim();
+      if (en.isNotEmpty && ta.isNotEmpty) {
+        return "$en\n$ta";
+      }
+    }
+
+    return raw.trim();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -218,7 +264,7 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      question.question.replaceAll('?', '?\n'),
+                      _formatBilingual(question.question),
                       style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.5),
                     ),
                     const SizedBox(height: 20),
@@ -248,7 +294,7 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 16),
-                                Expanded(child: Text(question.options[index], style: AppTheme.getStyle(fontSize: 15, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal))),
+                                Expanded(child: Text(_formatBilingual(question.options[index]), style: AppTheme.getStyle(fontSize: 15, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal))),
                               ],
                             ),
                           ),

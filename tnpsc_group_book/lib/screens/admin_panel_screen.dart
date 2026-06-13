@@ -84,13 +84,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               onTap: _showBulkQuizGenDialog,
             ),
             const SizedBox(height: 12),
-            // Bulk 5‑day Quizzes (50‑question each)
+            // Bulk 3‑day Quizzes (50‑question each)
             _buildAdminCard(
               context,
-              title: "Bulk Generate 5 Days 50‑Question Quizzes",
+              title: "Bulk Generate 3 Days 50‑Question Quizzes",
               icon: Icons.auto_awesome_motion_rounded,
               color: Colors.deepPurple,
-              onTap: _showBulk5DaysQuizGenDialog,
+              onTap: _showBulk3DaysQuizGenDialog,
             ),
             const SizedBox(height: 12),
             // Manual Content placeholder
@@ -199,20 +199,20 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
-  void _showBulk5DaysQuizGenDialog() {
+  void _showBulk3DaysQuizGenDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Bulk Generate 5 Days Quizzes"),
+        title: const Text("Bulk Generate 3 Days Quizzes"),
         content: const Text(
-            "This will generate 50‑question quizzes (25 Tamil, 15 GS, 10 Aptitude) for the next 5 quiz dates (Sunday, Tuesday, Thursday, Saturday) using AI. Continue?"),
+            "This will generate 50‑question quizzes for the next 3 scheduled dates. It will also check and regenerate if any of these dates have fewer than 50 questions."),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _startBulk5DaysQuizGeneration();
+              _startBulk3DaysQuizGeneration();
             },
             child: const Text("Start"),
           ),
@@ -336,64 +336,85 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
-  Future<void> _startBulk5DaysQuizGeneration() async {
+  Future<void> _startBulk3DaysQuizGeneration() async {
     setState(() {
       _isGenerating = true;
-      _currentStatus = "Fetching latest quiz date...";
+      _currentStatus = "Checking existing mock quizzes...";
     });
 
     try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('mock_tests')
-          .orderBy('date', descending: true)
-          .limit(1)
-          .get();
-
-      DateTime startDate = DateTime.now();
-      if (querySnapshot.docs.isNotEmpty) {
-        String latestDateStr = querySnapshot.docs.first.get('date');
-        startDate = DateFormat('yyyy-MM-dd').parse(latestDateStr);
-      }
-
-      // Compute next 5 scheduled dates (Sun, Tue, Thu, Sat)
+      // Find the next 3 scheduled dates starting from today
       List<DateTime> nextDates = [];
-      DateTime checkDate = startDate;
-      while (nextDates.length < 5) {
-        checkDate = checkDate.add(const Duration(days: 1));
-        if (checkDate.weekday == DateTime.sunday ||
-            checkDate.weekday == DateTime.tuesday ||
-            checkDate.weekday == DateTime.thursday ||
-            checkDate.weekday == DateTime.saturday) {
+      DateTime checkDate = DateTime.now();
+      
+      bool isScheduledDay(DateTime d) =>
+          d.weekday == DateTime.sunday ||
+          d.weekday == DateTime.tuesday ||
+          d.weekday == DateTime.thursday ||
+          d.weekday == DateTime.saturday;
+
+      while (nextDates.length < 3) {
+        if (isScheduledDay(checkDate)) {
           nextDates.add(checkDate);
         }
+        checkDate = checkDate.add(const Duration(days: 1));
       }
 
-      // Generate a 50‑question mock quiz for each date
+      // Process each date
       for (int i = 0; i < nextDates.length; i++) {
         DateTime date = nextDates[i];
         String dateStr = DateFormat('yyyy-MM-dd').format(date);
-        setState(() {
-          _currentStatus = "Generating 50‑Question Quiz for $dateStr (Quiz ${i + 1}/5)...";
-        });
-        bool success = await AiService.generateAndSaveMockQuiz(date);
-        if (!success) {
-          _handleFailure(dateStr, "50‑question mock quiz");
-          return;
+        
+        // 1. Check if quiz exists and has at least 50 questions
+        final querySnap = await FirebaseFirestore.instance
+            .collection('mock_tests')
+            .where('date', isEqualTo: dateStr)
+            .where('quizType', isEqualTo: 'daily_50_quiz')
+            .get();
+
+        bool needsGeneration = true;
+        if (querySnap.docs.isNotEmpty) {
+          List questions = querySnap.docs.first.get('questions') ?? [];
+          if (questions.length >= 50) {
+            needsGeneration = false;
+            debugPrint("[BulkGen] $dateStr already has ${questions.length} questions. Skipping.");
+          } else {
+            debugPrint("[BulkGen] $dateStr has only ${questions.length} questions. Regenerating...");
+          }
+        }
+
+        if (needsGeneration) {
+          setState(() {
+            _currentStatus = "Generating 50‑Question Quiz for $dateStr (Quiz ${i + 1}/3)...";
+          });
+          
+          bool success = await AiService.generateAndSaveMockQuiz(date);
+          
+          if (!success) {
+            // Retry once if failed
+            debugPrint("[BulkGen] Failed first attempt for $dateStr. Retrying...");
+            success = await AiService.generateAndSaveMockQuiz(date);
+          }
+
+          if (!success) {
+            _handleFailure(dateStr, "50‑question mock quiz");
+            return;
+          }
         }
       }
 
       setState(() {
         _isGenerating = false;
-        _currentStatus = "Successfully generated 5 days of scheduled 50‑question quizzes!";
+        _currentStatus = "Successfully verified and generated 3 days of 50‑question quizzes!";
       });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Bulk 5‑day quiz generation completed successfully!")));
+          content: Text("Bulk 3‑day quiz generation completed successfully!")));
     } catch (e) {
       setState(() {
         _isGenerating = false;
         _currentStatus = "Error: $e";
       });
-      print("AI_DEBUG: Bulk 5‑day Generation Error: $e");
+      print("AI_DEBUG: Bulk 3‑day Generation Error: $e");
     }
   }
 

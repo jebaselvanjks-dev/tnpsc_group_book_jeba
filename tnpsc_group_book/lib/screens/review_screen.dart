@@ -15,6 +15,52 @@ class ReviewScreen extends StatelessWidget {
     required this.selectedAnswers,
   });
 
+  // Helper to format bilingual text (English / Tamil)
+  String _formatBilingual(String raw) {
+    if (raw.isEmpty) return "";
+
+    // Normalize escaped newlines
+    raw = raw.replaceAll('\\n', '\n');
+    
+    // 1. Check for explicit separators first
+    if (raw.contains('\n') || raw.contains(' / ') || raw.contains(' | ')) {
+      List<String> parts;
+      if (raw.contains('\n')) {
+        parts = raw.split('\n');
+      } else if (raw.contains(' / ')) {
+        parts = raw.split(' / ');
+      } else {
+        parts = raw.split(' | ');
+      }
+
+      final en = parts[0].trim();
+      final ta = parts.length > 1 ? parts[1].trim() : en;
+
+      if (en == ta) return en;
+      return "$en\n$ta";
+    }
+
+    // 2. Smart detection: Split at the first Tamil character if no separator is found
+    int tamilIndex = -1;
+    for (int i = 0; i < raw.length; i++) {
+      int code = raw.codeUnitAt(i);
+      if (code >= 0x0B80 && code <= 0x0BFF) {
+        tamilIndex = i;
+        break;
+      }
+    }
+
+    if (tamilIndex > 0) {
+      String en = raw.substring(0, tamilIndex).trim();
+      String ta = raw.substring(tamilIndex).trim();
+      if (en.isNotEmpty && ta.isNotEmpty) {
+        return "$en\n$ta";
+      }
+    }
+
+    return raw.trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(
@@ -80,7 +126,7 @@ class ReviewScreen extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            "Q${index + 1}: ${q.question.replaceAll('?', '?\n').replaceAll(RegExp(r'\s*/\s*'), '\n')}",
+                            "Q${index + 1}: ${_formatBilingual(q.question)}",
                             style: GoogleFonts.outfit(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -136,7 +182,7 @@ class ReviewScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                q.explanation,
+                                _formatBilingual(q.explanation),
                                 style: GoogleFonts.outfit(
                                   fontSize: 14,
                                   color: isDark ? Colors.white60 : Colors.black54,
@@ -267,7 +313,7 @@ class ReviewScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  answer.replaceAll(RegExp(r'\s*/\s*'), '\n'),
+                  _formatBilingual(answer),
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,

@@ -286,14 +286,59 @@ class _QuizScreenState extends State<QuizScreen> {
 
   }
 
+  // Helper to format bilingual text (English / Tamil)
+  String _formatBilingual(String raw) {
+    if (raw.isEmpty) return "";
+
+    // Normalize escaped newlines from database
+    raw = raw.replaceAll('\\n', '\n');
+    
+    // 1. Check for explicit separators first
+    if (raw.contains('\n') || raw.contains(' / ') || raw.contains(' | ')) {
+      List<String> parts;
+      if (raw.contains('\n')) {
+        parts = raw.split('\n');
+      } else if (raw.contains(' / ')) {
+        parts = raw.split(' / ');
+      } else {
+        parts = raw.split(' | ');
+      }
+
+      final en = parts[0].trim();
+      final ta = parts.length > 1 ? parts[1].trim() : en;
+
+      // If both parts are identical (e.g., "7/8 / 7/8"), return only one
+      if (en == ta) return en;
+      
+      return "$en\n$ta";
+    }
+
+    // 2. Smart detection: Split at the first Tamil character if no separator is found
+    // This handles questions like: "Which... energy? பின்வருவனவற்றுள்..."
+    int tamilIndex = -1;
+    for (int i = 0; i < raw.length; i++) {
+      int code = raw.codeUnitAt(i);
+      // Tamil Unicode range: 0B80 to 0BFF
+      if (code >= 0x0B80 && code <= 0x0BFF) {
+        tamilIndex = i;
+        break;
+      }
+    }
+
+    if (tamilIndex > 0) {
+      String en = raw.substring(0, tamilIndex).trim();
+      String ta = raw.substring(tamilIndex).trim();
+      if (en.isNotEmpty && ta.isNotEmpty) {
+        return "$en\n$ta";
+      }
+    }
+
+    return raw.trim();
+  }
+
   // Returns the option string localized based on current app language.
   String _localizedOption(String raw) {
-    if (!raw.contains('/')) return raw.trim();
-    final parts = raw.split('/');
-    final en = parts[0].trim();
-    final ta = parts.length > 1 ? parts[1].trim() : en;
-    final isTamil = AppLanguage.languageNotifier.value == 'ta';
-    return isTamil ? ta : en;
+    return _formatBilingual(raw);
   }
 
   // Returns shuffled option indices for a given question index.
@@ -508,7 +553,7 @@ class _QuizScreenState extends State<QuizScreen> {
                             ),
                             const SizedBox(height: 40),
                             Text(
-                              q.question.replaceAll('\\n', '\n'),
+                              _formatBilingual(q.question),
                               style: AppTheme.getStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -747,11 +792,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        (() {
-                                          final parts = question.question.split('/').map((p) => p.trim()).toList();
-                                          final displayText = parts.join('\n');
-                                          return displayText;
-                                        })(),
+                                        _formatBilingual(question.question),
                                         style: AppTheme.getStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
@@ -832,7 +873,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                             const SizedBox(width: 16),
                                             Expanded(
                                               child: Text(
-                                                (() { final parts = question.options[index].split('/').map((p) => p.trim()).toList(); return (parts.length > 1 && parts[0] == parts[1]) ? parts[0] : parts.join('\n'); })(),
+                                                _formatBilingual(question.options[index]),
                                                 style: AppTheme.getStyle(
                                                   fontSize: 15,
                                                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
