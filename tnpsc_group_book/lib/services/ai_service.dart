@@ -16,14 +16,21 @@ class AiService {
     }
     try {
       final remoteConfig = FirebaseRemoteConfig.instance;
-      await remoteConfig.setConfigSettings(RemoteConfigSettings(
-        fetchTimeout: const Duration(minutes: 1),
-        minimumFetchInterval: Duration.zero,
-      ));
+      await remoteConfig.setConfigSettings(
+        RemoteConfigSettings(
+          fetchTimeout: const Duration(minutes: 1),
+          minimumFetchInterval: Duration.zero,
+        ),
+      );
       await remoteConfig.fetchAndActivate();
       _cachedApiKey = remoteConfig.getString('gemini_api_key');
       if (_cachedApiKey != null && _cachedApiKey!.length > 10) {
-        print("AI_DEBUG: Key picked: "+_cachedApiKey!.substring(0,5)+"..."+_cachedApiKey!.substring(_cachedApiKey!.length-5));
+        print(
+          "AI_DEBUG: Key picked: " +
+              _cachedApiKey!.substring(0, 5) +
+              "..." +
+              _cachedApiKey!.substring(_cachedApiKey!.length - 5),
+        );
       }
       return _cachedApiKey!;
     } catch (e) {
@@ -43,8 +50,12 @@ class AiService {
     List<String> discoveredModels = [];
     try {
       print("AI_DEBUG: Discovering available models...");
-      final listUrl = Uri.parse('https://generativelanguage.googleapis.com/v1/models?key=$apiKey');
-      final listRes = await http.get(listUrl).timeout(const Duration(seconds: 10));
+      final listUrl = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1/models?key=$apiKey',
+      );
+      final listRes = await http
+          .get(listUrl)
+          .timeout(const Duration(seconds: 10));
       if (listRes.statusCode == 200) {
         final listData = jsonDecode(listRes.body);
         for (var m in listData['models']) {
@@ -53,7 +64,9 @@ class AiService {
             discoveredModels.add(mName);
           }
         }
-        print("AI_DEBUG: Discovered ${discoveredModels.length} models: $discoveredModels");
+        print(
+          "AI_DEBUG: Discovered ${discoveredModels.length} models: $discoveredModels",
+        );
       }
     } catch (e) {
       print("AI_DEBUG: Discovery failed: $e");
@@ -70,24 +83,43 @@ class AiService {
         try {
           print("AI_DEBUG: REST Call - Trying $modelName on $version...");
           final url = Uri.parse(
-              'https://generativelanguage.googleapis.com/$version/models/$modelName:generateContent?key=$apiKey');
+            'https://generativelanguage.googleapis.com/$version/models/$modelName:generateContent?key=$apiKey',
+          );
 
-          final response = await http.post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'contents': [
-                {'parts': [{'text': prompt}]}
-              ],
-              'safetySettings': [
-                {'category': 'HARM_CATEGORY_HARASSMENT', 'threshold': 'BLOCK_NONE'},
-                {'category': 'HARM_CATEGORY_HATE_SPEECH', 'threshold': 'BLOCK_NONE'},
-                {'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold': 'BLOCK_NONE'},
-                {'category': 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold': 'BLOCK_NONE'}
-              ],
-              'generationConfig': {'responseMimeType': 'application/json'}
-            }),
-          ).timeout(const Duration(seconds: 30));
+          final response = await http
+              .post(
+                url,
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode({
+                  'contents': [
+                    {
+                      'parts': [
+                        {'text': prompt},
+                      ],
+                    },
+                  ],
+                  'safetySettings': [
+                    {
+                      'category': 'HARM_CATEGORY_HARASSMENT',
+                      'threshold': 'BLOCK_NONE',
+                    },
+                    {
+                      'category': 'HARM_CATEGORY_HATE_SPEECH',
+                      'threshold': 'BLOCK_NONE',
+                    },
+                    {
+                      'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                      'threshold': 'BLOCK_NONE',
+                    },
+                    {
+                      'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                      'threshold': 'BLOCK_NONE',
+                    },
+                  ],
+                  'generationConfig': {'responseMimeType': 'application/json'},
+                }),
+              )
+              .timeout(const Duration(seconds: 30));
 
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body);
@@ -97,7 +129,12 @@ class AiService {
               return text;
             }
           } else {
-            print("AI_DEBUG: REST FAIL ($version/$modelName) - Status: "+response.statusCode.toString()+", Body: "+response.body);
+            print(
+              "AI_DEBUG: REST FAIL ($version/$modelName) - Status: " +
+                  response.statusCode.toString() +
+                  ", Body: " +
+                  response.body,
+            );
           }
         } catch (e) {
           print("AI_DEBUG: REST Error ($version/$modelName): $e");
@@ -113,41 +150,50 @@ class AiService {
   static Future<bool> generateAndSaveDailyQuiz(DateTime date) async {
     final dateStr = DateFormat('yyyy-MM-dd').format(date);
 
+    // Get a few recent questions to avoid repeats
+    String recentContext = "";
+    try {
+      final recentDocs = await FirebaseFirestore.instance
+          .collection('quizzes')
+          .orderBy('createdAt', descending: true)
+          .limit(2)
+          .get();
+      for (var doc in recentDocs.docs) {
+        List qs = doc.get('questions') ?? [];
+        for (var q in qs.take(5)) {
+          recentContext += "${q['question'].toString().split('\n').first}, ";
+        }
+      }
+    } catch (e) {}
+
+    final avoidPrompt = recentContext.isNotEmpty
+        ? "\nSTRICTLY DO NOT REPEAT these recent questions or topics: $recentContext"
+        : "";
+
     // Prompt definitions ------------------------------------------------
-    final promptTamil = '''
-Generate 10 TNPSC General Tamil (பொதுத்தமிழ்) MCQs (SSLC Standard) covering Part A: Grammar (இலக்கணம்), Part B: Literature (இலக்கியம்), and Part C: Tamil Scholars and Service (தமிழ் அறிஞர்களும் தமிழ்த் தொண்டும்). 
-Each question MUST be bilingual: contain both English and Tamil text. Format: "English question text\\nTamil question text". 
-Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
-Strictly use this JSON format: 
-[{"question": "English question text\\nTamil question text", 
-"options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
-"correctOptionIndex": 0, 
-"explanation": "English explanation / தமிழ் விளக்கம்"}]. 
-Only return the raw JSON array, no other text or markdown formatting.
+    final promptTamil =
+        '''
+Generate 10 UNIQUE TNPSC General Tamil MCQs (SSLC Standard). 
+Focus on different chapters of Samacheer Kalvi books. $avoidPrompt
+Each question MUST be bilingual: English and Tamil separated by a newline. Format: "English question\\nTamil question". 
+Each option and explanation MUST be bilingual separated by a space-slash-space: "English / Tamil". 
+Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
-    final promptGS = '''
-Generate 6 TNPSC General Studies (பொது அறிவு) MCQs (SSLC Standard) covering General Science, Current Events, Geography, History and Culture of India, Indian Polity, Indian Economy, and Indian National Movement. 
-Each question MUST be bilingual: contain both English and Tamil text. Format: "English question text\\nTamil question text". 
-Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
-Strictly use this JSON format: 
-[{"question": "English question text\\nTamil question text", 
-"options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
-"correctOptionIndex": 0, 
-"explanation": "English explanation / தமிழ் விளக்கம்"}]. 
-Only return the raw JSON array, no other text or markdown formatting.
+    final promptGS =
+        '''
+Generate 6 UNIQUE TNPSC General Studies MCQs (SSLC Standard). 
+Rotate between Science, History, Polity, and Economy. $avoidPrompt
+Format: Question: English\\nTamil. Options: English / Tamil.
+Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
-    final promptAptitude = '''
-Generate 4 TNPSC Aptitude and Mental Ability (திறனறிவும் மனக்கணக்கு நுண்ணறிவும்) MCQs (SSLC Standard) covering Simplification, Percentage, HCF & LCM, Ratio and Proportion, Simple Interest, Compound Interest, Area, Volume, Time and Work, and Logical Reasoning. 
-Each question MUST be bilingual: contain both English and Tamil text. Format: "English question text\\nTamil question text". 
-Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
-Strictly use this JSON format: 
-[{"question": "English question text\\nTamil question text", 
-"options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
-"correctOptionIndex": 0, 
-"explanation": "English explanation / தமிழ் விளக்கம்"}]. 
-Only return the raw JSON array, no other text or markdown formatting.
+    final promptAptitude =
+        '''
+Generate 4 UNIQUE TNPSC Aptitude MCQs (SSLC Standard). 
+Topics: HCF/LCM, Ratio, Time & Work, Interest, or Mensuration. $avoidPrompt
+Format: Question: English\\nTamil. Options: English / Tamil.
+Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
     // --------------------------------------------------------------------
@@ -155,25 +201,40 @@ Only return the raw JSON array, no other text or markdown formatting.
     List<dynamic> allQuestions = [];
 
     // Helper to fetch questions and tag them with a quiz_type
-    Future<void> fetchAndTag(String prompt, String quizType) async {
+    Future<void> fetchAndTag(
+      String prompt,
+      String quizType,
+      int expectedCount,
+    ) async {
       final res = await _generateWithFallback(prompt);
       if (res != null) {
         int start = res.indexOf('[');
         int end = res.lastIndexOf(']');
         if (start != -1 && end != -1) {
           List q = jsonDecode(res.substring(start, end + 1));
-          // Add quiz_type to each question map
-          allQuestions.addAll(q.map((item) => {...item, 'quiz_type': quizType}));
+
+          // Validation: Trim if more, fail if less
+          if (q.length > expectedCount) q = q.sublist(0, expectedCount);
+          if (q.length < expectedCount) {
+            print(
+              "AI_DEBUG: Count mismatch for $quizType. Got ${q.length}, expected $expectedCount",
+            );
+            return;
+          }
+
+          allQuestions.addAll(
+            q.map((item) => {...item, 'quiz_type': quizType}),
+          );
         }
       }
     }
 
     // Fetch each category and tag appropriately
-    await fetchAndTag(promptTamil, 'general_tamil');
-    await fetchAndTag(promptGS, 'general_studies');
-    await fetchAndTag(promptAptitude, 'aptitude');
+    await fetchAndTag(promptTamil, 'general_tamil', 10);
+    await fetchAndTag(promptGS, 'general_studies', 6);
+    await fetchAndTag(promptAptitude, 'aptitude', 4);
 
-    if (allQuestions.isEmpty) return false;
+    if (allQuestions.length != 20) return false; // Ensure exactly 20 total
 
     // Store / update in Firestore
     final querySnapshot = await FirebaseFirestore.instance
@@ -192,7 +253,10 @@ Only return the raw JSON array, no other text or markdown formatting.
     };
 
     if (querySnapshot.docs.isNotEmpty) {
-      await querySnapshot.docs.first.reference.set(quizData, SetOptions(merge: true));
+      await querySnapshot.docs.first.reference.set(
+        quizData,
+        SetOptions(merge: true),
+      );
     } else {
       await FirebaseFirestore.instance.collection('quizzes').add(quizData);
     }
@@ -205,41 +269,49 @@ Only return the raw JSON array, no other text or markdown formatting.
   static Future<bool> generateAndSaveMockQuiz(DateTime date) async {
     final dateStr = DateFormat('yyyy-MM-dd').format(date);
 
+    // Get a few recent questions to avoid repeats in mock tests
+    String recentContext = "";
+    try {
+      final recentDocs = await FirebaseFirestore.instance
+          .collection('mock_tests')
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+      if (recentDocs.docs.isNotEmpty) {
+        List qs = recentDocs.docs.first.get('questions') ?? [];
+        for (var q in qs.take(10)) {
+          recentContext += "${q['question'].toString().split('\n').first}, ";
+        }
+      }
+    } catch (e) {}
+
+    final avoidPrompt = recentContext.isNotEmpty
+        ? "\nSTRICTLY DO NOT REPEAT these recent questions or topics: $recentContext"
+        : "";
+
     // Prompt definitions ------------------------------------------------
-    final promptTamil = '''
-Generate 25 TNPSC General Tamil (பொத்துத்தமிழ்) MCQs (SSLC Standard) covering Part A: Grammar (இலக்கணம்), Part B: Literature (இலக்கியம்), and Part C: Tamil Scholars and Service (தமிழ் அறிஞர்களும் தமிழ்த் தொண்டும்). 
-Each question MUST be bilingual: contain both English and Tamil text. Format: "English question text\\nTamil question text". 
-Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
-Strictly use this JSON format: 
-[{"question": "English question text\\nTamil question text", 
-"options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
-"correctOptionIndex": 0, 
-"explanation": "English explanation / தமிழ் விளக்கம்"}]. 
-Only return the raw JSON array, no other text or markdown formatting.
+    final promptTamil =
+        '''
+Generate 25 UNIQUE TNPSC General Tamil MCQs (SSLC Standard). 
+Cover Grammar, Literature, and Tamil Scholars. $avoidPrompt
+Format: Question: English\\nTamil. Options/Explanation: English / Tamil.
+Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
-    final promptGS = '''
-Generate 15 TNPSC General Studies (பொது அறிவு) MCQs (SSLC Standard) covering General Science, Current Events, Geography, History and Culture of India, Indian Polity, Indian Economy, and Indian National Movement. 
-Each question MUST be bilingual: contain both English and Tamil text. Format: "English question text\\nTamil question text". 
-Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
-Strictly use this JSON format: 
-[{"question": "English question text\\nTamil question text", 
-"options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
-"correctOptionIndex": 0, 
-"explanation": "English explanation / தமிழ் விளக்கம்"}]. 
-Only return the raw JSON array, no other text or markdown formatting.
+    final promptGS =
+        '''
+Generate 15 UNIQUE TNPSC General Studies MCQs (SSLC Standard). 
+Cover Science, History, Geography, Polity, and Economy. $avoidPrompt
+Format: Question: English\\nTamil. Options: English / Tamil.
+Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
-    final promptAptitude = '''
-Generate 10 TNPSC Aptitude and Mental Ability (திறனறிவும் மனக்கணக்கு நுண்ணறிவும்) MCQs (SSLC Standard) covering Simplification, Percentage, HCF & LCM, Ratio and Proportion, Simple Interest, Compound Interest, Area, Volume, Time and Work, and Logical Reasoning. 
-Each question MUST be bilingual: contain both English and Tamil text. Format: "English question text\\nTamil question text". 
-Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
-Strictly use this JSON format: 
-[{"question": "English question text\\nTamil question text", 
-"options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
-"correctOptionIndex": 0, 
-"explanation": "English explanation / தமிழ் விளக்கம்"}]. 
-Only return the raw JSON array, no other text or markdown formatting.
+    final promptAptitude =
+        '''
+Generate 10 UNIQUE TNPSC Aptitude MCQs (SSLC Standard). 
+Cover HCF/LCM, Ratio, Time & Work, Interest, Mensuration, and Reasoning. $avoidPrompt
+Format: Question: English\\nTamil. Options: English / Tamil.
+Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
     // --------------------------------------------------------------------
@@ -253,8 +325,16 @@ Only return the raw JSON array, no other text or markdown formatting.
         int start = resTamil.indexOf('[');
         int end = resTamil.lastIndexOf(']');
         if (start != -1 && end != -1) {
-          final List<dynamic> tamilQuestions = jsonDecode(resTamil.substring(start, end + 1));
-          allQuestions.addAll(tamilQuestions.map((q) => {...q, 'quiz_type': 'general_tamil'}));
+          List<dynamic> tamilQuestions = jsonDecode(
+            resTamil.substring(start, end + 1),
+          );
+          if (tamilQuestions.length > 25)
+            tamilQuestions = tamilQuestions.sublist(0, 25);
+          if (tamilQuestions.length == 25) {
+            allQuestions.addAll(
+              tamilQuestions.map((q) => {...q, 'quiz_type': 'general_tamil'}),
+            );
+          }
         }
       } catch (e) {
         print("AI_DEBUG: Tamil JSON Parse Error: $e");
@@ -269,8 +349,15 @@ Only return the raw JSON array, no other text or markdown formatting.
         int start = resGS.indexOf('[');
         int end = resGS.lastIndexOf(']');
         if (start != -1 && end != -1) {
-          final List<dynamic> gsQuestions = jsonDecode(resGS.substring(start, end + 1));
-          allQuestions.addAll(gsQuestions.map((q) => {...q, 'quiz_type': 'general_studies'}));
+          List<dynamic> gsQuestions = jsonDecode(
+            resGS.substring(start, end + 1),
+          );
+          if (gsQuestions.length > 15) gsQuestions = gsQuestions.sublist(0, 15);
+          if (gsQuestions.length == 15) {
+            allQuestions.addAll(
+              gsQuestions.map((q) => {...q, 'quiz_type': 'general_studies'}),
+            );
+          }
         }
       } catch (e) {
         print("AI_DEBUG: GS JSON Parse Error: $e");
@@ -285,8 +372,16 @@ Only return the raw JSON array, no other text or markdown formatting.
         int start = resAptitude.indexOf('[');
         int end = resAptitude.lastIndexOf(']');
         if (start != -1 && end != -1) {
-          final List<dynamic> aptitudeQuestions = jsonDecode(resAptitude.substring(start, end + 1));
-          allQuestions.addAll(aptitudeQuestions.map((q) => {...q, 'quiz_type': 'aptitude'}));
+          List<dynamic> aptitudeQuestions = jsonDecode(
+            resAptitude.substring(start, end + 1),
+          );
+          if (aptitudeQuestions.length > 10)
+            aptitudeQuestions = aptitudeQuestions.sublist(0, 10);
+          if (aptitudeQuestions.length == 10) {
+            allQuestions.addAll(
+              aptitudeQuestions.map((q) => {...q, 'quiz_type': 'aptitude'}),
+            );
+          }
         }
       } catch (e) {
         print("AI_DEBUG: Aptitude JSON Parse Error: $e");
@@ -294,7 +389,8 @@ Only return the raw JSON array, no other text or markdown formatting.
     }
 
     // --------------------------------------------------------------------
-    if (allQuestions.isNotEmpty) {
+    if (allQuestions.length == 50) {
+      // Final check for 50 questions total
       final querySnapshot = await FirebaseFirestore.instance
           .collection('mock_tests')
           .where('date', isEqualTo: dateStr)
@@ -313,7 +409,10 @@ Only return the raw JSON array, no other text or markdown formatting.
       };
 
       if (querySnapshot.docs.isNotEmpty) {
-        await querySnapshot.docs.first.reference.set(quizData, SetOptions(merge: true));
+        await querySnapshot.docs.first.reference.set(
+          quizData,
+          SetOptions(merge: true),
+        );
       } else {
         await FirebaseFirestore.instance.collection('mock_tests').add(quizData);
       }
@@ -325,39 +424,36 @@ Only return the raw JSON array, no other text or markdown formatting.
   // -----------------------------------------------------------------
   // Scheduled quiz generation (used by bulk‑7‑day flow)
   // -----------------------------------------------------------------
-  static Future<bool> generateScheduledQuiz(DateTime date, String quizType) async {
+  static Future<bool> generateScheduledQuiz(
+    DateTime date,
+    String quizType, {
+    int count = 20,
+    int? setIndex,
+  }) async {
     final dateStr = DateFormat('yyyy-MM-dd').format(date);
-    int totalQuestions = 25;
     String subjectTitle = "";
     String syllabusPrompt = "";
 
-    if (quizType == 'tamil_eligibility') {
-      totalQuestions = 100;
-      subjectTitle = "Tamil Eligibility-cum-Scoring Test (SSLC Standard)";
-      syllabusPrompt = "General Tamil (பொதுத்தமிழ்) - Part A: Grammar (இலக்கணம்), Part B: Literature (இலக்கியம்), and Part C: Tamil Scholars and Service (தமிழ் அறிஞர்களும் தமிழ்த் தொண்டும்).";
+    if (quizType == 'general_tamil') {
+      subjectTitle =
+          "General Tamil (SSLC Standard)${setIndex != null ? ' - Set $setIndex' : ''}";
+      syllabusPrompt =
+          "Part A: Grammar (இலக்கணம்), Part B: Literature (இலக்கியம்), and Part C: Tamil Scholars and Service (தமிழ் அறிஞர்களும் தமிழ்த் தொண்டும்).";
     } else if (quizType == 'general_studies') {
-      totalQuestions = 75;
-      subjectTitle = "General Studies (SSLC Standard)";
-      syllabusPrompt = "General Studies (பொது அறிவு) - General Science, Current Events, Geography, History and Culture of India, Indian Polity, Indian Economy, and Indian National Movement.";
+      subjectTitle =
+          "General Studies (SSLC Standard)${setIndex != null ? ' - Set $setIndex' : ''}";
+      syllabusPrompt =
+          "General Science, Current Events, Geography, History and Culture of India, Indian Polity, Indian Economy, and Indian National Movement.";
     } else {
-      totalQuestions = 25;
-      subjectTitle = "Aptitude & Mental Ability Test (SSLC Standard)";
-      syllabusPrompt = "Aptitude and Mental Ability (திறனறிவும் மனக்கணக்கு நுண்ணறிவும்) - Simplification, Percentage, HCF & LCM, Ratio and Proportion, Simple Interest, Compound Interest, Area, Volume, Time and Work, and Logical Reasoning/Puzzles.";
+      subjectTitle =
+          "Aptitude & Mental Ability Test (SSLC Standard)${setIndex != null ? ' - Set $setIndex' : ''}";
+      syllabusPrompt =
+          "Simplification, Percentage, HCF & LCM, Ratio and Proportion, Simple Interest, Compound Interest, Area, Volume, Time and Work, and Logical Reasoning/Puzzles.";
     }
 
-    // Break into 25‑question chunks to avoid payload limits
-    int chunkSize = 25;
-    int chunks = (totalQuestions / chunkSize).ceil();
-    List<dynamic> allQuestions = [];
-
-    for (int i = 0; i < chunks; i++) {
-      int startIdx = i * chunkSize + 1;
-      int endIdx = (i + 1) * chunkSize;
-      if (endIdx > totalQuestions) endIdx = totalQuestions;
-      int count = endIdx - startIdx + 1;
-
-      final prompt = '''
-Generate $count TNPSC MCQs (Questions $startIdx to $endIdx out of $totalQuestions) for the subject '$subjectTitle' based on the Combined Civil Services Examination‑IV (Group‑IV and VAO) syllabus: $syllabusPrompt. 
+    final prompt =
+        '''
+Generate EXACTLY $count TNPSC MCQs for the subject '$subjectTitle' based on the syllabus: $syllabusPrompt.
 Each question MUST be bilingual: contain both English and Tamil text. Format: "English question text\\nTamil question text". 
 Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
 Strictly use this JSON format: 
@@ -365,53 +461,67 @@ Strictly use this JSON format:
 "options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
 "correctOptionIndex": 0, 
 "explanation": "English explanation / தமிழ் விளக்கம்"}]. 
-Only return the raw JSON array, no other text or markdown formatting.
+Return only the raw JSON array of EXACTLY $count items.
 ''';
 
-      final res = await _generateWithFallback(prompt);
-      if (res != null) {
-        try {
-          int start = res.indexOf('[');
-          int end = res.lastIndexOf(']');
-          if (start != -1 && end != -1) {
-            List chunkQuestions = jsonDecode(res.substring(start, end + 1));
-            allQuestions.addAll(chunkQuestions.map((q) => {...q, 'quiz_type': quizType}));
-          } else {
-            print("AI_DEBUG: Bracket mismatch in chunk response: $res");
-            return false;
+    final res = await _generateWithFallback(prompt);
+    if (res != null) {
+      try {
+        int start = res.indexOf('[');
+        int end = res.lastIndexOf(']');
+        if (start != -1 && end != -1) {
+          List<dynamic> allQuestions = jsonDecode(
+            res.substring(start, end + 1),
+          );
+
+          // STRICT VALIDATION: Ensure exactly 'count' questions
+          if (allQuestions.length != count) {
+            print(
+              "AI_DEBUG: Count mismatch. Got ${allQuestions.length}, expected $count. Retrying logic...",
+            );
+            // If too many, trim. If too few, this attempt failed.
+            if (allQuestions.length > count) {
+              allQuestions = allQuestions.sublist(0, count);
+            } else {
+              return false;
+            }
           }
-        } catch (e) {
-          print("AI_DEBUG: Chunk $i JSON Parse Error: $e");
-          return false;
+
+          final querySnapshot = await FirebaseFirestore.instance
+              .collection('quizzes')
+              .where('date', isEqualTo: dateStr)
+              .where('quiz_type', isEqualTo: quizType)
+              .where('set_index', isEqualTo: setIndex)
+              .get();
+
+          final quizData = {
+            'date': dateStr,
+            'title': subjectTitle,
+            'quiz_type': quizType,
+            'quizType': quizType,
+            'set_index': setIndex,
+            'questions': allQuestions
+                .map((q) => {...q, 'quiz_type': quizType})
+                .toList(),
+            'type': 'daily_quiz',
+            'createdAt': FieldValue.serverTimestamp(),
+          };
+
+          if (querySnapshot.docs.isNotEmpty) {
+            await querySnapshot.docs.first.reference.set(
+              quizData,
+              SetOptions(merge: true),
+            );
+          } else {
+            await FirebaseFirestore.instance
+                .collection('quizzes')
+                .add(quizData);
+          }
+          return true;
         }
-      } else {
-        print("AI_DEBUG: Chunk $i API response is null");
-        return false;
+      } catch (e) {
+        print("AI_DEBUG: JSON Parse Error: $e");
       }
-    }
-
-    if (allQuestions.isNotEmpty) {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('quizzes')
-          .where('date', isEqualTo: dateStr)
-          .get();
-
-      final quizData = {
-        'date': dateStr,
-        'title': subjectTitle,
-        'quiz_type': quizType,
-        'quizType': quizType,
-        'questions': allQuestions,
-        'type': 'daily_quiz',
-        'createdAt': FieldValue.serverTimestamp(),
-      };
-
-      if (querySnapshot.docs.isNotEmpty) {
-        await querySnapshot.docs.first.reference.set(quizData, SetOptions(merge: true));
-      } else {
-        await FirebaseFirestore.instance.collection('quizzes').add(quizData);
-      }
-      return true;
     }
     return false;
   }
@@ -419,32 +529,37 @@ Only return the raw JSON array, no other text or markdown formatting.
   // -----------------------------------------------------------------
   // Additional helper methods (subject questions, study material, chats, etc.)
   // -----------------------------------------------------------------
-  static Future<bool> generateSubjectQuestions(String subject, {String? category}) async {
+  static Future<bool> generateSubjectQuestions(
+    String subject, {
+    String? category,
+  }) async {
     String specializedPrompt = "";
 
     if (subject == 'general_tamil') {
       specializedPrompt = '''
-Generate 20 TNPSC General Tamil (பொதுத்தமிழ்) MCQs (SSLC Standard) covering Part A: Grammar (இலக்கணம்), Part B: Literature (இலக்கியம்), and Part C: Tamil Scholars and Service (தமிழ் அறிஞர்களும் தமிழ்த் தொண்டும்). 
-Each question MUST be bilingual: contain both English and Tamil text. Format: "English question text\\nTamil question text". 
-Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
+Generate 20 UNIQUE TNPSC General Tamil (பொதுத்தமிழ்) MCQs (SSLC Standard). 
+Cover Part A: Grammar (இலக்கணம்), Part B: Literature (இலக்கியம்), and Part C: Tamil Scholars.
+Format: Question: English\\nTamil. Options/Explanation: English / Tamil.
 ''';
     } else if (subject == 'general_studies') {
       specializedPrompt = '''
-Generate 20 TNPSC General Studies (பொது அறிவு) MCQs (SSLC Standard) covering General Science, Current Events, Geography, History and Culture of India, Indian Polity, Indian Economy, and Indian National Movement. 
-Each question MUST be bilingual: contain both English and Tamil text. Format: "English question text\\nTamil question text". 
-Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
+Generate 20 UNIQUE TNPSC General Studies (பொது அறிவு) MCQs (SSLC Standard). 
+Rotate between Science, History, Geography, Polity, and Economy.
+Format: Question: English\\nTamil. Options/Explanation: English / Tamil.
 ''';
     } else if (subject == 'aptitude') {
       specializedPrompt = '''
-Generate 20 TNPSC Aptitude and Mental Ability (திறனறிவும் மனக்கணக்கு நுண்ணறிவும்) MCQs (SSLC Standard) covering Simplification, Percentage, HCF & LCM, Ratio and Proportion, Simple Interest, Compound Interest, Area, Volume, Time and Work, and Logical Reasoning. 
-Each question MUST be bilingual: contain both English and Tamil text. Format: "English question text\\nTamil question text". 
-Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
+Generate 20 UNIQUE TNPSC Aptitude and Mental Ability MCQs (SSLC Standard). 
+Cover Simplification, Percentage, HCF/LCM, Ratio, Interest, Area, Volume, Time and Work.
+Format: Question: English\\nTamil. Options/Explanation: English / Tamil.
 ''';
     } else {
-      specializedPrompt = "Create 25 TNPSC MCQs for '$subject' in both Tamil and English (Bilingual). Each question MUST contain both English and Tamil text separated by a newline (\\n). Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ).";
+      specializedPrompt =
+          "Create 25 UNIQUE TNPSC MCQs for '$subject' (Bilingual). Format: Question: English\\nTamil. Options/Explanation: English / Tamil.";
     }
 
-    final prompt = '''
+    final prompt =
+        '''
 $specializedPrompt
 Strictly use this JSON format: 
 [{"question": "English question text\\nTamil question text", 
@@ -460,11 +575,17 @@ Only return the raw JSON array, no other text or markdown formatting.
         int start = res.indexOf('[');
         int end = res.lastIndexOf(']');
         if (start != -1 && end != -1) {
-          List<dynamic> newQuestions = jsonDecode(res.substring(start, end + 1));
-          newQuestions = newQuestions.map((q) => {...q, 'quiz_type': 'subject_question'}).toList();
+          List<dynamic> newQuestions = jsonDecode(
+            res.substring(start, end + 1),
+          );
+          newQuestions = newQuestions
+              .map((q) => {...q, 'quiz_type': 'subject_question'})
+              .toList();
 
           String safeId = subject.trim().replaceAll('/', '-');
-          final docRef = FirebaseFirestore.instance.collection('subject_questions').doc(safeId);
+          final docRef = FirebaseFirestore.instance
+              .collection('subject_questions')
+              .doc(safeId);
           final doc = await docRef.get();
 
           List<dynamic> existingQuestions = [];
@@ -472,7 +593,9 @@ Only return the raw JSON array, no other text or markdown formatting.
             existingQuestions = doc.get('questions') ?? [];
           }
 
-          Set<String> existingTexts = existingQuestions.map((e) => (e['question'] ?? "").toString().trim()).toSet();
+          Set<String> existingTexts = existingQuestions
+              .map((e) => (e['question'] ?? "").toString().trim())
+              .toSet();
           List<dynamic> uniqueNew = newQuestions.where((item) {
             String text = (item['question'] ?? "").toString().trim();
             return text.isNotEmpty && !existingTexts.contains(text);
@@ -496,8 +619,12 @@ Only return the raw JSON array, no other text or markdown formatting.
     return false;
   }
 
-  static Future<bool> generateStudyMaterial(String subject, {String? category}) async {
-    final prompt = "Create 25 structured TNPSC study points for '$subject'. Use this JSON format: [{\"id\": 1, \"tamil\": \"...\", \"english\": \"...\"}]. Only return the JSON array.";
+  static Future<bool> generateStudyMaterial(
+    String subject, {
+    String? category,
+  }) async {
+    final prompt =
+        "Create 25 structured TNPSC study points for '$subject'. Use this JSON format: [{\"id\": 1, \"tamil\": \"...\", \"english\": \"...\"}]. Only return the JSON array.";
     final res = await _generateWithFallback(prompt);
     if (res != null) {
       try {
@@ -506,7 +633,9 @@ Only return the raw JSON array, no other text or markdown formatting.
         if (start != -1 && end != -1) {
           List<dynamic> newMaterial = jsonDecode(res.substring(start, end + 1));
           String safeId = subject.trim().replaceAll('/', '-');
-          final docRef = FirebaseFirestore.instance.collection('subject_study_material').doc(safeId);
+          final docRef = FirebaseFirestore.instance
+              .collection('subject_study_material')
+              .doc(safeId);
           final doc = await docRef.get();
 
           List<dynamic> existingMaterial = [];
@@ -514,7 +643,9 @@ Only return the raw JSON array, no other text or markdown formatting.
             existingMaterial = doc.get('material') ?? [];
           }
 
-          Set<String> existingTexts = existingMaterial.map((e) => (e['tamil'] ?? "").toString().trim()).toSet();
+          Set<String> existingTexts = existingMaterial
+              .map((e) => (e['tamil'] ?? "").toString().trim())
+              .toSet();
           List<dynamic> uniqueNew = newMaterial.where((item) {
             String text = (item['tamil'] ?? "").toString().trim();
             return text.isNotEmpty && !existingTexts.contains(text);
@@ -543,8 +674,12 @@ Only return the raw JSON array, no other text or markdown formatting.
   }
 
   // Simple chat helpers ------------------------------------------------
-  static Future<String?> chatWithAppContext(String message, String context) async {
-    final prompt = "TNPSC Tutor context search: $context. Question: $message. Bilingual.";
+  static Future<String?> chatWithAppContext(
+    String message,
+    String context,
+  ) async {
+    final prompt =
+        "TNPSC Tutor context search: $context. Question: $message. Bilingual.";
     return await _generateWithFallback(prompt);
   }
 
@@ -553,8 +688,13 @@ Only return the raw JSON array, no other text or markdown formatting.
     return await _generateWithFallback(prompt);
   }
 
-  static Future<String> explainQuestion(String question, List<String> options, String correctAnswer) async {
-    final prompt = "Explain TNPSC question: $question. Answer: $correctAnswer. Bilingual.";
+  static Future<String> explainQuestion(
+    String question,
+    List<String> options,
+    String correctAnswer,
+  ) async {
+    final prompt =
+        "Explain TNPSC question: $question. Answer: $correctAnswer. Bilingual.";
     final res = await _generateWithFallback(prompt);
     return res ?? "Explanation unavailable.";
   }
@@ -566,7 +706,8 @@ Only return the raw JSON array, no other text or markdown formatting.
   }
 
   static Future<List<dynamic>> generateCustomQuiz(String topic) async {
-    final prompt = '''
+    final prompt =
+        '''
 Generate 20 TNPSC MCQs for '$topic' in both Tamil and English (Bilingual). 
 Each question MUST contain both English and Tamil text separated by a newline (\n). 
 Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). 
@@ -582,7 +723,8 @@ Only return the raw JSON array, no other text or markdown formatting.
       try {
         int start = res.indexOf('[');
         int end = res.lastIndexOf(']');
-        if (start != -1 && end != -1) return jsonDecode(res.substring(start, end + 1));
+        if (start != -1 && end != -1)
+          return jsonDecode(res.substring(start, end + 1));
       } catch (e) {}
     }
     return [];

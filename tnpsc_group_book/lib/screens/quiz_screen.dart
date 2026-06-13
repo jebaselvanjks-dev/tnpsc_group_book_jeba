@@ -293,32 +293,28 @@ class _QuizScreenState extends State<QuizScreen> {
     // Normalize escaped newlines from database
     raw = raw.replaceAll('\\n', '\n');
     
-    // 1. Check for explicit separators first
-    if (raw.contains('\n') || raw.contains(' / ') || raw.contains(' | ')) {
-      List<String> parts;
-      if (raw.contains('\n')) {
-        parts = raw.split('\n');
-      } else if (raw.contains(' / ')) {
-        parts = raw.split(' / ');
-      } else {
-        parts = raw.split(' | ');
-      }
-
-      final en = parts[0].trim();
-      final ta = parts.length > 1 ? parts[1].trim() : en;
-
-      // If both parts are identical (e.g., "7/8 / 7/8"), return only one
+    // 1. Check for newline first (Most common for questions)
+    if (raw.contains('\n')) {
+      List<String> parts = raw.split('\n');
+      String en = parts[0].trim();
+      String ta = parts.sublist(1).join('\n').trim(); // Join rest as Tamil
       if (en == ta) return en;
-      
       return "$en\n$ta";
     }
 
-    // 2. Smart detection: Split at the first Tamil character if no separator is found
-    // This handles questions like: "Which... energy? பின்வருவனவற்றுள்..."
+    // 2. Check for explicit space-slash-space separator (Common for options)
+    if (raw.contains(' / ')) {
+      List<String> parts = raw.split(' / ');
+      String en = parts[0].trim();
+      String ta = parts.sublist(1).join(' / ').trim();
+      if (en == ta) return en;
+      return "$en\n$ta";
+    }
+
+    // 3. Smart detection: Split at the first Tamil character
     int tamilIndex = -1;
     for (int i = 0; i < raw.length; i++) {
       int code = raw.codeUnitAt(i);
-      // Tamil Unicode range: 0B80 to 0BFF
       if (code >= 0x0B80 && code <= 0x0BFF) {
         tamilIndex = i;
         break;
@@ -327,6 +323,10 @@ class _QuizScreenState extends State<QuizScreen> {
 
     if (tamilIndex > 0) {
       String en = raw.substring(0, tamilIndex).trim();
+      // Clean up any trailing separators AI might have left
+      while (en.endsWith('/') || en.endsWith('|') || en.endsWith(':') || en.endsWith('-')) {
+        en = en.substring(0, en.length - 1).trim();
+      }
       String ta = raw.substring(tamilIndex).trim();
       if (en.isNotEmpty && ta.isNotEmpty) {
         return "$en\n$ta";
@@ -676,7 +676,7 @@ class _QuizScreenState extends State<QuizScreen> {
                       style: GoogleFonts.outfit(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: _remainingSeconds < 60 ? Colors.red : AppTheme.primaryColor,
+                        color: _remainingSeconds < 60 ? Colors.red : AppTheme.secondaryColorLight,
                       ),
                     );
                   }
@@ -718,6 +718,8 @@ class _QuizScreenState extends State<QuizScreen> {
                                     icon: const Icon(Icons.auto_awesome_rounded, color: Colors.amber, size: 24),
                                     onPressed: _generateMoreQuestions,
                                   ),
+                          if (widget.subjectTitle != "Daily Quiz" && 
+                              widget.subjectTitle != AppLanguage.getString('daily_quiz'))
                           Padding(
                             padding: const EdgeInsets.only(right: 8.0),
                             child: TextButton(

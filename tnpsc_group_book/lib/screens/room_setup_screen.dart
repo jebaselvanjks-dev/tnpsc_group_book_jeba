@@ -482,25 +482,29 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   }
 
   Future<bool> _showExitConfirmation() async {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101F42) : Colors.white,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101F42) : Colors.white70,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           AppLanguage.languageNotifier.value == 'ta' ? 'வெளியேறவா?' : 'Exit Room Setup?',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(fontSize: 18,fontWeight: FontWeight.bold,color: isDark ? Colors.white70 : AppTheme.textMainColor),
         ),
         content: Text(
           AppLanguage.languageNotifier.value == 'ta' 
             ? 'குரூப் தேர்வு அமைப்பிலிருந்து வெளியேற விரும்புகிறீர்களா?' 
             : 'Are you sure you want to exit the room setup?',
-          style: GoogleFonts.outfit(),
+          style: GoogleFonts.outfit(
+              color: isDark ? Colors.white : AppTheme.textMainColor
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text(AppLanguage.getString('close_btn'), style: TextStyle(color: Colors.grey[600])),
+            child: Text(AppLanguage.getString('close_btn'), style: TextStyle(fontSize: 14,color: Colors.grey[600])),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -510,7 +514,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
             ),
             child: Text(
               AppLanguage.languageNotifier.value == 'ta' ? 'வெளியேறு' : 'Exit',
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(fontSize: 14, color: isDark ? Colors.white : AppTheme.textMainColor),
             ),
           ),
         ],

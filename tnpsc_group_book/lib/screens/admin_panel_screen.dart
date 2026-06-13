@@ -87,10 +87,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             // Bulk 3‑day Quizzes (50‑question each)
             _buildAdminCard(
               context,
-              title: "Bulk Generate 3 Days 50‑Question Quizzes",
+              title: "Bulk Generate 5 Days 50‑Question Quizzes",
               icon: Icons.auto_awesome_motion_rounded,
               color: Colors.deepPurple,
-              onTap: _showBulk3DaysQuizGenDialog,
+              onTap: _showBulk5DaysQuizGenDialog,
             ),
             const SizedBox(height: 12),
             // Manual Content placeholder
@@ -177,42 +177,82 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   // ────── Dialogs ──────
 
-  void _showBulkQuizGenDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Bulk Generate Quizzes"),
-        content: const Text(
-            "This will generate bilingual (Tamil & English) quizzes for the next 7 quiz dates (Sunday, Tuesday, Thursday, Saturday) using AI. Continue?"),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _startBulkQuizGeneration();
-            },
-            child: const Text("Start"),
+  void _showBulkQuizGenDialog() async {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(AppLanguage.languageNotifier.value == 'ta' ? '7 நாட்களுக்கான வினாக்கள் உருவாகின்றன...' : 'Generating 7 days of quizzes...'),
+                ],
+              ),
+            ),
           ),
-        ],
-      ),
-    );
+        ),
+      );
+
+      try {
+        int successCount = 0;
+        for (int i = 0; i < 7; i++) {
+          DateTime targetDate = DateTime.now().add(Duration(days: i));
+          String dateStr = DateFormat('yyyy-MM-dd').format(targetDate);
+
+          final db = FirebaseFirestore.instance;
+          final existing = await db.collection('quizzes')
+              .where('date', isEqualTo: dateStr)
+              .where('type', isEqualTo: 'daily_quiz')
+              .get();
+
+          if (existing.docs.isEmpty) {
+            bool success = await AiService.generateAndSaveDailyQuiz(targetDate);
+            if (success) successCount++;
+            // Rate limit தவிர்க்க சிறிய இடைவெளி
+            await Future.delayed(const Duration(seconds: 5));
+          } else {
+            successCount++; // ஏற்கனவே இருப்பதால் வெற்றியாகக் கருதப்படும்
+          }
+        }
+
+        if (context.mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLanguage.getString('gen_success_count').replaceAll('{count}', successCount.toString())),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("${AppLanguage.getString('error_prefix')}: $e"), backgroundColor: Colors.red),
+          );
+        }
+      }
   }
 
-  void _showBulk3DaysQuizGenDialog() {
+  void _showBulk5DaysQuizGenDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Bulk Generate 3 Days Quizzes"),
+        title: const Text("Bulk Generate 5 Days Quizzes"),
         content: const Text(
-            "This will generate 50‑question quizzes for the next 3 scheduled dates. It will also check and regenerate if any of these dates have fewer than 50 questions."),
+            "This will generate 50‑question quizzes for the next 5 scheduled dates. It will also check and regenerate if any of these dates have fewer than 50 questions."),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _startBulk3DaysQuizGeneration();
+              _startBulk5DaysQuizGeneration();
             },
             child: const Text("Start"),
           ),
@@ -250,21 +290,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           .get();
       final existingDates = existingSnap.docs.map((d) => d.get('date') as String).toSet();
 
-      bool isScheduledDay(DateTime d) =>
-          d.weekday == DateTime.sunday ||
-          d.weekday == DateTime.tuesday ||
-          d.weekday == DateTime.thursday ||
-          d.weekday == DateTime.saturday;
-
-      // Determine next 7 scheduled dates without quizzes
+      // Determine next 7 dates starting from the day after latest quiz
       List<DateTime> nextDates = [];
       DateTime checkDate = startDate;
       while (nextDates.length < 7) {
         checkDate = checkDate.add(const Duration(days: 1));
-        String fmt = DateFormat('yyyy-MM-dd').format(checkDate);
-        if (isScheduledDay(checkDate) && !existingDates.contains(fmt)) {
-          nextDates.add(checkDate);
-        }
+        nextDates.add(checkDate);
       }
 
       // Generate quizzes for each date
@@ -272,51 +303,52 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         DateTime date = nextDates[i];
         String dateStr = DateFormat('yyyy-MM-dd').format(date);
 
-          // Tamil Eligibility – 10 per day
-          for (int t = 0; t < 10; t++) {
-            setState(() {
-              _currentStatus = "Generating Tamil Quiz "+(t+1).toString()+"/10 for $dateStr (Day ${i + 1}/7)...";
-            });
-            debugPrint("[BulkGen] Starting Tamil quiz "+(t+1).toString()+"/10 for $dateStr (Day ${i + 1}/7)");
-            bool success = await AiService.generateScheduledQuiz(date, 'general_tamil');
-            if (!success) {
-              debugPrint("[BulkGen] Failed Tamil quiz generation on $dateStr");
-              _handleFailure(dateStr, "Tamil eligibility quiz");
-              return;
-            } else {
-              debugPrint("[BulkGen] Successfully generated Tamil quiz "+(t+1).toString()+"/10 for $dateStr");
-            }
-          }
-
-        // General Studies – 6 per day
-        for (int g = 0; g < 6; g++) {
+        // Tamil Eligibility – 10 per day (20 questions each)
+        for (int t = 0; t < 10; t++) {
           setState(() {
-            _currentStatus = "Generating General Studies Quiz ${g + 1}/6 for $dateStr (Day ${i + 1}/7)...";
+            _currentStatus = "Generating Tamil Quiz ${t + 1}/10 for $dateStr (Day ${i + 1}/7)...";
           });
-          debugPrint("[BulkGen] Starting General Studies quiz ${g + 1}/6 for $dateStr (Day ${i + 1}/7)");
-          bool success = await AiService.generateScheduledQuiz(date, 'general_studies');
+          debugPrint("[BulkGen] Starting Tamil quiz ${t + 1}/10 for $dateStr");
+          bool success = await AiService.generateScheduledQuiz(date, 'general_tamil', count: 20, setIndex: t + 1);
           if (!success) {
-            debugPrint("[BulkGen] Failed General Studies quiz generation on $dateStr");
-            _handleFailure(dateStr, "General Studies quiz");
+            // Try one retry
+            success = await AiService.generateScheduledQuiz(date, 'general_tamil', count: 20, setIndex: t + 1);
+          }
+          if (!success) {
+            _handleFailure(dateStr, "Tamil Quiz ${t + 1}");
             return;
-          } else {
-            debugPrint("[BulkGen] Successfully generated General Studies quiz ${g + 1}/6 for $dateStr");
           }
         }
 
-        // Aptitude & Mental Ability – 4 per day
+        // General Studies – 6 per day (20 questions each)
+        for (int g = 0; g < 6; g++) {
+          setState(() {
+            _currentStatus = "Generating GS Quiz ${g + 1}/6 for $dateStr (Day ${i + 1}/7)...";
+          });
+          debugPrint("[BulkGen] Starting GS quiz ${g + 1}/6 for $dateStr");
+          bool success = await AiService.generateScheduledQuiz(date, 'general_studies', count: 20, setIndex: g + 1);
+          if (!success) {
+            success = await AiService.generateScheduledQuiz(date, 'general_studies', count: 20, setIndex: g + 1);
+          }
+          if (!success) {
+            _handleFailure(dateStr, "GS Quiz ${g + 1}");
+            return;
+          }
+        }
+
+        // Aptitude & Mental Ability – 4 per day (20 questions each)
         for (int a = 0; a < 4; a++) {
           setState(() {
             _currentStatus = "Generating Aptitude Quiz ${a + 1}/4 for $dateStr (Day ${i + 1}/7)...";
           });
-          debugPrint("[BulkGen] Starting Aptitude quiz ${a + 1}/4 for $dateStr (Day ${i + 1}/7)");
-          bool success = await AiService.generateScheduledQuiz(date, 'aptitude');
+          debugPrint("[BulkGen] Starting Aptitude quiz ${a + 1}/4 for $dateStr");
+          bool success = await AiService.generateScheduledQuiz(date, 'aptitude', count: 20, setIndex: a + 1);
           if (!success) {
-            debugPrint("[BulkGen] Failed Aptitude quiz generation on $dateStr");
-            _handleFailure(dateStr, "Aptitude quiz");
+            success = await AiService.generateScheduledQuiz(date, 'aptitude', count: 20, setIndex: a + 1);
+          }
+          if (!success) {
+            _handleFailure(dateStr, "Aptitude Quiz ${a + 1}");
             return;
-          } else {
-            debugPrint("[BulkGen] Successfully generated Aptitude quiz ${a + 1}/4 for $dateStr");
           }
         }
       }
@@ -336,7 +368,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
-  Future<void> _startBulk3DaysQuizGeneration() async {
+  Future<void> _startBulk5DaysQuizGeneration() async {
     setState(() {
       _isGenerating = true;
       _currentStatus = "Checking existing mock quizzes...";
@@ -353,7 +385,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           d.weekday == DateTime.thursday ||
           d.weekday == DateTime.saturday;
 
-      while (nextDates.length < 3) {
+      while (nextDates.length < 5) {
         if (isScheduledDay(checkDate)) {
           nextDates.add(checkDate);
         }
@@ -385,7 +417,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
         if (needsGeneration) {
           setState(() {
-            _currentStatus = "Generating 50‑Question Quiz for $dateStr (Quiz ${i + 1}/3)...";
+            _currentStatus = "Generating 50‑Question Quiz for $dateStr (Quiz ${i + 1}/5)...";
           });
           
           bool success = await AiService.generateAndSaveMockQuiz(date);
@@ -405,16 +437,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
       setState(() {
         _isGenerating = false;
-        _currentStatus = "Successfully verified and generated 3 days of 50‑question quizzes!";
+        _currentStatus = "Successfully verified and generated 5 days of 50‑question quizzes!";
       });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Bulk 3‑day quiz generation completed successfully!")));
+          content: Text("Bulk 5‑day quiz generation completed successfully!")));
     } catch (e) {
       setState(() {
         _isGenerating = false;
         _currentStatus = "Error: $e";
       });
-      print("AI_DEBUG: Bulk 3‑day Generation Error: $e");
+      print("AI_DEBUG: Bulk 5‑day Generation Error: $e");
     }
   }
 
