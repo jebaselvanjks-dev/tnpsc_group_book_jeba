@@ -11,7 +11,6 @@ import '../services/firestore_service.dart';
 import 'settings_screen.dart';
 import 'login_screen.dart';
 import 'admin_panel_screen.dart';
-import 'premium_plans_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../services/credential_storage.dart';
@@ -68,7 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool get _isAdmin {
     return user?.phoneNumber == '+918754236411' ||
-        user?.email == 'admin@tnpscmaster.com' ||
+        user?.email == 'adminjeba@gmail.com' ||
         user?.email == 'kjebaselvan987@gmail.com';
   }
 
@@ -228,76 +227,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
                       const SizedBox(height: 24),
-
-                      // // VIP Premium Membership Banner (Deactivated / Promoted Free VIP)
-                      // GestureDetector(
-                      //   onTap: () {
-                      //     ScaffoldMessenger.of(context).showSnackBar(
-                      //       SnackBar(
-                      //         content: Text(
-                      //           lang == 'ta' ? 'VIP அம்சங்கள் முழுமையாக அன்லாக் செய்யப்பட்டுள்ளன!' : 'VIP features are fully unlocked for you!',
-                      //         ),
-                      //         backgroundColor: AppTheme.primaryColor,
-                      //       ),
-                      //     );
-                      //   },
-                      //   child: Container(
-                      //     decoration: BoxDecoration(
-                      //       gradient: const LinearGradient(
-                      //         colors: [Color(0xFFD4AF37), Color(0xFFE5BA73)],
-                      //         begin: Alignment.topLeft,
-                      //         end: Alignment.bottomRight,
-                      //       ),
-                      //       borderRadius: BorderRadius.circular(20),
-                      //       boxShadow: [
-                      //         BoxShadow(
-                      //           color: AppTheme.secondaryColor.withOpacity(0.2),
-                      //           blurRadius: 10,
-                      //           offset: const Offset(0, 5),
-                      //         )
-                      //       ],
-                      //     ),
-                      //     padding: const EdgeInsets.all(16),
-                      //     child: Row(
-                      //       children: [
-                      //         Container(
-                      //           padding: const EdgeInsets.all(10),
-                      //           decoration: const BoxDecoration(
-                      //             color: Colors.black12,
-                      //             shape: BoxShape.circle,
-                      //           ),
-                      //           child: const Icon(Icons.workspace_premium_rounded, color: Colors.black87, size: 24),
-                      //         ),
-                      //         const SizedBox(width: 16),
-                      //         Expanded(
-                      //           child: Column(
-                      //             crossAxisAlignment: CrossAxisAlignment.start,
-                      //             children: [
-                      //               Text(
-                      //                 lang == 'ta' ? 'VIP பிரீமியம் ஆக்டிவ்' : 'VIP Premium Active',
-                      //                 style: GoogleFonts.outfit(
-                      //                   color: Colors.black87,
-                      //                   fontSize: 16,
-                      //                   fontWeight: FontWeight.bold,
-                      //                 ),
-                      //               ),
-                      //               const SizedBox(height: 2),
-                      //               Text(
-                      //                 lang == 'ta' ? 'அனைத்து விளம்பரமில்லா & மாதிரி தேர்வுகள் அன்லாக்!' : 'All mock tests & ad-free experience unlocked!',
-                      //                 style: GoogleFonts.outfit(
-                      //                   color: Colors.black54,
-                      //                   fontSize: 11,
-                      //                 ),
-                      //               ),
-                      //             ],
-                      //           ),
-                      //         ),
-                      //         const Icon(Icons.check_circle_rounded, color: Colors.black54, size: 16),
-                      //       ],
-                      //     ),
-                      //   ),
-                      // ),
-                      // const SizedBox(height: 30),
 
                       // Quick Settings Section
                       Text(

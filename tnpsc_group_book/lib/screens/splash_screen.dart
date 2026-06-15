@@ -8,7 +8,6 @@ import '../main.dart';
 import 'login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/notification_service.dart';
-import '../services/premium_service.dart';
 
 
 class SplashScreen extends StatefulWidget {
@@ -32,7 +31,6 @@ class _SplashScreenState extends State<SplashScreen> {
     User? user = FirebaseAuth.instance.currentUser;
     
     if (user != null) {
-      await PremiumService.syncCurrentUserPremium();
       await NotificationService.saveFCMToken();
       Navigator.pushReplacement(
         context,

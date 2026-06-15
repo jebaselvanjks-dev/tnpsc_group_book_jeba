@@ -5,15 +5,16 @@ import 'dart:convert';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class HiveService {
+  static const String questionsBoxName = 'offline_questions';
+  static const String userBoxName = 'user_data';
+  static const String studyMaterialBoxName = 'study_material';
+
   static Future<void> init() async {
     await Hive.initFlutter();
     await Hive.openBox(userBoxName);
     await Hive.openBox(questionsBoxName);
+    await Hive.openBox(studyMaterialBoxName);
   }
-  static const String questionsBoxName = 'offline_questions';
-  static const String userBoxName = 'user_data';
-
-
 
   static Future<void> saveThemeMode(ThemeMode mode) async {
     await Hive.box(userBoxName).put('theme_mode', mode.name);
@@ -203,10 +204,9 @@ class HiveService {
   }
 
 
-  /// Pro & Elite only — Starter (₹49) still shows ads.
+  /// Unlocked for all users after removing payment system.
   static bool isAdFree() {
-    // Change this logic based on subscription plans. Currently returns false to allow ads.
-    return false;
+    return true;
   }
 
   /// Pro (₹99) & Elite (₹259).
@@ -271,6 +271,58 @@ class HiveService {
 
   static double getFontSizeFactor() {
     return Hive.box(userBoxName).get('font_size_factor', defaultValue: 1.0) as double;
+  }
+
+  // ------------------- Study Material -------------------
+  static Future<void> saveStudyMaterial(String subject, List<Map<String, dynamic>> material) async {
+    var box = Hive.box(studyMaterialBoxName);
+    await box.put(subject, jsonEncode(material));
+  }
+
+  static List<Map<String, dynamic>>? getStudyMaterial(String subject) {
+    var box = Hive.box(studyMaterialBoxName);
+    String? data = box.get(subject);
+    if (data != null) {
+      List<dynamic> decoded = jsonDecode(data);
+      return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+    return null;
+  }
+
+  // ------------------- Last Fetch Tracking -------------------
+  static Future<void> setLastLeaderboardFetch(bool isDaily) async {
+    final box = Hive.box(userBoxName);
+    final key = isDaily ? 'last_leaderboard_fetch_daily' : 'last_leaderboard_fetch_mock';
+    await box.put(key, DateTime.now().toString().split(' ')[0]);
+  }
+
+  static bool shouldFetchLeaderboard(bool isDaily) {
+    final box = Hive.box(userBoxName);
+    final key = isDaily ? 'last_leaderboard_fetch_daily' : 'last_leaderboard_fetch_mock';
+    final dataKey = isDaily ? 'leaderboard_data_daily' : 'leaderboard_data_mock';
+    
+    String? lastFetch = box.get(key) as String?;
+    String? cachedData = box.get(dataKey) as String?;
+
+    // Fetch if never fetched today OR if cache was explicitly cleared (after a quiz)
+    return lastFetch != DateTime.now().toString().split(' ')[0] || cachedData == null || cachedData == "[]";
+  }
+
+  static Future<void> saveLeaderboardData(bool isDaily, List<Map<String, dynamic>> data) async {
+    final box = Hive.box(userBoxName);
+    final key = isDaily ? 'leaderboard_data_daily' : 'leaderboard_data_mock';
+    await box.put(key, jsonEncode(data));
+  }
+
+  static List<Map<String, dynamic>>? getLeaderboardData(bool isDaily) {
+    final box = Hive.box(userBoxName);
+    final key = isDaily ? 'leaderboard_data_daily' : 'leaderboard_data_mock';
+    String? data = box.get(key);
+    if (data != null) {
+      List<dynamic> decoded = jsonDecode(data);
+      return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+    return null;
   }
 
   // ------------------- Performance Statistics -------------------

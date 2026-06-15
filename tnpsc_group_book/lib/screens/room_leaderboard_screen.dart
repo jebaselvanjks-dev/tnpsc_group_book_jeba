@@ -139,8 +139,8 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
                       Text(
                         HiveService.isAdFree()
                             ? (ta
-                                ? 'Premium — விளம்பரம் இல்லை. புள்ளிகள் வழங்கப்பட்டது.'
-                                : 'Premium — no ads. Reward applied.')
+                                ? 'விளம்பரம் இல்லை. புள்ளிகள் வழங்கப்பட்டது.'
+                                : 'Ad-free experience. Reward applied.')
                             : (ta
                                 ? 'அனைவரும் முடித்தனர்!'
                                 : 'All finished!'),

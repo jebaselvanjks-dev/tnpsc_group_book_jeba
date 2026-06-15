@@ -4,7 +4,9 @@
     <option name="approvalStates">
       <map>
         <entry key="20260612-114757-2ed63c3c-14a5-45be-a9ff-5394abe014fa" value="true" />
-        <entry key="20260615-120359-043dabd5-1341-41a0-8281-4442ac8cba0f" value="true" />
+        <entry key="20260615-120359-043dabd5-1341-41a0-8281-4442ac8cba0f" value="false" />
+        <entry key="20260615-194731-8b870e79-e6a3-4ec0-adc4-6689615ba65a" value="true" />
+        <entry key="20260615-202142-bfdcd42e-4b70-418a-a48e-c640d4cb37c2" value="true" />
       </map>
     </option>
   </component>

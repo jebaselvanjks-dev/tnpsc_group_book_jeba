@@ -13,7 +13,6 @@ import 'package:tnpsc_group_book/screens/feedback_screen.dart';
 import 'package:intl/intl.dart';
 import '../services/hive_service.dart';
 import 'package:tnpsc_group_book/services/reward_service.dart';
-import 'premium_plans_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -28,7 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   bool get _isAdmin {
     final user = FirebaseAuth.instance.currentUser;
-    return user?.phoneNumber == '+918754236411' || user?.email == 'admin@tnpscmaster.com' || user?.email == 'kjebaselvan987@gmail.com';
+    return user?.phoneNumber == '+918754236411' || user?.email == 'adminjeba@gmail.com' || user?.email == 'kjebaselvan987@gmail.com';
   }
 
   @override
@@ -204,82 +203,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: const EdgeInsets.all(16.0),
                 children: [
                   _buildProfileSection(isDarkMode),
-
-                  // VIP Premium Membership Banner (Deactivated / Promoted Free VIP)
-                  // GestureDetector(
-                  //   onTap: () {
-                  //     ScaffoldMessenger.of(context).showSnackBar(
-                  //       SnackBar(
-                  //         content: Text(
-                  //           lang == 'ta' ? 'VIP அம்சங்கள் முழுமையாக அன்லாக் செய்யப்பட்டுள்ளன!' : 'VIP features are fully unlocked for you!',
-                  //         ),
-                  //         backgroundColor: AppTheme.primaryColor,
-                  //       ),
-                  //     );
-                  //   },
-                  //   child: Card(
-                  //     shape: RoundedRectangleBorder(
-                  //       borderRadius: BorderRadius.circular(20),
-                  //     ),
-                  //     elevation: 4,
-                  //     shadowColor: AppTheme.secondaryColor.withOpacity(0.3),
-                  //     child: Container(
-                  //       decoration: BoxDecoration(
-                  //         gradient: const LinearGradient(
-                  //           colors: [AppTheme.primaryColor, Color(0xFF0F2D59), Color(0xFF1E3A8A)],
-                  //           begin: Alignment.topLeft,
-                  //           end: Alignment.bottomRight,
-                  //         ),
-                  //         borderRadius: BorderRadius.circular(20),
-                  //         border: Border.all(color: AppTheme.secondaryColor.withOpacity(0.4), width: 1.5),
-                  //       ),
-                  //       child: Padding(
-                  //         padding: const EdgeInsets.all(20.0),
-                  //         child: Row(
-                  //           children: [
-                  //             Container(
-                  //               padding: const EdgeInsets.all(12),
-                  //               decoration: BoxDecoration(
-                  //                 color: AppTheme.secondaryColor.withOpacity(0.15),
-                  //                 shape: BoxShape.circle,
-                  //               ),
-                  //               child: const Icon(Icons.workspace_premium_rounded, color: AppTheme.secondaryColor, size: 30),
-                  //             ),
-                  //             const SizedBox(width: 16),
-                  //             Expanded(
-                  //               child: Column(
-                  //                 crossAxisAlignment: CrossAxisAlignment.start,
-                  //                 children: [
-                  //                   Text(
-                  //                     lang == 'ta' ? 'VIP பிரீமியம் ஆக்டிவ்' : 'VIP Premium Active',
-                  //                     style: GoogleFonts.outfit(
-                  //                       color: Colors.white,
-                  //                       fontSize: 18,
-                  //                       fontWeight: FontWeight.bold,
-                  //                     ),
-                  //                   ),
-                  //                   const SizedBox(height: 4),
-                  //                   Text(
-                  //                     lang == 'ta'
-                  //                       ? 'விளம்பரங்கள் இல்லா படிப்பு, மாதிரி தேர்வுகள் மற்றும் கூடுதல் குரூப் தேர்வுகள்!'
-                  //                       : 'Ad-Free study, all mock tests, and daily room matches!',
-                  //                     style: GoogleFonts.outfit(
-                  //                       color: Colors.white70,
-                  //                       fontSize: 12,
-                  //                     ),
-                  //                   ),
-                  //                 ],
-                  //               ),
-                  //             ),
-                  //             const SizedBox(width: 8),
-                  //             const Icon(Icons.check_circle_rounded, color: Colors.white70, size: 16),
-                  //           ],
-                  //         ),
-                  //       ),
-                  //     ),
-                  //   ),
-                  // ),
-                  // const SizedBox(height: 24),
 
                   // Rewards Section
                   Text(

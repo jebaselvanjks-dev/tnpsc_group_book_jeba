@@ -62,7 +62,7 @@ class _QuizScreenState extends State<QuizScreen> {
   bool get isAdmin {
     final user = FirebaseAuth.instance.currentUser;
     return user?.phoneNumber == '+918754236411' || 
-           user?.email == 'admin@tnpscmaster.com' || 
+           user?.email == 'adminjeba@gmail.com' ||
            user?.email == 'kjebaselvan987@gmail.com';
   }
 

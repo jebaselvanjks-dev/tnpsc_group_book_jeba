@@ -6,7 +6,6 @@ import '../models/room.dart';
 import '../models/question.dart';
 import 'firestore_service.dart';
 import 'ai_service.dart';
-import 'premium_service.dart';
 import 'hive_service.dart';
 import 'package:flutter/foundation.dart';
 
@@ -38,9 +37,6 @@ class RoomService {
 
   // Check if user has already played a multiplayer room today
   Future<bool> canPlayToday() async {
-  // Ensure premium status is up‑to‑date (clears expired premium)
-  await PremiumService.syncCurrentUserPremium();
-
   String? uid = _auth.currentUser?.uid;
   if (uid == null) return false;
 
@@ -403,6 +399,21 @@ class RoomService {
         'status': abandoned ? 'abandoned' : 'finished',
         (abandoned ? 'abandonedAt' : 'finishedAt'): FieldValue.serverTimestamp(),
       });
+
+      // AI_DEBUG: Add roomCode to user's room_history in the 'users' collection
+      try {
+        await _db.collection('users').doc(uid).set({
+          'room_history': FieldValue.arrayUnion([roomCode]),
+          'last_room_played': roomCode,
+          'last_room_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        debugPrint("AI_DEBUG: Added $roomCode to user's room_history");
+        
+        // Refresh user data immediately after save to sync history
+        await _firestoreService.getUserData(forceRefresh: true);
+      } catch (e) {
+        debugPrint("AI_DEBUG: Error updating user room_history: $e");
+      }
 
       return await _checkAndMarkRoomFinished(roomCode);
     } catch (e) {

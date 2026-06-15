@@ -9,7 +9,6 @@ import '../utils/app_theme.dart';
 import '../models/subject.dart';
 import 'waiting_room_screen.dart';
 import '../services/hive_service.dart';
-import 'premium_plans_screen.dart';
 import '../services/reward_service.dart';
 import 'package:hive/hive.dart';
 import '../services/version_service.dart';
@@ -41,7 +40,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
   bool get _isAdmin {
     final user = FirebaseAuth.instance.currentUser;
-    return user?.phoneNumber == '+918754236411' || user?.email == 'admin@tnpscmaster.com' || user?.email == 'kjebaselvan987@gmail.com';
+    return user?.phoneNumber == '+918754236411' || user?.email == 'adminjeba@gmail.com' || user?.email == 'kjebaselvan987@gmail.com';
   }
 
   @override

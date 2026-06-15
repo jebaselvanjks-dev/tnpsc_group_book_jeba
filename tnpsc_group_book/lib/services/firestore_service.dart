@@ -23,6 +23,9 @@ class FirestoreService {
         'lastNameUpdateDate': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       debugPrint("AI_DEBUG: User profile name updated in Firestore: $name");
+      
+      // Refresh user data immediately after save
+      await getUserData(forceRefresh: true);
     } catch (e) {
       debugPrint("Error updating profile name: $e");
     }
@@ -94,17 +97,17 @@ class FirestoreService {
   }
 
   // Get user data with Offline Cache support (Cache-first optimization)
-  Future<DocumentSnapshot?> getUserData({bool forceRefresh = false}) async {
+  Future<DocumentSnapshot?> getUserData({bool forceRefresh = true}) async {
     String? uid = _auth.currentUser?.uid;
     if (uid == null) return null;
 
     try {
+      // AI_DEBUG: Always try to get fresh data from server for users API as requested
       if (!forceRefresh) {
         try {
-          // Try to get from Firestore cache first (free!)
           DocumentSnapshot cachedDoc = await _db.collection('users').doc(uid).get(const GetOptions(source: Source.cache));
           if (cachedDoc.exists) {
-            debugPrint("AI_DEBUG: User data fetched from CACHE");
+            debugPrint("AI_DEBUG: User data fetched from FIRESTORE CACHE");
             var data = cachedDoc.data() as Map<String, dynamic>;
             await _syncCompletedQuizzesToHive(data);
             return cachedDoc;
@@ -113,6 +116,7 @@ class FirestoreService {
       }
 
       // Try server fetch
+      debugPrint("AI_DEBUG: Fetching user data from SERVER (Every Open)");
       DocumentSnapshot doc = await _db.collection('users').doc(uid).get();
       if (doc.exists) {
         var data = doc.data() as Map<String, dynamic>;
@@ -174,6 +178,9 @@ class FirestoreService {
         'totalScore': FieldValue.increment(points),
       }, SetOptions(merge: true));
       debugPrint("AI_DEBUG: User points incremented in Firestore by $points");
+      
+      // Refresh user data immediately after save
+      await getUserData(forceRefresh: true);
     } catch (e) {
       debugPrint("Error incrementing user points: $e");
     }
@@ -183,7 +190,16 @@ class FirestoreService {
   Future<List<Question>> getDailyQuiz() async {
     try {
       String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      String tomorrow = DateFormat('yyyy-MM-dd').format(DateTime.now().add(const Duration(days: 1)));
       
+      // AI_DEBUG: Check Hive first for today's quiz
+      List<Question> cachedToday = HiveService.getQuestions("Daily Quiz");
+      String? lastActiveDate = Hive.box(HiveService.userBoxName).get('last_active_quiz_date') as String?;
+      if (cachedToday.isNotEmpty && lastActiveDate == today) {
+        debugPrint("AI_DEBUG: Today's Daily quiz fetched from HIVE");
+        return cachedToday;
+      }
+
       // 1. Check if today's quiz exists (Immediate check)
       QuerySnapshot todaySnap = await _db
           .collection('quizzes')
@@ -213,6 +229,20 @@ class FirestoreService {
           }
         }
       }
+
+      // --- OPTIMIZATION: Prefetch tomorrow's quiz if not present ---
+      try {
+         QuerySnapshot tomorrowSnap = await _db
+            .collection('quizzes')
+            .where('type', isEqualTo: 'daily_quiz')
+            .where('date', isEqualTo: tomorrow)
+            .limit(1)
+            .get();
+         if (tomorrowSnap.docs.isEmpty) {
+           debugPrint("AI_DEBUG: Tomorrow's quiz not found. Generating in background...");
+           AiService.generateAndSaveDailyQuiz(DateTime.now().add(const Duration(days: 1)));
+         }
+      } catch (_) {}
 
       // 3. Fallback: If AI fails or today's quiz still missing, fetch older quiz
       if (resolvedDoc == null) {
@@ -259,7 +289,16 @@ class FirestoreService {
   Future<List<Question>> getMockQuiz() async {
     try {
       String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      String tomorrow = DateFormat('yyyy-MM-dd').format(DateTime.now().add(const Duration(days: 1)));
       
+      // AI_DEBUG: Check Hive first for today's mock quiz
+      List<Question> cachedToday = HiveService.getQuestions("Mock Quiz");
+      String? lastActiveDate = Hive.box(HiveService.userBoxName).get('last_active_mock_quiz_date') as String?;
+      if (cachedToday.isNotEmpty && lastActiveDate == today) {
+        debugPrint("AI_DEBUG: Today's Mock quiz fetched from HIVE");
+        return cachedToday;
+      }
+
       // 1. Check if today's mock quiz exists
       QuerySnapshot todaySnap = await _db
           .collection('mock_tests')
@@ -291,6 +330,21 @@ class FirestoreService {
           }
         }
       }
+
+      // --- OPTIMIZATION: Prefetch tomorrow's mock quiz if not present ---
+      try {
+         QuerySnapshot tomorrowSnap = await _db
+            .collection('mock_tests')
+            .where('type', isEqualTo: 'daily_quiz')
+            .where('quizType', isEqualTo: 'daily_50_quiz')
+            .where('date', isEqualTo: tomorrow)
+            .limit(1)
+            .get();
+         if (tomorrowSnap.docs.isEmpty) {
+           debugPrint("AI_DEBUG: Tomorrow's mock quiz not found. Generating in background...");
+           AiService.generateAndSaveMockQuiz(DateTime.now().add(const Duration(days: 1)));
+         }
+      } catch (_) {}
 
       // 3. Fallback: If AI fails or today's quiz still missing, fetch older mock quiz
       if (resolvedDoc == null) {
@@ -373,7 +427,6 @@ class FirestoreService {
   Future<List<Map<String, dynamic>>> getLeaderboard({bool isDaily = true, bool forceRefresh = false}) async {
     try {
       Query query;
-
       if (isDaily) {
         String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
         query = _db.collection('leaderboards').doc('daily_$today').collection('scores');
@@ -382,44 +435,24 @@ class FirestoreService {
         query = _db.collection('leaderboards').doc(docId).collection('scores');
       }
 
-      // If forceRefresh, skip cache
-      if (forceRefresh) {
-        QuerySnapshot snapshot = await query
-            .where('score', isGreaterThan: 0)
-            .orderBy('score', descending: true)
-            .limit(10)
-            .get();
-        debugPrint("AI_DEBUG: Leaderboard fetched from SERVER (forceRefresh). Count: ${snapshot.docs.length}");
-        return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
-      }
+      // Server fetch
+      QuerySnapshot snapshot = await query
+          .orderBy('score', descending: true)
+          .limit(20)
+          .get();
+      
+      debugPrint("AI_DEBUG: Leaderboard fetched from SERVER (Every Open). Count: ${snapshot.docs.length}");
+      var data = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+      
+      // Update Hive cache
+      await HiveService.saveLeaderboardData(isDaily, data);
+      await HiveService.setLastLeaderboardFetch(isDaily);
 
-      // Try cache first
-      QuerySnapshot snapshot;
-      try {
-        snapshot = await query
-            .where('score', isGreaterThan: 0)
-            .orderBy('score', descending: true)
-            .limit(10)
-            .get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isNotEmpty) {
-          debugPrint("AI_DEBUG: Leaderboard fetched from CACHE. Count: ${snapshot.docs.length}");
-          return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
-        }
-        // Fallback to server if cache empty
-        throw Exception("Cache empty");
-      } catch (_) {
-        // Server fetch
-        snapshot = await query
-            .where('score', isGreaterThan: 0)
-            .orderBy('score', descending: true)
-            .limit(10)
-            .get();
-        debugPrint("AI_DEBUG: Leaderboard fetched from SERVER. Count: ${snapshot.docs.length}");
-        return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
-      }
+      return data;
     } catch (e) {
       debugPrint("AI_DEBUG: LEADERBOARD ERROR: $e");
-      return [];
+      // Fallback to Hive if server fails
+      return HiveService.getLeaderboardData(isDaily) ?? [];
     }
   }
 
@@ -504,6 +537,12 @@ class FirestoreService {
          // Update Weekly (Subcollection format for TTL)
          await _db.collection('leaderboards').doc('weekly_$monday').collection('scores').doc(uid).set(scoreData, SetOptions(merge: true));
          debugPrint("AI_DEBUG: Daily and Weekly leaderboards updated (Mock Quiz excluded)");
+         
+         // AI_DEBUG: Reset daily leaderboard fetch tracking to force refresh on next visit
+         await HiveService.saveLeaderboardData(true, []); // Clear local cache
+         // We don't need to call setLastLeaderboardFetch here, 
+         // because clearing the data or changing the date logic will trigger a fetch.
+         // Actually, let's just make sure the next getLeaderboard call sees it needs a refresh.
        }
 
        // --- NEW: Save Mock Quiz Result to Scheduled Leaderboard ---
@@ -521,6 +560,9 @@ class FirestoreService {
 
          await _db.collection('leaderboards').doc(docId).collection('scores').doc(uid).set(scoreData, SetOptions(merge: true));
          debugPrint("AI_DEBUG: Mock leaderboard updated for $docId");
+
+         // AI_DEBUG: Reset mock leaderboard fetch tracking
+         await HiveService.saveLeaderboardData(false, []);
        }
 
       if (subject == "Daily Quiz") {
@@ -555,6 +597,9 @@ class FirestoreService {
         'quizzesCompleted': FieldValue.increment(1),
       }, SetOptions(merge: true));
       debugPrint("AI_DEBUG: User stats updated in Firestore and local Hive");
+
+      // Refresh user data immediately after save to sync all stats
+      await getUserData(forceRefresh: true);
     }
   }
 
@@ -617,6 +662,9 @@ class FirestoreService {
       // Sync to Hive
       await userBox.put('streak', newStreak);
       await userBox.put('lastActiveDate', today);
+
+      // Refresh user data immediately after save
+      await getUserData(forceRefresh: true);
 
     } catch (e) {
       debugPrint("Error updating streak: $e");
@@ -683,6 +731,14 @@ class FirestoreService {
   // Fetch Questions for a specific subject with Hive fallback (Cache-first optimization)
   Future<List<Question>> getSubjectQuestions(String subject, {bool forceRefresh = false}) async {
     try {
+      if (!forceRefresh) {
+        List<Question> cached = HiveService.getQuestions(subject);
+        if (cached.isNotEmpty) {
+          debugPrint("AI_DEBUG: Subject questions $subject fetched from HIVE");
+          return cached;
+        }
+      }
+
       String safeId = subject.replaceAll('/', '-');
       
       DocumentSnapshot doc;
@@ -690,7 +746,7 @@ class FirestoreService {
         try {
           doc = await _db.collection('subject_questions').doc(safeId).get(const GetOptions(source: Source.cache));
           if (doc.exists) {
-            debugPrint("AI_DEBUG: Subject questions $subject fetched from CACHE");
+            debugPrint("AI_DEBUG: Subject questions $subject fetched from FIRESTORE CACHE");
             List<dynamic> questionsData = doc.get('questions');
             List<Question> questions = questionsData.map((q) => Question(
               question: q['question'],
@@ -709,6 +765,7 @@ class FirestoreService {
       // Try server fetch
       doc = await _db.collection('subject_questions').doc(safeId).get();
       if (doc.exists) {
+        debugPrint("AI_DEBUG: Subject questions $subject fetched from SERVER");
         List<dynamic> questionsData = doc.get('questions');
         List<Question> questions = questionsData.map((q) => Question(
           question: q['question'],
@@ -726,7 +783,7 @@ class FirestoreService {
     }
     
     // Fallback to Hive
-    debugPrint("AI_DEBUG: Fetching $subject from HIVE (Offline)");
+    debugPrint("AI_DEBUG: Fetching $subject from HIVE (Last Fallback)");
     return HiveService.getQuestions(subject);
   }
 
@@ -880,6 +937,14 @@ class FirestoreService {
   // Fetch Study Material for a specific subject (Cache-first optimization)
   Future<List<Map<String, dynamic>>> getStudyMaterial(String subject, {bool forceRefresh = false}) async {
     try {
+      if (!forceRefresh) {
+        List<Map<String, dynamic>>? cached = HiveService.getStudyMaterial(subject);
+        if (cached != null && cached.isNotEmpty) {
+          debugPrint("AI_DEBUG: Study material $subject fetched from HIVE");
+          return cached;
+        }
+      }
+
       String safeId = subject.replaceAll('/', '-');
       
       DocumentSnapshot doc;
@@ -887,18 +952,22 @@ class FirestoreService {
         try {
           doc = await _db.collection('subject_study_material').doc(safeId).get(const GetOptions(source: Source.cache));
           if (doc.exists) {
-            debugPrint("AI_DEBUG: Study material $subject fetched from CACHE");
+            debugPrint("AI_DEBUG: Study material $subject fetched from FIRESTORE CACHE");
             List<dynamic> material = doc.get('material');
-            return material.map((e) => Map<String, dynamic>.from(e)).toList();
+            var data = material.map((e) => Map<String, dynamic>.from(e)).toList();
+            await HiveService.saveStudyMaterial(subject, data);
+            return data;
           }
         } catch (_) {}
       }
 
       doc = await _db.collection('subject_study_material').doc(safeId).get();
       if (doc.exists) {
+        debugPrint("AI_DEBUG: Study material $subject fetched from SERVER");
         List<dynamic> material = doc.get('material');
-        // Backwards compatibility for UI or internal use
-        return material.map((e) => Map<String, dynamic>.from(e)).toList();
+        var data = material.map((e) => Map<String, dynamic>.from(e)).toList();
+        await HiveService.saveStudyMaterial(subject, data);
+        return data;
       }
     } catch (e) {
       debugPrint("Error fetching study material: $e");

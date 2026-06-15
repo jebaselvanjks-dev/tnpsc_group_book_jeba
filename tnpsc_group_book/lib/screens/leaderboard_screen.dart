@@ -275,7 +275,15 @@ class _LeaderboardListState extends State<_LeaderboardList> {
   @override
   void initState() {
     super.initState();
-    _loadData(forceRefresh: false);
+    _loadData(forceRefresh: true); // Force fresh fetch on init
+  }
+
+  @override
+  void didUpdateWidget(_LeaderboardList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isDaily != widget.isDaily) {
+      _loadData(forceRefresh: true);
+    }
   }
 
   void _loadData({required bool forceRefresh}) {

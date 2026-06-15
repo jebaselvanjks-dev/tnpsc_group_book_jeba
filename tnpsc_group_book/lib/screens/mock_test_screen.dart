@@ -5,7 +5,6 @@ import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
 import '../services/hive_service.dart';
 import 'quiz_screen.dart';
-import 'premium_plans_screen.dart';
 import '../services/version_service.dart';
 
 class MockTestScreen extends StatelessWidget {
@@ -204,10 +203,6 @@ bool isAllowedDay = const [2, 4, 6, 7].contains(DateTime.now().weekday);
                   if (context.mounted) VersionService.showUpdateDialogIfNeeded(context);
                   return;
                 }
-                if (!HiveService.isMockTestsUnlocked()) {
-                  if (context.mounted) _showMockTestLockDialog(context);
-                  return;
-                }
                 if (context.mounted) {
                   Navigator.push(
                     context,
@@ -233,62 +228,6 @@ bool isAllowedDay = const [2, 4, 6, 7].contains(DateTime.now().weekday);
               ),
             ),
           )
-        ],
-      ),
-    );
-  }
-
-  void _showMockTestLockDialog(BuildContext context) {
-    final ta = AppLanguage.languageNotifier.value == 'ta';
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101F42) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.lock_rounded, color: Colors.amber, size: 40),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              ta ? 'தேர்வு பூட்டப்பட்டுள்ளது!' : 'Mock Test Locked!',
-              style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 20),
-            ),
-          ],
-        ),
-        content: Text(
-          ta 
-            ? 'அனைத்து TNPSC மாதிரித் தேர்வுகளையும் எழுத VIP புரோ (₹99) அல்லது எலைட் (₹259) மெம்பர்ஷிப் பெற வேண்டும்.'
-            : 'Accessing premium mock tests requires a VIP Pro (₹99) or Elite (₹259) membership plan.',
-          textAlign: TextAlign.center,
-          style: AppTheme.getStyle(fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(ta ? 'மூடு' : 'Close', style: TextStyle(color: Colors.grey[600])),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const PremiumPlansScreen()),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.secondaryColor,
-              foregroundColor: Colors.black87,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text(ta ? 'சந்தாக்களைப் பார்' : 'View Premium Plans'),
-          ),
         ],
       ),
     );

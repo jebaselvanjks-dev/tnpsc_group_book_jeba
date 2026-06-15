@@ -17,7 +17,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter/services.dart';
 import 'services/tts_service.dart';
-import 'services/premium_service.dart';
 import 'services/reward_service.dart';
 import 'firebase_options.dart';
 
@@ -59,7 +58,6 @@ Future<void> _initServicesInBackground() async {
   NotificationService.init();
   TtsService.init();
   RewardService.loadRewardedAd();
-  PremiumService.syncCurrentUserPremium();
 }
 
 class TNPSCPrepApp extends StatelessWidget {
