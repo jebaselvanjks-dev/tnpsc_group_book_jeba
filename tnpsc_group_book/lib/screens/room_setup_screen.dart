@@ -520,9 +520,17 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                     ),
                     child: const Icon(Icons.history_rounded, color: AppTheme.secondaryColorLight, size: 20),
                   ),
-                  title: Text(
-                    code,
-                    style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.secondaryColor).copyWith(letterSpacing: 1.5),
+                  title: Row(
+                    children: [
+                      Text(
+                        AppLanguage.getString('last_room_history') + ":",
+                        style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.secondaryColor).copyWith(letterSpacing: 1.5),
+                      ),
+                      Text(
+                        code,
+                        style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.secondaryColor).copyWith(letterSpacing: 1.5),
+                      ),
+                    ],
                   ),
                   subtitle: Text(
                     date,

@@ -806,6 +806,8 @@ class AppLanguage {
         return ta ? 'சேர்ந்து கொள்ளவும்' : 'Join Room';
       case 'room_history':
         return ta ? 'குழு தேர்வு வரலாறு' : 'Room History';
+      case 'last_room_history':
+        return ta ? 'கடைசி குழு தேர்வு' : 'Final Group Test';
       case 'correct_feedback':
         return ta ? 'சரி!' : 'Correct!';
       case 'wrong_feedback':
