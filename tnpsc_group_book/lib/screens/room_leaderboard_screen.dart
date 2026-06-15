@@ -11,8 +11,9 @@ import '../main.dart';
 
 class RoomLeaderboardScreen extends StatefulWidget {
   final String roomCode;
+  final String? date;
 
-  const RoomLeaderboardScreen({super.key, required this.roomCode});
+  const RoomLeaderboardScreen({super.key, required this.roomCode, this.date});
 
   @override
   State<RoomLeaderboardScreen> createState() => _RoomLeaderboardScreenState();
@@ -94,7 +95,7 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
         ],
       ),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: _roomService.roomStream(widget.roomCode),
+        stream: _roomService.roomStream(widget.roomCode, date: widget.date),
         builder: (context, roomSnap) {
           if (!roomSnap.hasData || !roomSnap.data!.exists) {
             return const Center(child: CircularProgressIndicator());
@@ -115,6 +116,10 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
                     Text('Room: ${widget.roomCode}',
                         style: AppTheme.getStyle(
                             fontSize: 16, fontWeight: FontWeight.bold)),
+                    if (widget.date != null)
+                      Text('Date: ${widget.date}',
+                          style: AppTheme.getStyle(
+                              fontSize: 12, color: Colors.grey)),
                     const SizedBox(height: 8),
                     if (status != 'finished')
                       Text(
@@ -148,7 +153,7 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
               ),
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
-                  stream: _roomService.playersStream(widget.roomCode),
+                  stream: _roomService.playersStream(widget.roomCode, date: widget.date),
                   builder: (context, playersSnap) {
                     if (!playersSnap.hasData) {
                       return const Center(child: CircularProgressIndicator());

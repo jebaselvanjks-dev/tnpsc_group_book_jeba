@@ -748,6 +748,8 @@ class AppLanguage {
         return ta ? 'ஹோஸ்ட் தேர்வைத் தொடங்க காத்திருக்கிறது...' : 'Waiting for host to start the test...';
       case 'room_screen_title':
         return ta ? 'குழு வினாடி வினா' : 'Room Quiz';
+      case 'battle_title':
+        return ta ? 'குழுத் தேர்வு' : 'Group Match';
       case 'insufficient_points_create':
         return ta ? 'புள்ளிகள் மிகவும் குறைவு: {points}' : 'Insufficient points: {points}';
       case 'daily_quiz_first_error':
@@ -802,6 +804,8 @@ class AppLanguage {
         return ta ? 'குழுவிற்கான வினாக்கள் தயாராகின்றன...' : 'Questions for the group are being prepared...';
       case 'join_room_btn':
         return ta ? 'சேர்ந்து கொள்ளவும்' : 'Join Room';
+      case 'room_history':
+        return ta ? 'குழு தேர்வு வரலாறு' : 'Room History';
       case 'correct_feedback':
         return ta ? 'சரி!' : 'Correct!';
       case 'wrong_feedback':

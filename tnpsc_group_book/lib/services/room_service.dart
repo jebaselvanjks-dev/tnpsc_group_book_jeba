@@ -23,9 +23,9 @@ class RoomService {
 
   static String? currentRoomDate;
 
-  DocumentReference _getRoomRef(String roomCode) {
-    String date = currentRoomDate ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
-    return _db.collection('rooms').doc('daily_$date').collection('matches').doc(roomCode);
+  DocumentReference _getRoomRef(String roomCode, {String? date}) {
+    String d = date ?? (currentRoomDate ?? DateFormat('yyyy-MM-dd').format(DateTime.now()));
+    return _db.collection('rooms').doc('daily_$d').collection('matches').doc(roomCode);
   }
 
   // Generate 6 character code
@@ -251,6 +251,7 @@ class RoomService {
       RoomPlayer hostPlayer = RoomPlayer(uid: uid, name: name);
       await _getRoomRef(roomCode).collection('players').doc(uid).set(hostPlayer.toMap());
 
+      await _addToRoomHistory(roomCode, today);
       await HiveService.saveHostRoom(roomCode, today);
       
       return roomCode;
@@ -328,6 +329,8 @@ class RoomService {
 
       RoomPlayer player = RoomPlayer(uid: uid, name: name);
       await roomRef.collection('players').doc(uid).set(player.toMap());
+      
+      await _addToRoomHistory(roomCode, today);
       
       return 'success';
     } catch (e) {
@@ -542,11 +545,48 @@ class RoomService {
   }
 
   // Streams for real-time updates
-  Stream<DocumentSnapshot> roomStream(String roomCode) {
-    return _getRoomRef(roomCode).snapshots();
+  Stream<DocumentSnapshot> roomStream(String roomCode, {String? date}) {
+    return _getRoomRef(roomCode, date: date).snapshots();
   }
 
-  Stream<QuerySnapshot> playersStream(String roomCode) {
-    return _getRoomRef(roomCode).collection('players').snapshots();
+  Stream<QuerySnapshot> playersStream(String roomCode, {String? date}) {
+    return _getRoomRef(roomCode, date: date).collection('players').snapshots();
+  }
+
+  // --- ROOM HISTORY ---
+
+  Future<void> _addToRoomHistory(String roomCode, String date) async {
+    String? uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      await _db.collection('users').doc(uid).collection('room_history').doc(roomCode).set({
+        'roomCode': roomCode,
+        'date': date,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint("Error adding to room history: $e");
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getUserRoomHistory() async {
+    String? uid = _auth.currentUser?.uid;
+    if (uid == null) return [];
+
+    try {
+      QuerySnapshot snap = await _db
+          .collection('users')
+          .doc(uid)
+          .collection('room_history')
+          .orderBy('timestamp', descending: true)
+          .limit(20)
+          .get();
+
+      return snap.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+    } catch (e) {
+      debugPrint("Error fetching room history: $e");
+      return [];
+    }
   }
 }

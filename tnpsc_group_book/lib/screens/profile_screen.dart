@@ -485,7 +485,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ],
                             ListTile(
                               leading: const Icon(
-                                Icons.info_outline_rounded,
+                                Icons.update,
                                 color: Colors.grey,
                               ),
                               title: Text(AppLanguage.getString('app_version')),
@@ -503,7 +503,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: Colors.grey,
                               ),
                               onTap: () =>
-                                  _launchURL('https://tnpscmaster.com/about'),
+                                  _launchURL('https://tnpscmasterapp.blogspot.com/2026/06/about-app.html'),
                             ),
                             const Divider(height: 1),
                             ListTile(
@@ -519,7 +519,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: Colors.grey,
                               ),
                               onTap: () => _launchURL(
-                                'https://tnpscmaster.com/privacy-policy',
+                                'https://tnpscmasterapp.blogspot.com/2026/06/privacy-policy.html',
                               ),
                             ),
                             const Divider(height: 1),

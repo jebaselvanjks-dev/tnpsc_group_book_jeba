@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:tnpsc_group_book/screens/room_leaderboard_screen.dart';
 import '../services/room_service.dart';
 import '../utils/app_language.dart';
 import '../utils/app_theme.dart';
@@ -476,6 +477,76 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     );
   }
 
+  Widget _buildRoomHistorySection(BuildContext context, bool isDark) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _roomService.getUserRoomHistory(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final history = snapshot.data!;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 4.0, bottom: 12.0),
+              child: Text(
+                AppLanguage.getString('room_history'),
+                style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ...history.map((room) {
+              final code = room['roomCode'] as String;
+              final date = room['date'] as String;
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade900 : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))
+                  ],
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.history_rounded, color: AppTheme.primaryColor, size: 20),
+                  ),
+                  title: Text(
+                    code,
+                    style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.secondaryColor).copyWith(letterSpacing: 1.5),
+                  ),
+                  subtitle: Text(
+                    date,
+                    style: AppTheme.getStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RoomLeaderboardScreen(roomCode: code, date: date),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }).toList(),
+            const SizedBox(height: 40),
+          ],
+        );
+      },
+    );
+  }
+
   void _showError(String message) {
     debugPrint(message);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red));
@@ -726,10 +797,12 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(
-                                      AppLanguage.getString('enter_waiting_room'),
-                                      textAlign: TextAlign.center,
-                                      style: AppTheme.getStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 13),
+                                    Flexible(
+                                      child: Text(
+                                        AppLanguage.getString('enter_waiting_room'),
+                                        textAlign: TextAlign.center,
+                                        style: AppTheme.getStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 14),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -883,6 +956,10 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                       ],
                     ),
                   ),
+
+                  const SizedBox(height: 30),
+
+                  _buildRoomHistorySection(context, isDark),
                 ],
               ),
             ),

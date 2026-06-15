@@ -332,6 +332,8 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                   ),
                 ),
               ],
+              // பட்டனுக்குக் கீழே இதனைச் சேர்க்கவும்
+              const SizedBox(height: 60),
             ],
           ),
         );

@@ -38,15 +38,15 @@ async function sendPasswordEmail(to, password) {
   }
   const from = process.env.GMAIL_USER || functions.config().gmail?.user;
   await transporter.sendMail({
-    from: `TNPSC Study Hub <${from}>`,
+    from: `TNPSC Master <${from}>`,
     to,
-    subject: "Your TNPSC Study Hub password",
+    subject: "Your TNPSC Master password",
     text:
-      `Your password for TNPSC Study Hub is: ${password}\n\n` +
+      `Your password for TNPSC Master is: ${password}\n\n` +
       "Please sign in and change your password from Settings if you want.\n\n" +
       "If you did not request this, contact support.",
     html:
-      `<p>Your password for <b>TNPSC Study Hub</b> is:</p>` +
+      `<p>Your password for <b>TNPSC Master</b> is:</p>` +
       `<p style="font-size:20px;font-weight:bold">${password}</p>` +
       `<p>Sign in and use <b>Change Password</b> in Settings to set a new one.</p>`,
   });

@@ -6,7 +6,7 @@
 class PaymentConfig {
   static const String razorpayKeyId = 'rzp_test_6527658900001005';
 
-  static const String appName = 'TNPSC Group Book';
+  static const String appName = 'TNPSC Master';
 
   static String get normalizedKeyId =>
       razorpayKeyId.replaceAll(RegExp(r'\s+'), '').trim();

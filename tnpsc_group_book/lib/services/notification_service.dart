@@ -249,9 +249,10 @@ class NotificationService {
   }
 
   static tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
-    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+    final tz.Location india = tz.getLocation('Asia/Kolkata');
+    final tz.TZDateTime now = tz.TZDateTime.now(india);
     tz.TZDateTime scheduledDate =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    tz.TZDateTime(india, now.year, now.month, now.day, hour, minute);
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }

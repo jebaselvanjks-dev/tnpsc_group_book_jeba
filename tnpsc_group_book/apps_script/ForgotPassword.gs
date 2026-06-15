@@ -1,5 +1,5 @@
 /**
- * TNPSC Study Hub – Forgot password email (works without Firebase Blaze plan)
+ * TNPSC Master – Forgot password email (works without Firebase Blaze plan)
  *
  * SETUP (one time):
  * 1. Firebase Console → Project Settings → Service accounts → Generate new private key (JSON)
@@ -162,21 +162,21 @@ function sendGmail(to, password) {
     Session.getActiveUser().getEmail();
   GmailApp.sendEmail(
     to,
-    "Your TNPSC Study Hub password",
-    "Your password for TNPSC Study Hub is: " +
+    "Your TNPSC Master password",
+    "Your password for TNPSC Master is: " +
       password +
       "\n\n1. Open the app and Sign In with this password\n" +
       "2. You will be asked to set a new password\n\n" +
       "If you did not request this, ignore this email.",
     {
       htmlBody:
-        "<p>Your password for <b>TNPSC Study Hub</b> is:</p>" +
+        "<p>Your password for <b>TNPSC Master</b> is:</p>" +
         "<p style='font-size:22px;font-weight:bold'>" +
         password +
         "</p>" +
         "<p>1. <b>Sign In</b> with this password<br/>" +
         "2. Set a <b>new password</b> in the app</p>",
-      name: "TNPSC Study Hub",
+      name: "TNPSC Master",
       // from: sender,
     }
   );
@@ -188,16 +188,16 @@ function sendOtpGmail(to, otp) {
     Session.getActiveUser().getEmail();
   GmailApp.sendEmail(
     to,
-    "Your TNPSC Study Hub OTP",
-    "Your OTP for TNPSC Study Hub is: " + otp + "\n\nUse this code to login to your account.",
+    "Your TNPSC Master OTP",
+    "Your OTP for TNPSC Master is: " + otp + "\n\nUse this code to login to your account.",
     {
       htmlBody:
-        "<p>Your OTP for <b>TNPSC Study Hub</b> is:</p>" +
+        "<p>Your OTP for <b>TNPSC Master</b> is:</p>" +
         "<p style='font-size:26px;font-weight:bold;color:#1a73e8;letter-spacing:4px;'>" +
         otp +
         "</p>" +
         "<p>Use this code to securely login to your account. This code is valid for your current session.</p>",
-      name: "TNPSC Study Hub",
+      name: "TNPSC Master",
       // from: sender,
     }
   );

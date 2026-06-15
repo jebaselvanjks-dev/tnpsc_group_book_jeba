@@ -12,10 +12,10 @@ class RewardService {
   /// Change Ad Id
 
   /// Test Rewarded Ad ID (replace with real ID in production)
-  static const String adUnitId = 'ca-app-pub-3940256099942544/5224354917';
+  // static const String adUnitId = 'ca-app-pub-3940256099942544/5224354917';
 
   /// REAL Rewarded Ad ID
-  // static const String adUnitId = 'ca-app-pub-9952621231526514/2142313722';
+  static const String adUnitId = 'ca-app-pub-9952621231526514/2142313722';
 
   static void loadRewardedAd() {
     RewardedAd.load(

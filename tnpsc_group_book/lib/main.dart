@@ -28,6 +28,12 @@ final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<Scaffol
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Lock orientation to portrait
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  
   // 1. Critical initializations (Fast & Local)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

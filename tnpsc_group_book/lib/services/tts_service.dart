@@ -16,7 +16,7 @@ class TtsService {
     if (_backgroundInitialized) return;
     try {
       const androidConfig = FlutterBackgroundAndroidConfig(
-        notificationTitle: "TNPSC Study Hub",
+        notificationTitle: "TNPSC Master",
         notificationText: "ஆடியோ பின்னணியில் இயங்குகிறது | Audio guide is playing",
         notificationImportance: AndroidNotificationImportance.normal,
         notificationIcon: AndroidResource(name: 'ic_launcher', defType: 'mipmap'),

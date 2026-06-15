@@ -90,7 +90,7 @@ class PasswordEmailService {
           'to_email': norm,
           'user_email': norm,
           'password': tempPassword,
-          'app_name': 'TNPSC Study Hub',
+          'app_name': 'TNPSC Master',
         },
       }),
     );
@@ -180,7 +180,7 @@ class PasswordEmailService {
             'to_email': norm,
             'user_email': norm,
             'password': otp, // Injecting OTP into the generic password placeholder
-            'app_name': 'TNPSC Study Hub OTP',
+            'app_name': 'TNPSC Master OTP',
           },
         }),
       );

@@ -16,10 +16,10 @@ class _AdBannerState extends State<AdBanner> {
   /// Change Ad Id
 
   /// Test Banner ID (Replace with your own ID later)
-  final String adUnitId = 'ca-app-pub-3940256099942544/6300978111';
+  // final String adUnitId = 'ca-app-pub-3940256099942544/6300978111';
 
   /// Real Banner ID
-  // final String adUnitId = 'ca-app-pub-9952621231526514/4594388106';
+  final String adUnitId = 'ca-app-pub-9952621231526514/4594388106';
 
   @override
   void initState() {
