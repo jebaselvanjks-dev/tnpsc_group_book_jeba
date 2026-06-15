@@ -515,10 +515,10 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                   leading: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: AppTheme.secondaryColorLight.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.history_rounded, color: AppTheme.primaryColor, size: 20),
+                    child: const Icon(Icons.history_rounded, color: AppTheme.secondaryColorLight, size: 20),
                   ),
                   title: Text(
                     code,
