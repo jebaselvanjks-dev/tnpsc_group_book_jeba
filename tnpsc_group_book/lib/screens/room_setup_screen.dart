@@ -291,7 +291,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                     child: const Icon(Icons.ondemand_video_rounded, color: Colors.orange, size: 40),
                   ),
                   const SizedBox(height: 16),
-                  Text(AppLanguage.getString('room_limit_title'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20),
+                  Text(AppLanguage.getString('room_limit_title'), style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                 ],
               ),
@@ -301,7 +301,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                   Text(
                     AppLanguage.getString('room_limit_desc'),
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(fontSize: 14, height: 1.4),
+                    style: AppTheme.getStyle(fontSize: 14, height: 1.4),
                   ),
                   const SizedBox(height: 20),
                   Container(
@@ -312,7 +312,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                     ),
                     child: Text(
                       AppLanguage.getString('ads_watched').replaceAll('{watched}', '$adWatches'),
-                      style: GoogleFonts.outfit(
+                      style: AppTheme.getStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.orange.shade800,
                         fontSize: 15,
@@ -370,7 +370,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                   ),
                   label: Text(
                     AppLanguage.getString('watch_ad_btn'),
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                    style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -449,7 +449,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                   ),
                   child: Text(
                     AppLanguage.getString('ok'),
-                    style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: AppTheme.getStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -468,9 +468,9 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: isDark ? AppTheme.secondaryColor : AppTheme.primaryColor)),
+          Text(title, style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 15, color: isDark ? AppTheme.secondaryColor : AppTheme.primaryColor)),
           const SizedBox(height: 4),
-          Text(desc, style: GoogleFonts.outfit(fontSize: 13, height: 1.4, color: Colors.grey[500])),
+          Text(desc, style: AppTheme.getStyle(fontSize: 13, height: 1.4, color: Colors.grey[500])),
         ],
       ),
     );
@@ -491,13 +491,14 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           AppLanguage.languageNotifier.value == 'ta' ? 'வெளியேறவா?' : 'Exit Room Setup?',
-          style: GoogleFonts.outfit(fontSize: 18,fontWeight: FontWeight.bold,color: isDark ? Colors.white70 : AppTheme.textMainColor),
+          style: AppTheme.getStyle(fontSize: 18,fontWeight: FontWeight.bold,color: isDark ? Colors.white70 : AppTheme.textMainColor),
         ),
         content: Text(
           AppLanguage.languageNotifier.value == 'ta' 
             ? 'குரூப் தேர்வு அமைப்பிலிருந்து வெளியேற விரும்புகிறீர்களா?' 
             : 'Are you sure you want to exit the room setup?',
-          style: GoogleFonts.outfit(
+          style: AppTheme.getStyle(
+              fontSize: 15,
               color: isDark ? Colors.white : AppTheme.textMainColor
           ),
         ),
@@ -547,7 +548,8 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
               }
             },
           ),
-          title: Text(AppLanguage.getString('room_screen_title'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          title: Text(AppLanguage.getString('room_screen_title'), style: AppTheme.getStyle(
+              fontSize: 15, fontWeight: FontWeight.bold)),
           backgroundColor: Colors.transparent,
           elevation: 0,
           iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
@@ -580,7 +582,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                         const SizedBox(height: 24),
                         Text(
                           AppLanguage.getString('loading_quiz'),
-                          style: GoogleFonts.outfit(
+                          style: AppTheme.getStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: isDark ? AppTheme.secondaryColor : AppTheme.textSecondaryColor,
@@ -692,12 +694,11 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                               ),
                               child: Text(
                                 _existingRoomCode!,
-                                style: GoogleFonts.outfit(
+                                style: AppTheme.getStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
-                                  letterSpacing: 3,
                                   color: AppTheme.secondaryColor,
-                                ),
+                                ).copyWith(letterSpacing: 3),
                               ),
                             ),
                           ),
@@ -728,7 +729,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                     Text(
                                       AppLanguage.getString('enter_waiting_room'),
                                       textAlign: TextAlign.center,
-                                      style: GoogleFonts.outfit(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 13),
+                                      style: AppTheme.getStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 13),
                                     ),
                                   ],
                                 ),
@@ -828,7 +829,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
-                              child: Text(AppLanguage.getString('create_room_btn'), style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                              child: Text(AppLanguage.getString('create_room_btn'), style: AppTheme.getStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                             ),
                           )
                         ],
@@ -876,7 +877,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: Text(AppLanguage.getString('join_room_btn'), style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                            child: Text(AppLanguage.getString('join_room_btn'), style: AppTheme.getStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                           ),
                         )
                       ],

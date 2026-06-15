@@ -145,7 +145,7 @@ class _AiTutorScreenState extends State<AiTutorScreen> {
         ),
         title: Text(
           AppLanguage.getString('ai_tutor'),
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18, color: isDark ? Colors.white : AppTheme.textMainColor),
+          style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isDark ? Colors.white : AppTheme.textMainColor),
         ),
         centerTitle: true,
       ),
@@ -172,7 +172,7 @@ class _AiTutorScreenState extends State<AiTutorScreen> {
                   const SizedBox(width: 10),
                   Text(
                     AppLanguage.getString('ai_thinking'),
-                    style: GoogleFonts.outfit(fontSize: 13, color: isDark ? Colors.white54 : Colors.grey.shade600),
+                    style: AppTheme.getStyle(fontSize: 13, color: isDark ? Colors.white54 : Colors.grey.shade600),
                   ),
                 ],
               ),
@@ -203,10 +203,10 @@ class _AiTutorScreenState extends State<AiTutorScreen> {
               ),
               child: TextField(
                 controller: _controller,
-                style: GoogleFonts.outfit(fontSize: 15, color: isDark ? Colors.white : AppTheme.textMainColor),
+                style: AppTheme.getStyle(fontSize: 15, color: isDark ? Colors.white : AppTheme.textMainColor),
                 decoration: InputDecoration(
                   hintText: AppLanguage.getString('ask_ai_hint'),
-                  hintStyle: GoogleFonts.outfit(color: isDark ? Colors.white38 : Colors.grey.shade400),
+                  hintStyle: AppTheme.getStyle(fontSize: 13.5, color: isDark ? Colors.white38 : Colors.grey.shade400),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
@@ -303,7 +303,7 @@ class ChatMessage extends StatelessWidget {
                 ),
                 child: Text(
                   text,
-                  style: GoogleFonts.outfit(
+                  style: AppTheme.getStyle(
                     fontSize: 15,
                     color: isUser ? Colors.white : (isDark ? Colors.white.withOpacity(0.9) : AppTheme.textMainColor),
                     height: 1.4,

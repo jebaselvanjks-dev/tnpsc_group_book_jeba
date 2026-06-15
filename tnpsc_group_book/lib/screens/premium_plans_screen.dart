@@ -261,19 +261,19 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.outfit(
+                                style: AppTheme.getStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18,
                                   color: isDark ? Colors.white : AppTheme.textMainColor,
-                                  shadows: isDark
-                                      ? [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.5),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          )
-                                        ]
-                                      : null,
+                                  // shadows: isDark
+                                  //     ? [
+                                  //         BoxShadow(
+                                  //           color: Colors.black.withOpacity(0.5),
+                                  //           blurRadius: 4,
+                                  //           offset: const Offset(0, 2),
+                                  //         )
+                                  //       ]
+                                  //     : null,
                                 ),
                               ),
                             ),
@@ -302,11 +302,10 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                               ),
                               child: Text(
                                 ta ? 'VIP உறுப்பினர்' : 'VIP MEMBERSHIP',
-                                style: GoogleFonts.outfit(
+                                style: AppTheme.getStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
                                   color: Colors.black87,
-                                  letterSpacing: 1.5,
                                 ),
                               ),
                             ),
@@ -318,7 +317,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                                     ? 'உங்கள் அரசு தேர்வு தயாரிப்பை வேகப்படுத்துங்கள்!'
                                     : 'Accelerate your government exam preparation today!',
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.outfit(
+                                style: AppTheme.getStyle(
                                   fontSize: 14,
                                   color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
                                 ),
@@ -455,11 +454,10 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                         ta ? 'சிறந்த மதிப்பு' : 'BEST VALUE',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(
+                        style: AppTheme.getStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 10,
                           color: Colors.black,
-                          letterSpacing: 1.0,
                         ),
                       ),
                     ),
@@ -474,7 +472,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.outfit(
+                  style: AppTheme.getStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : AppTheme.textMainColor,
@@ -487,7 +485,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                   children: [
                     Text(
                       '₹$price',
-                      style: GoogleFonts.outfit(
+                      style: AppTheme.getStyle(
                         fontSize: 38,
                         fontWeight: FontWeight.bold,
                         color: isPopular
@@ -498,7 +496,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                     const SizedBox(width: 6),
                     Text(
                       '/ $period',
-                      style: GoogleFonts.outfit(
+                      style: AppTheme.getStyle(
                         fontSize: 15,
                         color: isDark ? Colors.white60 : AppTheme.textSecondaryColor,
                       ),
@@ -536,7 +534,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                         Expanded(
                           child: Text(
                             feature,
-                            style: GoogleFonts.outfit(
+                            style: AppTheme.getStyle(
                               fontSize: 14.5,
                               height: 1.3,
                               color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
@@ -592,10 +590,9 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.center,
-                                  style: GoogleFonts.outfit(
+                                  style: AppTheme.getStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
-                                    letterSpacing: 0.5,
                                   ),
                                 ),
                               ),
@@ -644,7 +641,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                 const SizedBox(height: 18),
                 Text(
                   ta ? 'வாழ்த்துகள்!' : 'Congratulations!',
-                  style: GoogleFonts.outfit(
+                  style: AppTheme.getStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 22,
                     color: isDark ? Colors.white : AppTheme.textMainColor,
@@ -657,7 +654,7 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                   ? '$planTitle (₹$price) வெற்றிகரமாக செலுத்தப்பட்டது! பிரீமியம் அம்சங்கள் திறக்கப்பட்டன.'
                   : 'Your $planTitle (₹$price) payment was successful! Premium features are now unlocked.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: AppTheme.getStyle(
                 fontSize: 15,
                 height: 1.4,
                 color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
@@ -679,7 +676,8 @@ class _PremiumPlansScreenState extends State<PremiumPlansScreen> {
                     ),
                     child: Text(
                       ta ? 'தொடரவும்' : 'Continue',
-                      style: GoogleFonts.outfit(
+                      style: AppTheme.getStyle(
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

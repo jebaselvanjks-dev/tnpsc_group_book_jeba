@@ -38,7 +38,7 @@ class MockTestScreen extends StatelessWidget {
               category != null 
                   ? "${AppLanguage.getString(category!)} ${AppLanguage.getString('mock_tests_title')}"
                   : AppLanguage.getString('mock_tests_title'),
-              style: GoogleFonts.outfit(
+              style: AppTheme.getStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
                 color: isDark ? Colors.white : AppTheme.textMainColor,
@@ -62,7 +62,7 @@ class MockTestScreen extends StatelessWidget {
                       const SizedBox(height: 16),
                       Text(
                         AppLanguage.getString('no_mock_tests'),
-                        style: GoogleFonts.outfit(fontSize: 18, color: Colors.grey),
+                        style: AppTheme.getStyle(fontSize: 18, color: Colors.grey),
                       ),
                     ],
                   ),
@@ -172,7 +172,7 @@ bool isAllowedDay = const [2, 4, 6, 7].contains(DateTime.now().weekday);
               Expanded(
                 child: Text(
                   title,
-                  style: GoogleFonts.outfit(
+                  style: AppTheme.getStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -188,11 +188,11 @@ bool isAllowedDay = const [2, 4, 6, 7].contains(DateTime.now().weekday);
             children: [
               const Icon(Icons.help_outline_rounded, color: Colors.white70, size: 16),
               const SizedBox(width: 6),
-              Text(AppLanguage.getString('questions_count_label').replaceAll('{count}', questionsCount.toString()), style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14)),
+              Text(AppLanguage.getString('questions_count_label').replaceAll('{count}', questionsCount.toString()), style: AppTheme.getStyle(color: Colors.white70, fontSize: 14)),
               const SizedBox(width: 16),
               const Icon(Icons.timer_outlined, color: Colors.white70, size: 16),
               const SizedBox(width: 6),
-              Text(AppLanguage.getString('one_hour'), style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14)),
+              Text(AppLanguage.getString('one_hour'), style: AppTheme.getStyle(color: Colors.white70, fontSize: 14)),
             ],
           ),
           const SizedBox(height: 24),
@@ -229,7 +229,7 @@ bool isAllowedDay = const [2, 4, 6, 7].contains(DateTime.now().weekday);
               ),
               child: Text(
                 (isLocked || !isAllowedDay) ? AppLanguage.getString('locked') : (isExpired ? AppLanguage.getString('review_previous_test') : AppLanguage.getString('start_mock_test')), 
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)
+                style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 16)
               ),
             ),
           )
@@ -258,7 +258,7 @@ bool isAllowedDay = const [2, 4, 6, 7].contains(DateTime.now().weekday);
             const SizedBox(height: 16),
             Text(
               ta ? 'தேர்வு பூட்டப்பட்டுள்ளது!' : 'Mock Test Locked!',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20),
+              style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ],
         ),
@@ -267,7 +267,7 @@ bool isAllowedDay = const [2, 4, 6, 7].contains(DateTime.now().weekday);
             ? 'அனைத்து TNPSC மாதிரித் தேர்வுகளையும் எழுத VIP புரோ (₹99) அல்லது எலைட் (₹259) மெம்பர்ஷிப் பெற வேண்டும்.'
             : 'Accessing premium mock tests requires a VIP Pro (₹99) or Elite (₹259) membership plan.',
           textAlign: TextAlign.center,
-          style: GoogleFonts.outfit(fontSize: 14),
+          style: AppTheme.getStyle(fontSize: 14),
         ),
         actions: [
           TextButton(

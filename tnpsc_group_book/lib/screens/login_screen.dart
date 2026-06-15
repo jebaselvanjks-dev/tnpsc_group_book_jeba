@@ -115,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 32),
                     Text(
                       AppLanguage.getString('welcome_title'),
-                      style: GoogleFonts.outfit(
+                      style: AppTheme.getStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: isDark ? Colors.white : AppTheme.textMainColor,
@@ -125,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     Text(
                       ta ? 'உள்நுழைந்து உங்களின் TNPSC தயாரிப்பைத் தொடரவும்.' : 'Login to continue your TNPSC preparation.',
-                      style: GoogleFonts.outfit(
+                      style: AppTheme.getStyle(
                         fontSize: 15,
                         color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
                       ),
@@ -148,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           : const FaIcon(FontAwesomeIcons.google, color: Colors.red),
                         label: Text(
                           ta ? 'Google மூலம் தொடரவும்' : 'Continue with Google',
-                          style: GoogleFonts.outfit(
+                          style: AppTheme.getStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: isDark ? Colors.white : Colors.black87,

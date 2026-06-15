@@ -127,7 +127,7 @@ class ReviewScreen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             "Q${index + 1}: ${_formatBilingual(q.question)}",
-                            style: GoogleFonts.outfit(
+                            style: AppTheme.getStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
                               color: isDark ? Colors.white : AppTheme.textMainColor,
@@ -175,7 +175,8 @@ class ReviewScreen extends StatelessWidget {
                             children: [
                               Text(
                                 AppLanguage.getString('explanation'),
-                                style: GoogleFonts.outfit(
+                                style: AppTheme.getStyle(
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: isDark ? Colors.white70 : Colors.black87,
                                 ),
@@ -183,7 +184,7 @@ class ReviewScreen extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 _formatBilingual(q.explanation),
-                                style: GoogleFonts.outfit(
+                                style: AppTheme.getStyle(
                                   fontSize: 14,
                                   color: isDark ? Colors.white60 : Colors.black54,
                                 ),
@@ -238,7 +239,7 @@ class ReviewScreen extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       "AI Deep Insight",
-                      style: GoogleFonts.outfit(
+                      style: AppTheme.getStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -307,14 +308,14 @@ class ReviewScreen extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.outfit(
+                  style: AppTheme.getStyle(
                     fontSize: 12,
                     color: isDark ? Colors.white60 : Colors.black54,
                   ),
                 ),
                 Text(
                   _formatBilingual(answer),
-                  style: GoogleFonts.outfit(
+                  style: AppTheme.getStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: color,

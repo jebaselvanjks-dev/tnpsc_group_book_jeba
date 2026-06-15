@@ -316,7 +316,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
                     : HiveService.isMockQuizDone()
                     ? AppLanguage.getString('completed')
                     : AppLanguage.getString('start_quiz'),
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ),
           )
@@ -340,7 +340,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+            style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ],
       ),
@@ -387,7 +387,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
             Text(
               AppLanguage.getString(key),
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: AppTheme.getStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -434,7 +434,7 @@ class _SubjectCard extends StatelessWidget {
                       Flexible(
                         child: Text(
                           subject.title,
-                          style: GoogleFonts.outfit(
+                          style: AppTheme.getStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: isDark ? Colors.white : AppTheme.textMainColor,

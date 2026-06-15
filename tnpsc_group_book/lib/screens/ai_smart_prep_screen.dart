@@ -190,7 +190,7 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
         ),
         title: Text(
           AppLanguage.getString('ai_smart_prep'),
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18, color: isDark ? Colors.white : AppTheme.textMainColor),
+          style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isDark ? Colors.white : AppTheme.textMainColor),
         ),
         centerTitle: true,
         actions: [
@@ -230,7 +230,7 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
                   const SizedBox(width: 10),
                   Text(
                     AppLanguage.getString('ai_thinking'),
-                    style: GoogleFonts.outfit(fontSize: 13, color: isDark ? Colors.white54 : Colors.grey.shade600),
+                    style: AppTheme.getStyle(fontSize: 13, color: isDark ? Colors.white54 : Colors.grey.shade600),
                   ),
                 ],
               ),
@@ -260,13 +260,13 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
             Text(
               "Smart Syllabus Chat",
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
+              style: AppTheme.getStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
             ),
             const SizedBox(height: 16),
             Text(
               "Ask anything! I search your saved data first, then use AI to explain. If AI is slow, I'll show your data instantly.",
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(fontSize: 15, color: isDark ? Colors.white60 : Colors.grey.shade600, height: 1.5),
+              style: AppTheme.getStyle(fontSize: 15, color: isDark ? Colors.white60 : Colors.grey.shade600, height: 1.5),
             ),
             const SizedBox(height: 40),
             _buildSuggestionChip("History", isDark),
@@ -294,7 +294,7 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
         ),
         child: Text(
           text,
-          style: GoogleFonts.outfit(color: isDark ? Colors.white70 : AppTheme.textMainColor, fontSize: 14),
+          style: AppTheme.getStyle(color: isDark ? Colors.white70 : AppTheme.textMainColor, fontSize: 14),
         ),
       ),
     );
@@ -320,10 +320,10 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
               ),
               child: TextField(
                 controller: _controller,
-                style: GoogleFonts.outfit(fontSize: 15, color: isDark ? Colors.white : AppTheme.textMainColor),
+                style: AppTheme.getStyle(fontSize: 15, color: isDark ? Colors.white : AppTheme.textMainColor),
                 decoration: InputDecoration(
                   hintText: AppLanguage.getString('ask_ai_hint'),
-                  hintStyle: GoogleFonts.outfit(color: isDark ? Colors.white38 : Colors.grey.shade400),
+                  hintStyle: AppTheme.getStyle(fontSize: 13.5, color: isDark ? Colors.white38 : Colors.grey.shade400),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
@@ -420,7 +420,7 @@ class ChatMessage extends StatelessWidget {
                 ),
                 child: Text(
                   text,
-                  style: GoogleFonts.outfit(
+                  style: AppTheme.getStyle(
                     fontSize: 15,
                     color: isUser ? Colors.white : (isDark ? Colors.white.withOpacity(0.9) : AppTheme.textMainColor),
                     height: 1.4,

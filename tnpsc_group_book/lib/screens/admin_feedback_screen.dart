@@ -19,7 +19,7 @@ class AdminFeedbackScreen extends StatelessWidget {
         ),
         title: Text(
           "User Feedbacks",
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -45,7 +45,7 @@ class AdminFeedbackScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     "No feedback yet",
-                    style: GoogleFonts.outfit(fontSize: 18, color: Colors.grey),
+                    style: AppTheme.getStyle(fontSize: 18, color: Colors.grey),
                   ),
                 ],
               ),
@@ -82,7 +82,7 @@ class AdminFeedbackScreen extends StatelessWidget {
                           Expanded(
                             child: Text(
                               name,
-                              style: GoogleFonts.outfit(
+                              style: AppTheme.getStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                                 color: isDark ? Colors.white : AppTheme.textMainColor,
@@ -91,7 +91,7 @@ class AdminFeedbackScreen extends StatelessWidget {
                           ),
                           Text(
                             dateStr,
-                            style: GoogleFonts.outfit(
+                            style: AppTheme.getStyle(
                               fontSize: 12,
                               color: Colors.grey,
                             ),
@@ -101,7 +101,7 @@ class AdminFeedbackScreen extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         email,
-                        style: GoogleFonts.outfit(
+                        style: AppTheme.getStyle(
                           fontSize: 13,
                           color: isDark ? Colors.white70 : Colors.blueGrey,
                         ),
@@ -111,7 +111,7 @@ class AdminFeedbackScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         message,
-                        style: GoogleFonts.outfit(
+                        style: AppTheme.getStyle(
                           fontSize: 15,
                           height: 1.4,
                           color: isDark ? Colors.white : AppTheme.textMainColor,

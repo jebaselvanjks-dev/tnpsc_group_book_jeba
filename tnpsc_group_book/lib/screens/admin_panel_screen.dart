@@ -40,7 +40,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           children: [
             Text(
               "Management Tools",
-              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+              style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             // AI Tool Card
@@ -119,7 +119,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               const LinearProgressIndicator(),
               const SizedBox(height: 8),
               Text(_currentStatus,
-                  style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey)),
+                  style: AppTheme.getStyle(fontSize: 12, color: Colors.grey)),
             ],
           ],
         ),
@@ -161,7 +161,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   Expanded(
                     child: Text(
                       title,
-                      style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
                   const Icon(Icons.chevron_right_rounded, color: Colors.grey),

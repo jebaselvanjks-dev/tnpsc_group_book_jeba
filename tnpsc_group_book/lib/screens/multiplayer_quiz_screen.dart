@@ -221,7 +221,7 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
                   int secs = _remainingSeconds % 60;
                   return Text(
                     "${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}",
-                    style: GoogleFonts.outfit(
+                    style: AppTheme.getStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: _remainingSeconds < 60 ? Colors.red : AppTheme.secondaryColor,

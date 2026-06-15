@@ -48,7 +48,7 @@ class _MistakeBankScreenState extends State<MistakeBankScreen> {
         ),
         title: Text(
           AppLanguage.getString('mistake_bank'),
-          style: GoogleFonts.outfit(
+          style: AppTheme.getStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
             color: isDark ? Colors.white : AppTheme.textMainColor,
@@ -122,7 +122,7 @@ class _MistakeBankScreenState extends State<MistakeBankScreen> {
             Text(
               AppLanguage.getString('no_mistakes_title'),
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
+              style: AppTheme.getStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
             ),
             const SizedBox(height: 12),
             Padding(
@@ -162,7 +162,7 @@ class _MistakeBankScreenState extends State<MistakeBankScreen> {
         children: [
           Text(
             q.question.replaceAll('?', '?\n'),
-            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: isDark ? Colors.white : AppTheme.textMainColor),
+            style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.w600, color: isDark ? Colors.white : AppTheme.textMainColor),
           ),
           const SizedBox(height: 16),
           Container(
@@ -180,7 +180,7 @@ class _MistakeBankScreenState extends State<MistakeBankScreen> {
                 Expanded(
                   child: Text(
                     "${AppLanguage.getString('correct_answer')}: ${q.options[q.correctOptionIndex]}",
-                    style: GoogleFonts.outfit(fontSize: 14, color: isDark ? Colors.green.shade200 : Colors.green.shade800, fontWeight: FontWeight.bold),
+                    style: AppTheme.getStyle(fontSize: 14, color: isDark ? Colors.green.shade200 : Colors.green.shade800, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],

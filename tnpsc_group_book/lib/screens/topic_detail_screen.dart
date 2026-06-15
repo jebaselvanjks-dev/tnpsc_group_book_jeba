@@ -274,7 +274,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                           const SizedBox(width: 10),
                           Text(
                             AppLanguage.getString('audio_settings'),
-                            style: GoogleFonts.outfit(
+                            style: AppTheme.getStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: isDark ? Colors.white : Colors.black87,

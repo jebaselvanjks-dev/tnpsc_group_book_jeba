@@ -145,7 +145,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
               icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
               onPressed: () => Navigator.pop(context),
             ),
-            title: Text(AppLanguage.getString('group_test_lobby'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            title: Text(AppLanguage.getString('group_test_lobby'), style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold)),
             backgroundColor: Colors.transparent,
             elevation: 0,
             iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
@@ -179,7 +179,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
                   child: Text(
                     AppLanguage.getString('welcome_group_quiz'),
-                    style: GoogleFonts.outfit(
+                    style: AppTheme.getStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
                       color: isDark ? Colors.white70 : Colors.black54,
@@ -191,7 +191,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
                   child: Text(
                     AppLanguage.getString(_subject),
-                    style: GoogleFonts.outfit(
+                    style: AppTheme.getStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: isDark ? Colors.white60 : Colors.black87,
@@ -203,7 +203,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   child: Text(
                     AppLanguage.getString('room_setup_note'),
-                    style: GoogleFonts.outfit(
+                    style: AppTheme.getStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
                       color: isDark ? Colors.white60 : Colors.black45,
@@ -222,7 +222,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                   ),
                   child: Text(
                     widget.roomCode,
-                    style: GoogleFonts.outfit(fontSize: 40, fontWeight: FontWeight.bold, letterSpacing: 8, color: AppTheme.secondaryColor),
+                    style: AppTheme.getStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.secondaryColor).copyWith(letterSpacing: 8),
                   ),
                 ),
                 // const SizedBox(height: 30),
@@ -311,7 +311,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                                       ),
                                       child: Text(
                                         AppLanguage.getString('start_group_test'),
-                                        style: GoogleFonts.outfit(
+                                        style: AppTheme.getStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 18,

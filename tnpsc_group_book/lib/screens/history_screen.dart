@@ -47,7 +47,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         ),
         title: Text(
           AppLanguage.getString('my_history'),
-          style: GoogleFonts.outfit(
+          style: AppTheme.getStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: isDark ? Colors.white : AppTheme.textMainColor,
@@ -83,7 +83,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             Text(
               textAlign: TextAlign.center,
               AppLanguage.getString('no_history_title'),
-              style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
+              style: AppTheme.getStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
             ),
             const SizedBox(height: 12),
             Text(
@@ -129,7 +129,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: Center(
               child: Text(
                 "${percentage.toInt()}%",
-                style: GoogleFonts.outfit(
+                style: AppTheme.getStyle(
                   color: scoreColor,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
@@ -144,14 +144,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
               children: [
                 Text(
                   subject == "Daily Quiz" ? AppLanguage.getString('daily_quiz') : subject,
-                  style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
+                  style: AppTheme.getStyle(fontSize: 17, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 6),
                 Text(
                   dateStr,
-                  style: GoogleFonts.outfit(fontSize: 13, color: isDark ? Colors.white38 : Colors.grey.shade500),
+                  style: AppTheme.getStyle(fontSize: 13, color: isDark ? Colors.white38 : Colors.grey.shade500),
                 ),
               ],
             ),
@@ -162,7 +162,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             children: [
               Text(
                 "$score/$total",
-                style: GoogleFonts.outfit(
+                style: AppTheme.getStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: scoreColor,
@@ -170,7 +170,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
               Text(
                 AppLanguage.getString('points'),
-                style: GoogleFonts.outfit(fontSize: 11, color: isDark ? Colors.white38 : Colors.grey.shade500),
+                style: AppTheme.getStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.grey.shade500),
               ),
             ],
           ),

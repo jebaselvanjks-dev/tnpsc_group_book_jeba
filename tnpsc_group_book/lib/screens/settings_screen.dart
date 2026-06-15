@@ -284,7 +284,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // Rewards Section
                   Text(
                     AppLanguage.getString('rewards_gifts'),
-                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accentColor),
+                    style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accentColor),
                   ),
                   const SizedBox(height: 10),
                   ValueListenableBuilder<ThemeMode>(
@@ -397,7 +397,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // Help & Feedback Section
                   Text(
                     AppLanguage.getString('support'),
-                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accentColor),
+                    style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accentColor),
                   ),
                   const SizedBox(height: 10),
                   Card(
@@ -488,7 +488,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     // Admin Settings Section
                     Text(
                       AppLanguage.getString('admin_panel'),
-                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accentColor),
+                      style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accentColor),
                     ),
                     const SizedBox(height: 10),
                     Card(
@@ -599,7 +599,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     // Storage Settings Section
                     Text(
                       AppLanguage.getString('storage_offline'),
-                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accentColor),
+                      style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accentColor),
                     ),
                   ],
                   if (_isAdmin) ...[

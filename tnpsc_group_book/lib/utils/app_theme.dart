@@ -71,8 +71,38 @@ class AppTheme {
           fontWeight: FontWeight.bold,
           color: mainTextColor,
         ),
+        displayMedium: baseTextTheme.displayMedium?.copyWith(
+          fontSize: (28 + sizeOffset) * fontSizeFactorNotifier.value,
+          fontWeight: FontWeight.bold,
+          color: mainTextColor,
+        ),
+        displaySmall: baseTextTheme.displaySmall?.copyWith(
+          fontSize: (24 + sizeOffset) * fontSizeFactorNotifier.value,
+          fontWeight: FontWeight.bold,
+          color: mainTextColor,
+        ),
+        headlineLarge: baseTextTheme.headlineLarge?.copyWith(
+          fontSize: (22 + sizeOffset) * fontSizeFactorNotifier.value,
+          fontWeight: FontWeight.bold,
+          color: mainTextColor,
+        ),
+        headlineMedium: baseTextTheme.headlineMedium?.copyWith(
+          fontSize: (20 + sizeOffset) * fontSizeFactorNotifier.value,
+          fontWeight: FontWeight.bold,
+          color: mainTextColor,
+        ),
         titleLarge: baseTextTheme.titleLarge?.copyWith(
           fontSize: (20 + sizeOffset) * fontSizeFactorNotifier.value,
+          fontWeight: FontWeight.w600,
+          color: mainTextColor,
+        ),
+        titleMedium: baseTextTheme.titleMedium?.copyWith(
+          fontSize: (18 + sizeOffset) * fontSizeFactorNotifier.value,
+          fontWeight: FontWeight.w600,
+          color: mainTextColor,
+        ),
+        titleSmall: baseTextTheme.titleSmall?.copyWith(
+          fontSize: (16 + sizeOffset) * fontSizeFactorNotifier.value,
           fontWeight: FontWeight.w600,
           color: mainTextColor,
         ),
@@ -82,6 +112,22 @@ class AppTheme {
         ),
         bodyMedium: baseTextTheme.bodyMedium?.copyWith(
           fontSize: (14 + sizeOffset) * fontSizeFactorNotifier.value,
+          color: secTextColor,
+        ),
+        bodySmall: baseTextTheme.bodySmall?.copyWith(
+          fontSize: (12 + sizeOffset) * fontSizeFactorNotifier.value,
+          color: secTextColor,
+        ),
+        labelLarge: baseTextTheme.labelLarge?.copyWith(
+          fontSize: (14 + sizeOffset) * fontSizeFactorNotifier.value,
+          color: secTextColor,
+        ),
+        labelMedium: baseTextTheme.labelMedium?.copyWith(
+          fontSize: (12 + sizeOffset) * fontSizeFactorNotifier.value,
+          color: secTextColor,
+        ),
+        labelSmall: baseTextTheme.labelSmall?.copyWith(
+          fontSize: (10 + sizeOffset) * fontSizeFactorNotifier.value,
           color: secTextColor,
         ),
       ),

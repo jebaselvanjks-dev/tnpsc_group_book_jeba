@@ -290,20 +290,20 @@ class _ResultScreenState extends State<ResultScreen> {
                       ],
                     ),
                     // const SizedBox(height: 16),
-                    Text(
-                      message,
-                      style: GoogleFonts.outfit(
-                        fontSize: 25,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : AppTheme.textMainColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      AppLanguage.getString('quiz_completed'),
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(fontSize: 16, color: isDark ? Colors.white70 : AppTheme.textSecondaryColor),
-                    ),
+          Text(
+            message,
+            style: AppTheme.getStyle(
+              fontSize: 25,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : AppTheme.textMainColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            AppLanguage.getString('quiz_completed'),
+            textAlign: TextAlign.center,
+            style: AppTheme.getStyle(fontSize: 16, color: isDark ? Colors.white70 : AppTheme.textSecondaryColor),
+          ),
                     const SizedBox(height: 25),
 
                     // Stats Cards
@@ -445,7 +445,7 @@ class _ResultScreenState extends State<ResultScreen> {
                             padding: const EdgeInsets.only(top: 8.0, bottom: 8),
                             child: Text(
                               AppLanguage.getString('share_scorecard'),
-                              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
@@ -511,7 +511,7 @@ class _ResultScreenState extends State<ResultScreen> {
                             padding: const EdgeInsets.only(top: 8.0, bottom: 8),
                             child: Text(
                               AppLanguage.getString('go_home'),
-                              style: GoogleFonts.outfit(
+                              style: AppTheme.getStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: isDark ? Colors.white : AppTheme.textMainColor,
@@ -558,10 +558,10 @@ class _ResultScreenState extends State<ResultScreen> {
           const SizedBox(height: 12),
           Text(
             value,
-            style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
+            style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
           ),
           const SizedBox(height: 4),
-          Text(title, style: GoogleFonts.outfit(fontSize: 13, color: isDark ? Colors.white70 : AppTheme.textSecondaryColor)),
+          Text(title, style: AppTheme.getStyle(fontSize: 13, color: isDark ? Colors.white70 : AppTheme.textSecondaryColor)),
         ],
       ),
     );

@@ -255,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   AppLanguage.getString('listening_now'),
-                  style: GoogleFonts.outfit(
+                  style: AppTheme.getStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -266,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   text,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
+                  style: AppTheme.getStyle(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -299,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+            style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ],
       ),
@@ -369,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Text(
                 HiveService.isDailyQuizDone() ? AppLanguage.getString('completed') : AppLanguage.getString('start_quiz'),
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ),
           )
@@ -418,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               AppLanguage.getString(key),
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: AppTheme.getStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -858,7 +858,7 @@ void showSubjectTopicsBottomSheet(BuildContext context, Subject subject) {
                     Flexible(
                       child: Text(
                         subject.title,
-                        style: GoogleFonts.outfit(
+                        style: AppTheme.getStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: isDark ? Colors.white : AppTheme.textMainColor,
@@ -1069,7 +1069,7 @@ class _BookCard extends StatelessWidget {
                     ),
                     child: Text(
                       "PDF",
-                      style: GoogleFonts.outfit(
+                      style: AppTheme.getStyle(
                         color: isDark ? Colors.black : Colors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -1085,7 +1085,7 @@ class _BookCard extends StatelessWidget {
             title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.outfit(
+            style: AppTheme.getStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: isDark ? Colors.white : Colors.black,
@@ -1094,7 +1094,7 @@ class _BookCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             subject,
-            style: GoogleFonts.outfit(
+            style: AppTheme.getStyle(
               fontSize: 12,
               color: isDark ? Colors.white60 : Colors.black54,
               fontWeight: FontWeight.w500,
@@ -1103,7 +1103,7 @@ class _BookCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             edition,
-            style: GoogleFonts.outfit(
+            style: AppTheme.getStyle(
               fontSize: 10,
               color: isDark ? Colors.white38 : Colors.black38,
             ),

@@ -69,7 +69,7 @@ class WeakAreaScreen extends StatelessWidget {
             ? Center(
                 child: Text(
                   AppLanguage.getString('none') ?? 'None',
-                  style: GoogleFonts.outfit(fontSize: 18),
+                  style: AppTheme.getStyle(fontSize: 18),
                 ),
               )
             : Column(
@@ -77,7 +77,7 @@ class WeakAreaScreen extends StatelessWidget {
                 children: [
                   Text(
                     'முன்னிலை அறிய வேண்டிய பகுதிகள்',
-                    style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: AppTheme.getStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   Expanded(
@@ -95,7 +95,7 @@ class WeakAreaScreen extends StatelessWidget {
                             children: [
                               Text(
                                 subject,
-                                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600),
+                                style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.w600),
                               ),
                               const SizedBox(height: 4),
                               LinearProgressIndicator(
@@ -107,7 +107,7 @@ class WeakAreaScreen extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 'Wrong answers: $count',
-                                style: GoogleFonts.outfit(
+                                style: AppTheme.getStyle(
                                   fontSize: 12,
                                   color: isDark ? Colors.white70 : Colors.black54,
                                 ),
@@ -121,7 +121,7 @@ class WeakAreaScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     'மொத்த தவறுகள்: ${weakCounts.values.reduce((a, b) => a + b)}',
-                    style: GoogleFonts.outfit(fontSize: 16),
+                    style: AppTheme.getStyle(fontSize: 16),
                   ),
                 ],
               ),

@@ -536,7 +536,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                       const SizedBox(height: 24),
                                       Text(
                                         AppLanguage.getString('loading_quiz'),
-                                        style: GoogleFonts.outfit(
+                                        style: AppTheme.getStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
                                           color: isDark ? AppTheme.secondaryColor : AppTheme.textSecondaryColor,
@@ -673,7 +673,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     String timeStr = "${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}";
                     return Text(
                       timeStr,
-                      style: GoogleFonts.outfit(
+                      style: AppTheme.getStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: _remainingSeconds < 60 ? Colors.red : AppTheme.secondaryColorLight,
@@ -726,7 +726,7 @@ class _QuizScreenState extends State<QuizScreen> {
                               onPressed: _submitQuiz,
                               style: TextButton.styleFrom(
                                 foregroundColor: Colors.red,
-                                textStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                                textStyle: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold),
                               ),
                               child: Text(AppLanguage.getString('end')),
                             ),

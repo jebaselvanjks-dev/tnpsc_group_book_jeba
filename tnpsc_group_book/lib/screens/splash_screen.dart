@@ -84,7 +84,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 const SizedBox(height: 10),
                 Text(
                   AppLanguage.getString('tagline'),
-                  style: GoogleFonts.outfit(
+                  style: AppTheme.getStyle(
                     fontSize: 16,
                     color: Colors.white70,
                   ),

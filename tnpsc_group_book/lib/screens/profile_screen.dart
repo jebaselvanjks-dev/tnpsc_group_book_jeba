@@ -161,7 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             const SizedBox(height: 16),
                             Text(
                               name,
-                              style: GoogleFonts.outfit(
+                              style: AppTheme.getStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
                                 color: isDark
@@ -172,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             const SizedBox(height: 4),
                             Text(
                               email,
-                              style: GoogleFonts.outfit(
+                              style: AppTheme.getStyle(
                                 fontSize: 14,
                                 color: isDark
                                     ? AppTheme.cardColor
@@ -302,7 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // Quick Settings Section
                       Text(
                         AppLanguage.getString('quick_settings'),
-                        style: GoogleFonts.outfit(
+                        style: AppTheme.getStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.accentColor,
@@ -428,7 +428,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // Others
                       Text(
                         AppLanguage.getString('more'),
-                        style: GoogleFonts.outfit(
+                        style: AppTheme.getStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.accentColor,
@@ -587,7 +587,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text(
               value,
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: AppTheme.getStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: isDark ? Colors.white : color,
@@ -597,7 +597,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: AppTheme.getStyle(
                 fontSize: 12,
                 color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
               ),
