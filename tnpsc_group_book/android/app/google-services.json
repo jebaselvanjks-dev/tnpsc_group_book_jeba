@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "384136070006-f8c6vibo6jv52fpnnpd4unp90rd9sucf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tnpsc.groupbook.tnpsc_group_book",
+            "certificate_hash": "ecac68571c14888c1a79ca0dcb0915a53d8e83c1"
+          }
+        },
+        {
           "client_id": "384136070006-v0uid13frc64l7bbtmb3n86vob58sld5.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
