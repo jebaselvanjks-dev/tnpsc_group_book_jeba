@@ -21,6 +21,7 @@ import 'services/reward_service.dart';
 import 'firebase_options.dart';
 
 import 'services/firestore_service.dart';
+import 'services/version_service.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
@@ -42,6 +43,7 @@ void main() async {
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
   await HiveService.init();
+  await NotificationService.init();
   await AppTheme.loadThemePreference();
   await AppTheme.loadFontSizePreference();
 
@@ -55,7 +57,6 @@ void main() async {
 Future<void> _initServicesInBackground() async {
   // These don't need to block the UI from starting
   MobileAds.instance.initialize();
-  NotificationService.init();
   TtsService.init();
   RewardService.loadRewardedAd();
 }
@@ -101,6 +102,16 @@ class MainWrapper extends StatefulWidget {
 
 class _MainWrapperState extends State<MainWrapper> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Centralized app-level checks
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      VersionService.checkForUpdate(context);
+      FirestoreService().updateStreak();
+    });
+  }
 
   final List<Widget> _screens = [
     const HomeScreen(),

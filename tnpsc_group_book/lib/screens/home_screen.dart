@@ -40,10 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      VersionService.checkForUpdate(context);
-      _firestoreService.updateStreak();
-    });
   }
 
   @override

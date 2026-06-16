@@ -21,78 +21,124 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static Future<void> init() async {
-    tz.initializeTimeZones();
-    
-    // 1. Request Permission (for iOS and Android 13+)
-    NotificationSettings settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    try {
+      debugPrint("AI_DEBUG: Initializing NotificationService...");
+      tz.initializeTimeZones();
+      
+      // 1. Request Permission (for iOS and Android 13+)
+      NotificationSettings settings = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      debugPrint('AI_DEBUG: User granted notification permission');
-    }
+      debugPrint('AI_DEBUG: Notification permission status: ${settings.authorizationStatus}');
 
-    // 2. Local Notifications Setup
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+      // 2. Local Notifications Setup
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const DarwinInitializationSettings initializationSettingsIOS =
-        DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
+      const DarwinInitializationSettings initializationSettingsIOS =
+          DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
 
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
+      const InitializationSettings initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsIOS,
+      );
 
-    await _notificationsPlugin.initialize(
-      settings: initializationSettings,
-      onDidReceiveNotificationResponse: (details) {
-        // Handle notification tap logic here
-      },
-    );
+      await _notificationsPlugin.initialize(
+        settings: initializationSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse details) {
+          debugPrint("AI_DEBUG: Notification tapped: ${details.payload}");
+        },
+      );
 
-    // 3. Handle FCM Messages
-    // Foreground messaging
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint("AI_DEBUG: Got a message in foreground!");
-      if (message.notification != null) {
-        _showLocalNotificationFromFCM(message);
+      // Create channels
+      const AndroidNotificationChannel fcmChannel = AndroidNotificationChannel(
+        'fcm_channel',
+        'Push Notifications',
+        description: 'This channel is used for important notifications.',
+        importance: Importance.max,
+      );
+
+      const AndroidNotificationChannel dailyChannel = AndroidNotificationChannel(
+        'daily_reminder_channel',
+        'Daily Reminders',
+        description: 'Scheduled study reminders',
+        importance: Importance.max,
+      );
+
+      const AndroidNotificationChannel studyChannel = AndroidNotificationChannel(
+        'study_reminder_channel',
+        'Study Reminders',
+        description: 'TNPSC study reminders',
+        importance: Importance.max,
+      );
+
+      final androidPlugin = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      
+      await androidPlugin?.createNotificationChannel(fcmChannel);
+      await androidPlugin?.createNotificationChannel(dailyChannel);
+      await androidPlugin?.createNotificationChannel(studyChannel);
+
+      // 3. Handle FCM Messages
+      // Foreground messaging
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint("AI_DEBUG: Got a message in foreground: ${message.notification?.title}");
+        if (message.notification != null) {
+          _showLocalNotificationFromFCM(message);
+        }
+      });
+
+      // Background messaging handler
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+      // 4. Subscribe to topics and save token
+      // Use a small delay to ensure FCM is ready
+      Future.delayed(const Duration(seconds: 2), () async {
+        try {
+          await _messaging.subscribeToTopic('all_users');
+          debugPrint("AI_DEBUG: Subscribed to all_users topic");
+          await saveFCMToken();
+        } catch (e) {
+          debugPrint("AI_DEBUG: Delayed init error: $e");
+        }
+      });
+
+      // 5. Schedule Automatic Reminders
+      // Request exact alarm permission for Android (Required for precise scheduling)
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        await _notificationsPlugin
+            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            ?.requestExactAlarmsPermission();
       }
-    });
 
-    // Background messaging handler
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      // Morning 10:10 AM - Daily Quiz Reminder
+      await scheduleDailyReminder(
+        id: 100,
+        hour: 08,
+        minute: 0,
+        titleKey: 'notif_daily_quiz_ready_title',
+        bodyKey: 'notif_daily_quiz_ready_body',
+      );
 
-    // 4. Subscribe to a general topic
-    await _messaging.subscribeToTopic('all_users');
-    
-    // 5. Get and save Token
-    await saveFCMToken();
-
-    // 6. Schedule Automatic Reminders
-    // Morning 8:00 AM - Daily Quiz Reminder
-    await scheduleDailyReminder(
-      id: 100,
-      hour: 8,
-      minute: 0,
-      titleKey: 'notif_daily_quiz_ready_title',
-      bodyKey: 'notif_daily_quiz_ready_body',
-    );
-
-    // Evening 8:00 PM - Group Test Reminder
-    await scheduleDailyReminder(
-      id: 200,
-      hour: 20,
-      minute: 0,
-      titleKey: 'reminder_title',
-      bodyKey: 'reminder_body',
-    );
+      // Evening 8:00 PM - Group Test Reminder
+      await scheduleDailyReminder(
+        id: 200,
+        hour: 20,
+        minute: 0,
+        titleKey: 'reminder_title',
+        bodyKey: 'reminder_body',
+      );
+    } catch (e) {
+      debugPrint("AI_DEBUG: Error initializing NotificationService: $e");
+    }
   }
 
   static Future<void> _showLocalNotificationFromFCM(RemoteMessage message) async {
@@ -174,7 +220,7 @@ class NotificationService {
         ),
         iOS: DarwinNotificationDetails(),
       ),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
     debugPrint("AI_DEBUG: Scheduled notification $id at $hour:$minute");
@@ -249,13 +295,23 @@ class NotificationService {
   }
 
   static tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
-    final tz.Location india = tz.getLocation('Asia/Kolkata');
-    final tz.TZDateTime now = tz.TZDateTime.now(india);
-    tz.TZDateTime scheduledDate =
-    tz.TZDateTime(india, now.year, now.month, now.day, hour, minute);
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    try {
+      final tz.Location india = tz.getLocation('Asia/Kolkata');
+      final tz.TZDateTime now = tz.TZDateTime.now(india);
+      tz.TZDateTime scheduledDate =
+          tz.TZDateTime(india, now.year, now.month, now.day, hour, minute);
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+      return scheduledDate;
+    } catch (e) {
+      debugPrint("AI_DEBUG: Timezone error, falling back to local: $e");
+      final now = DateTime.now();
+      DateTime scheduledDate = DateTime(now.year, now.month, now.day, hour, minute);
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+      return tz.TZDateTime.from(scheduledDate, tz.local);
     }
-    return scheduledDate;
   }
 }

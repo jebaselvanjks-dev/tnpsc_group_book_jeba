@@ -608,8 +608,17 @@ class FirestoreService {
     String? uid = _auth.currentUser?.uid;
     if (uid == null) return;
 
+    final userBox = Hive.box(HiveService.userBoxName);
+    String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    // 1. Local check to prevent double execution in same session/device
+    String localLastActive = userBox.get('lastActiveDate', defaultValue: "") as String;
+    if (localLastActive == today) {
+      debugPrint("AI_DEBUG: Streak already updated today (Local Hive Check)");
+      return;
+    }
+
     try {
-      final userBox = Hive.box(HiveService.userBoxName);
       DocumentReference userRef = _db.collection('users').doc(uid);
       DocumentSnapshot userDoc = await userRef.get();
 

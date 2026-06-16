@@ -36,21 +36,17 @@ class SubjectScreen extends StatefulWidget {
 class _SubjectScreenState extends State<SubjectScreen> {
   final FirestoreService _firestoreService = FirestoreService();
 
+  @override
+  void initState() {
+    super.initState();
+  }
+
   bool get _isQuizDay {
     final now = DateTime.now();
     return now.weekday == DateTime.sunday ||
            now.weekday == DateTime.tuesday ||
            now.weekday == DateTime.thursday ||
            now.weekday == DateTime.saturday;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      VersionService.checkForUpdate(context);
-      _firestoreService.updateStreak();
-    });
   }
 
   @override
