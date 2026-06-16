@@ -1,7 +1,9 @@
 name: tnpsc_group_book
 description: "TNPSC Master Flutter application"
 publish_to: 'none' # private package
-version: 1.0.0+1
+
+# Version Change
+version: 1.0.1+4
 
 environment:
   sdk: ">=3.11.0 <4.0.0"

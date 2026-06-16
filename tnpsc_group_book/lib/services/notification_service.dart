@@ -112,13 +112,6 @@ class NotificationService {
       });
 
       // 5. Schedule Automatic Reminders
-      // Request exact alarm permission for Android (Required for precise scheduling)
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        await _notificationsPlugin
-            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-            ?.requestExactAlarmsPermission();
-      }
-
       // Morning 10:10 AM - Daily Quiz Reminder
       await scheduleDailyReminder(
         id: 100,
@@ -220,7 +213,7 @@ class NotificationService {
         ),
         iOS: DarwinNotificationDetails(),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
     debugPrint("AI_DEBUG: Scheduled notification $id at $hour:$minute");
