@@ -27,6 +27,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   final RoomService _roomService = RoomService();
   final TextEditingController _codeController = TextEditingController();
   bool _isLoading = false;
+  bool _showOnlySpinner = false;
   String _selectedSubject = 'general_tamil';
   int _selectedMaxPlayers = RoomService.baseMaxPlayers;
   bool _isFirstAttempt = true;
@@ -100,6 +101,15 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     _showError(AppLanguage.getString('insufficient_points_create').replaceAll('{points}', '${_requiredRoomPoints()}'));
   }
 
+  void _startSpinnerTimer() {
+    setState(() => _showOnlySpinner = true);
+    Timer(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() => _showOnlySpinner = false);
+      }
+    });
+  }
+
   Future<void> _createRoom() async {
     // 1. Check App Version
     if (await VersionService.isUpdateRequired()) {
@@ -115,6 +125,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
     // 3. Check for Existing Room (Server sync)
     setState(() => _isLoading = true);
+    _startSpinnerTimer();
     final activeCode = await _roomService.getActiveHostRoom() ?? HiveService.getHostRoomCode();
     setState(() => _isLoading = false);
 
@@ -138,6 +149,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
     // 5. If all checks pass, proceed with Rewarded Ad
     setState(() => _isLoading = true);
+    _startSpinnerTimer();
     
     RewardService.showRewardAdIfAllowed(
       useLimit: false,
@@ -207,6 +219,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     }
 
     setState(() => _isLoading = true);
+    _startSpinnerTimer();
     String? result = await _roomService.joinRoom(code);
     setState(() => _isLoading = false);
 
@@ -522,7 +535,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                   title: Row(
                     children: [
                       Text(
-                        AppLanguage.getString('last_room_history') + ":",
+                        AppLanguage.getString('last_room_history') + ": ",
                         style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.secondaryColor).copyWith(letterSpacing: 1.5),
                       ),
                       Text(
@@ -602,6 +615,114 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     return result ?? false;
   }
 
+  Widget _buildPointCalculator(bool isDark) {
+    int currentPoints = Hive.box(HiveService.userBoxName).get('totalScore', defaultValue: 0) as int;
+    int totalCost = _requiredRoomPoints();
+    int balance = currentPoints - totalCost;
+    bool hasEnough = currentPoints >= totalCost;
+    
+    String today = DateTime.now().toString().split(' ')[0];
+    int attempts = Hive.box(HiveService.userBoxName).get('room_create_attempts_$today', defaultValue: 0) as int;
+    
+    // Logic matching _requiredRoomPoints()
+    int baseCost = (_isAdmin || attempts == 0) ? 0 : RoomService.roomCreateCostPoints;
+    int extraCost = totalCost - baseCost;
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 300),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(top: 10, bottom: 20),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade200),
+        ),
+        child: Column(
+          children: [
+            _buildCalcRow(AppLanguage.getString('current_points_label'), currentPoints.toDouble(), isDark),
+            const Divider(height: 20),
+            if (baseCost == 0)
+              _buildCalcRow(AppLanguage.getString('base_cost_label'), 0, isDark, overrideValue: AppLanguage.getString('free'))
+            else
+              _buildCalcRow(AppLanguage.getString('base_cost_label'), baseCost.toDouble(), isDark, isDeduction: true, prefix: "-"),
+            
+            if (extraCost > 0)
+              _buildCalcRow(AppLanguage.getString('extra_cost_label'), extraCost.toDouble(), isDark, isDeduction: true, prefix: "-"),
+            
+            const Divider(height: 20),
+            
+            if (totalCost == 0)
+               _buildCalcRow(AppLanguage.getString('total_deduction_label'), 0, isDark, isBold: true, overrideValue: AppLanguage.getString('free'))
+            else
+              _buildCalcRow(
+                AppLanguage.getString('total_deduction_label'), 
+                totalCost.toDouble(), 
+                isDark, 
+                isBold: true,
+                isDeduction: true,
+                prefix: "-",
+              ),
+              
+            const SizedBox(height: 8),
+            _buildCalcRow(
+              AppLanguage.getString('remaining_points_label'), 
+              balance.toDouble(), 
+              isDark, 
+              isBold: true, 
+              valueColor: hasEnough ? Colors.green : Colors.red,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalcRow(String label, double value, bool isDark, {bool isBold = false, bool isDeduction = false, Color? valueColor, String? overrideValue, String prefix = ""}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: AppTheme.getStyle(
+              fontSize: 14,
+              color: isDark ? Colors.white70 : Colors.grey.shade700,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
+        if (overrideValue != null)
+           Expanded(
+             child: Text(
+              overrideValue,
+              style: AppTheme.getStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: valueColor ?? (isDark ? Colors.white : Colors.black87),
+              ),
+                       ),
+           )
+        else
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: value),
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOut,
+            builder: (context, animValue, child) {
+              return Text(
+                "$prefix${animValue.toInt()}",
+                style: AppTheme.getStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: valueColor ?? (isDeduction ? Colors.redAccent : (isDark ? Colors.white : Colors.black87)),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -634,7 +755,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         ),
       body: _isLoading
           ? Expanded(
-        child: _teaserQuestions.isEmpty || _teaserController == null
+        child: _showOnlySpinner || _teaserQuestions.isEmpty || _teaserController == null
             ? const Center(child: CircularProgressIndicator())
             : PageView.builder(
           controller: _teaserController,
@@ -899,7 +1020,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                 : AppLanguage.getString('base_room_cost').replaceAll('{points}', '${RoomService.roomCreateCostPoints}'),
                             style: AppTheme.getStyle(fontSize: 12, color: Colors.grey),
                           ),
-                          const SizedBox(height: 20),
+                          _buildPointCalculator(isDark),
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(

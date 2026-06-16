@@ -571,6 +571,15 @@ class RoomService {
     if (uid == null) return;
 
     try {
+      // AI_DEBUG: Store in users document field for faster access (Consolidated)
+      await _db.collection('users').doc(uid).set({
+        'room_history': FieldValue.arrayUnion(["$roomCode|$date"]),
+        'last_room_played': roomCode,
+        'last_room_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint("AI_DEBUG: Added $roomCode to user's room_history field");
+
+      // Backward compatibility: Still add to subcollection for now
       await _db.collection('users').doc(uid).collection('room_history').doc(roomCode).set({
         'roomCode': roomCode,
         'date': date,
@@ -586,15 +595,54 @@ class RoomService {
     if (uid == null) return [];
 
     try {
-      QuerySnapshot snap = await _db
-          .collection('users')
-          .doc(uid)
-          .collection('room_history')
-          .orderBy('timestamp', descending: true)
-          .limit(20)
-          .get();
+      // 1. Try fetching from user document field first
+      final userDoc = await _db.collection('users').doc(uid).get();
+      final userData = userDoc.data() as Map<String, dynamic>?;
+      
+      List<dynamic> historyStrings = userData?['room_history'] ?? [];
 
-      return snap.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+      // 2. Migration: If field is empty, check old subcollection
+      if (historyStrings.isEmpty) {
+        debugPrint("AI_DEBUG: Field room_history is empty, checking subcollection for migration...");
+        QuerySnapshot oldSnap = await _db
+            .collection('users')
+            .doc(uid)
+            .collection('room_history')
+            .orderBy('timestamp', descending: true)
+            .limit(20)
+            .get();
+
+        if (oldSnap.docs.isNotEmpty) {
+          List<String> migratedStrings = [];
+          for (var doc in oldSnap.docs) {
+            var data = doc.data() as Map<String, dynamic>;
+            String code = data['roomCode'] ?? "";
+            String date = data['date'] ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+            if (code.isNotEmpty) {
+              migratedStrings.add("$code|$date");
+            }
+          }
+          
+          if (migratedStrings.isNotEmpty) {
+            // Update the user document with migrated data
+            await _db.collection('users').doc(uid).set({
+              'room_history': migratedStrings,
+            }, SetOptions(merge: true));
+            debugPrint("AI_DEBUG: Migrated ${migratedStrings.length} items to room_history field");
+            historyStrings = migratedStrings;
+          }
+        }
+      }
+
+      // 3. Convert "ROOMCODE|DATE" strings back to maps for the UI
+      return historyStrings.reversed.map((entry) {
+        final parts = entry.toString().split('|');
+        return {
+          'roomCode': parts[0],
+          'date': parts.length > 1 ? parts[1] : DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        };
+      }).toList();
+
     } catch (e) {
       debugPrint("Error fetching room history: $e");
       return [];

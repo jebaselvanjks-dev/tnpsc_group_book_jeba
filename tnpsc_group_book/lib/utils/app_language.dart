@@ -807,7 +807,7 @@ class AppLanguage {
       case 'room_history':
         return ta ? 'குழு தேர்வு வரலாறு' : 'Room History';
       case 'last_room_history':
-        return ta ? 'கடைசி குழு தேர்வு' : 'Final Group Test';
+        return ta ? 'கடைசி குழு' : 'Final Group';
       case 'correct_feedback':
         return ta ? 'சரி!' : 'Correct!';
       case 'wrong_feedback':
@@ -852,6 +852,18 @@ class AppLanguage {
         return ta 
             ? '• ஒரு நாளைக்கு முதல் குழு உருவாக்கம் இலவசம் (அடிப்படை வீரர்கள்).\n• அதே நாளில் கூடுதல் குழுக்களை உருவாக்க 200 புள்ளிகள் கழிக்கப்படும்.\n• 10 வீரர்களுக்கு மேல் (Max Players) தேர்வு செய்தால் கூடுதல் வீரர்களுக்கு தலா 100 புள்ளிகள் கழிக்கப்படும்.'
             : '• First room creation of the day is free (for base players).\n• Creating additional rooms on the same day costs 200 points.\n• Selecting more than 10 players costs 100 points extra per player.';
+      case 'current_points_label':
+        return ta ? 'உங்களிடம் உள்ள புள்ளிகள்' : 'Your Current Points';
+      case 'total_deduction_label':
+        return ta ? 'மொத்தமாக கழிக்கப்படும் புள்ளிகள்' : 'Total Deduction';
+      case 'remaining_points_label':
+        return ta ? 'மீதமுள்ள புள்ளிகள்' : 'Remaining Points';
+      case 'base_cost_label':
+        return ta ? 'அடிப்படை செலவு' : 'Base Cost';
+      case 'extra_cost_label':
+        return ta ? 'கூடுதல் வீரர் செலவு' : 'Extra Player Cost';
+      case 'free':
+        return ta ? 'இலவசம்' : 'Free';
       default:
         return key;
     }

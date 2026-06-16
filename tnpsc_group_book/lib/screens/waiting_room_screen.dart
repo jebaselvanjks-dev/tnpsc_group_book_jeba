@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import '../services/room_service.dart';
@@ -21,14 +24,42 @@ class WaitingRoomScreen extends StatefulWidget {
 
 class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   final RoomService _roomService = RoomService();
+  final ScreenshotController _screenshotController = ScreenshotController();
   String _subject = 'General';
 
-  void _shareRoomCode() {
-    Share.share(
-      'Join my TNPSC Live Quiz Battle!\n\n'
-      'Room Code: ${widget.roomCode}\n'
-      'Subject: ${AppLanguage.getString(_subject)}\n\n'
+  void _shareRoomCode() async {
+    // Show a loading indicator while capturing
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
+
+    try {
+      final image = await _screenshotController.capture();
+      if (mounted) Navigator.pop(context); // Dismiss loading
+
+      if (image == null) return;
+
+      final directory = await getTemporaryDirectory();
+      final imagePath = File('${directory.path}/invitation_${widget.roomCode}.png');
+      await imagePath.writeAsBytes(image);
+
+      await Share.shareXFiles(
+        [XFile(imagePath.path)],
+        text: 'Join my TNPSC Live Quiz Battle!\n\n'
+              'Room Code: ${widget.roomCode}\n'
+              'Subject: ${AppLanguage.getString(_subject)}\n\n'
+              // 'Download App: https://play.google.com/store/apps/details?id=com.tnpsc.master',
+      );
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to share invitation card.')),
+        );
+      }
+    }
   }
 
   void _startExam() async {
@@ -173,61 +204,80 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                   ),
                 ),
               ] else ...[
+                Screenshot(
+                  controller: _screenshotController,
+                  child: Container(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                          child: Text(
+                            AppLanguage.getString('welcome_group_quiz'),
+                            style: AppTheme.getStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? Colors.white70 : Colors.black54,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          child: Text(
+                            AppLanguage.getString('room_setup_note'),
+                            style: AppTheme.getStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              color: isDark ? Colors.white60 : Colors.black45,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                AppLanguage.getString(_subject),
+                                style: AppTheme.getStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white60 : Colors.black87,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              Text(
+                                AppLanguage.getString('lobby_max_players').replaceAll('{max}', '${roomData!['maxPlayers']}'),
+                                style: AppTheme.getStyle(fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white60 : Colors.black87),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                          decoration: BoxDecoration(
+                              color: isDark ? Colors.grey.shade900 : Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]
+                          ),
+                          child: Text(
+                            widget.roomCode,
+                            style: AppTheme.getStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.secondaryColor).copyWith(letterSpacing: 8),
+                          ),
+                        ),
+
+                      ],
+                    ),
+                  ),
+                ),
                 const LinearProgressIndicator(minHeight: 2, backgroundColor: Colors.transparent, valueColor: AlwaysStoppedAnimation(AppTheme.secondaryColor)),
                 const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                  child: Text(
-                    AppLanguage.getString('welcome_group_quiz'),
-                    style: AppTheme.getStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.white70 : Colors.black54,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                  child: Text(
-                    AppLanguage.getString(_subject),
-                    style: AppTheme.getStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white60 : Colors.black87,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: Text(
-                    AppLanguage.getString('room_setup_note'),
-                    style: AppTheme.getStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                      color: isDark ? Colors.white60 : Colors.black45,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Text(AppLanguage.getString('room_code'), style: AppTheme.getStyle(fontSize: 18, color: Colors.grey)),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.grey.shade900 : Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]
-                  ),
-                  child: Text(
-                    widget.roomCode,
-                    style: AppTheme.getStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.secondaryColor).copyWith(letterSpacing: 8),
-                  ),
-                ),
-                // const SizedBox(height: 30),
-                // _buildEducationalTips(isDark),
-                const SizedBox(height: 20),
                 Expanded(
                   child: Container(
                     width: double.infinity,
@@ -243,12 +293,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Flexible(child: Text(AppLanguage.getString('players_joined'), style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold))),
-                            Flexible(
-                              child: Text(
-                                AppLanguage.getString('lobby_max_players').replaceAll('{max}', '${roomData!['maxPlayers']}'),
-                                style: AppTheme.getStyle(fontSize: 14, color: Colors.grey),
-                              ),
-                            ),
+                            // Moved to screenshot area
                           ],
                         ),
                         const SizedBox(height: 16),

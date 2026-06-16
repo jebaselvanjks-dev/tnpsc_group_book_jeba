@@ -315,16 +315,30 @@ class _LeaderboardListState extends State<_LeaderboardList> {
               }
               if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
                 return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("🏆", style: TextStyle(fontSize: 60)),
-                      const SizedBox(height: 16),
-                      Text(
-                        AppLanguage.getString('no_results_today'),
-                        style: GoogleFonts.outfit(fontSize: 18, color: Colors.grey),
-                      ),
-                    ],
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text("🏆", style: TextStyle(fontSize: 60)),
+                        const SizedBox(height: 16),
+                        Text(
+                          AppLanguage.getString('no_results_today'),
+                          style: GoogleFonts.outfit(fontSize: 18, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          lang == 'ta' ? 'தேர்வை முடித்து முதலில் இங்கே வரவும்!' : 'Finish a quiz and be the first one here!',
+                          style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey.shade400),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: _onRefresh,
+                          icon: const Icon(Icons.refresh),
+                          label: Text(lang == 'ta' ? 'மீண்டும் ஏற்றவும்' : 'Refresh'),
+                        )
+                      ],
+                    ),
                   ),
                 );
               }

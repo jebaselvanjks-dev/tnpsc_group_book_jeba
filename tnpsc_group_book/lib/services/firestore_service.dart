@@ -189,8 +189,8 @@ class FirestoreService {
   // Fetch Daily Quiz Questions with Caching
   Future<List<Question>> getDailyQuiz() async {
     try {
-      String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      String tomorrow = DateFormat('yyyy-MM-dd').format(DateTime.now().add(const Duration(days: 1)));
+      String today = DateFormat('yyyy-MM-dd', 'en_US').format(DateTime.now());
+      String tomorrow = DateFormat('yyyy-MM-dd', 'en_US').format(DateTime.now().add(const Duration(days: 1)));
       
       // AI_DEBUG: Check Hive first for today's quiz
       List<Question> cachedToday = HiveService.getQuestions("Daily Quiz");
@@ -288,8 +288,8 @@ class FirestoreService {
   // Fetch Mock Quiz Questions with Caching
   Future<List<Question>> getMockQuiz() async {
     try {
-      String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      String tomorrow = DateFormat('yyyy-MM-dd').format(DateTime.now().add(const Duration(days: 1)));
+      String today = DateFormat('yyyy-MM-dd', 'en_US').format(DateTime.now());
+      String tomorrow = DateFormat('yyyy-MM-dd', 'en_US').format(DateTime.now().add(const Duration(days: 1)));
       
       // AI_DEBUG: Check Hive first for today's mock quiz
       List<Question> cachedToday = HiveService.getQuestions("Mock Quiz");
@@ -399,41 +399,53 @@ class FirestoreService {
     DateTime now = DateTime.now();
     int weekday = now.weekday; // 1 (Mon) to 7 (Sun)
     DateTime targetDate;
-    String dayName;
 
     // Logic:
-    // Sunday (7) & Monday (1) -> Sunday
-    // Tuesday (2) & Wednesday (3) -> Tuesday
-    // Thursday (4) & Friday (5) -> Thursday
-    // Saturday (6) -> Saturday
-    if (weekday == 7 || weekday == 1) {
-      dayName = "Sunday";
-      targetDate = now.subtract(Duration(days: weekday == 7 ? 0 : 1));
-    } else if (weekday == 2 || weekday == 3) {
-      dayName = "Tuesday";
-      targetDate = now.subtract(Duration(days: weekday == 2 ? 0 : 1));
-    } else if (weekday == 4 || weekday == 5) {
-      dayName = "Thursday";
-      targetDate = now.subtract(Duration(days: weekday == 4 ? 0 : 1));
+    // We group 2 days into one leaderboard for variety
+    // Mon (1) & Tue (2) -> Mon
+    // Wed (3) & Thu (4) -> Wed
+    // Fri (5) & Sat (6) -> Fri
+    // Sun (7) -> Sun
+    if (weekday == 7) {
+      targetDate = now;
+    } else if (weekday % 2 == 0) {
+      targetDate = now.subtract(const Duration(days: 1));
     } else {
-      dayName = "Saturday";
       targetDate = now;
     }
     
-    return "${dayName}_${DateFormat('yyyy-MM-dd').format(targetDate)}";
+    // AI_DEBUG: Use 'en_US' to ensure consistent document IDs regardless of device language
+    String dayName = DateFormat('EEEE', 'en_US').format(targetDate);
+    String docId = "mock_${dayName}_${DateFormat('yyyy-MM-dd').format(targetDate)}";
+    debugPrint("AI_DEBUG: Generated Mock Leaderboard Doc ID: $docId");
+    return docId;
   }
 
   // Get Top Scorers for Leaderboard (Static Fetch - No Stream)
   Future<List<Map<String, dynamic>>> getLeaderboard({bool isDaily = true, bool forceRefresh = false}) async {
     try {
+      debugPrint("AI_DEBUG: getLeaderboard(isDaily: $isDaily, forceRefresh: $forceRefresh) started");
+      
+      if (!forceRefresh) {
+        if (!HiveService.shouldFetchLeaderboard(isDaily)) {
+           debugPrint("AI_DEBUG: Returning Leaderboard from HIVE cache");
+           return HiveService.getLeaderboardData(isDaily) ?? [];
+        }
+      }
+
       Query query;
+      String fullPath;
       if (isDaily) {
-        String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+        String today = DateFormat('yyyy-MM-dd', 'en_US').format(DateTime.now());
+        fullPath = 'leaderboards/daily_$today/scores';
         query = _db.collection('leaderboards').doc('daily_$today').collection('scores');
       } else {
         String docId = _getMockLeaderboardDocId();
+        fullPath = 'leaderboards/$docId/scores';
         query = _db.collection('leaderboards').doc(docId).collection('scores');
       }
+
+      debugPrint("AI_DEBUG: Fetching from Firestore Path: $fullPath");
 
       // Server fetch
       QuerySnapshot snapshot = await query
@@ -441,16 +453,40 @@ class FirestoreService {
           .limit(20)
           .get();
       
-      debugPrint("AI_DEBUG: Leaderboard fetched from SERVER (Every Open). Count: ${snapshot.docs.length}");
-      var data = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+      debugPrint("AI_DEBUG: Fetch successful. Document count: ${snapshot.docs.length}");
+      
+      if (snapshot.docs.isEmpty) {
+        debugPrint("AI_DEBUG: No documents found at path: $fullPath");
+        
+        // Fallback: Check if collection exists without ordering (in case index is missing)
+        try {
+          QuerySnapshot testSnap = await query.limit(1).get();
+          if (testSnap.docs.isNotEmpty) {
+             debugPrint("AI_DEBUG: ALERT: Collection HAS data, but orderBy failed. MISSING INDEX?");
+          }
+        } catch (_) {}
+      }
+
+      var data = snapshot.docs.map((doc) {
+        var d = doc.data() as Map<String, dynamic>;
+        // AI_DEBUG: Sanitize Firestore Timestamp objects for JSON encoding/Hive storage
+        d.forEach((key, value) {
+          if (value is Timestamp) {
+            d[key] = value.toDate().toIso8601String();
+          }
+        });
+        debugPrint("AI_DEBUG: Found User: ${d['userName']} with Score: ${d['score']}");
+        return d;
+      }).toList();
       
       // Update Hive cache
       await HiveService.saveLeaderboardData(isDaily, data);
       await HiveService.setLastLeaderboardFetch(isDaily);
 
       return data;
-    } catch (e) {
+    } catch (e, stack) {
       debugPrint("AI_DEBUG: LEADERBOARD ERROR: $e");
+      debugPrint("AI_DEBUG: STACKTRACE: $stack");
       // Fallback to Hive if server fails
       return HiveService.getLeaderboardData(isDaily) ?? [];
     }
@@ -464,7 +500,7 @@ class FirestoreService {
     try {
       String docId;
       if (isDaily) {
-        String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+        String today = DateFormat('yyyy-MM-dd', 'en_US').format(DateTime.now());
         docId = 'daily_$today';
       } else {
         docId = _getMockLeaderboardDocId();
@@ -519,7 +555,7 @@ class FirestoreService {
       
        // Update Daily and Weekly Leaderboards if score > 0 AND it's a Daily Quiz (Mock Quiz scores should NOT affect leaderboard)
        if (score > 0 && subject == "Daily Quiz") {
-         String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+         String today = DateFormat('yyyy-MM-dd', 'en_US').format(DateTime.now());
          String monday = _getMondayDateString();
 
          var scoreData = {
@@ -534,8 +570,12 @@ class FirestoreService {
 
          // Update Daily (Subcollection format for TTL)
          await _db.collection('leaderboards').doc('daily_$today').collection('scores').doc(uid).set(scoreData, SetOptions(merge: true));
+         debugPrint("AI_DEBUG: Saved Daily Score to path: leaderboards/daily_$today/scores/$uid");
+
          // Update Weekly (Subcollection format for TTL)
          await _db.collection('leaderboards').doc('weekly_$monday').collection('scores').doc(uid).set(scoreData, SetOptions(merge: true));
+         debugPrint("AI_DEBUG: Saved Weekly Score to path: leaderboards/weekly_$monday/scores/$uid");
+         
          debugPrint("AI_DEBUG: Daily and Weekly leaderboards updated (Mock Quiz excluded)");
          
          // AI_DEBUG: Reset daily leaderboard fetch tracking to force refresh on next visit
@@ -559,6 +599,7 @@ class FirestoreService {
          };
 
          await _db.collection('leaderboards').doc(docId).collection('scores').doc(uid).set(scoreData, SetOptions(merge: true));
+         debugPrint("AI_DEBUG: Saved Mock Score to path: leaderboards/$docId/scores/$uid");
          debugPrint("AI_DEBUG: Mock leaderboard updated for $docId");
 
          // AI_DEBUG: Reset mock leaderboard fetch tracking
@@ -609,7 +650,7 @@ class FirestoreService {
     if (uid == null) return;
 
     final userBox = Hive.box(HiveService.userBoxName);
-    String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    String today = DateFormat('yyyy-MM-dd', 'en_US').format(DateTime.now());
 
     // 1. Local check to prevent double execution in same session/device
     String localLastActive = userBox.get('lastActiveDate', defaultValue: "") as String;

@@ -52,6 +52,7 @@ class _QuizScreenState extends State<QuizScreen> {
   int _remainingSeconds = 600; // Default 10 mins
   bool _isTimeUp = false;
   bool _isAutoTriggering = false;
+  bool _showOnlySpinner = true;
 
   // Teaser for loading screen
   List<Question> _teaserQuestions = [];
@@ -73,6 +74,14 @@ class _QuizScreenState extends State<QuizScreen> {
     RewardService.loadRewardedAd();
     _loadQuestions();
     AnalyticsService.logQuizStarted(widget.subjectTitle);
+
+    Timer(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _showOnlySpinner = false;
+        });
+      }
+    });
   }
 
   void _loadTeaserQuestions() {
@@ -510,7 +519,7 @@ class _QuizScreenState extends State<QuizScreen> {
             body: Column(
               children: [
                 Expanded(
-                  child: _teaserQuestions.isEmpty || _teaserController == null
+                  child: _showOnlySpinner || _teaserQuestions.isEmpty || _teaserController == null
                     ? const Center(child: CircularProgressIndicator())
                     : PageView.builder(
                     controller: _teaserController,
