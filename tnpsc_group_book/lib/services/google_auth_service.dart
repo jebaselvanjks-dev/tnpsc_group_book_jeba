@@ -20,12 +20,19 @@ class GoogleAuthService {
       try {
         debugPrint('AI_DEBUG: Calling authenticate()...');
         googleUser = await _googleSignIn.authenticate();
+        
+        if (googleUser == null) {
+          debugPrint('AI_DEBUG: Google Sign-In was canceled by the user (result is null).');
+          return null;
+        }
+        
         debugPrint('AI_DEBUG: Authenticate success: ${googleUser.email}');
       } catch (e) {
+        debugPrint('AI_DEBUG: Google Sign In Error: $e');
         debugPrint('AI_DEBUG: Authenticate error type: ${e.runtimeType}');
-        debugPrint('AI_DEBUG: Authenticate error: $e');
+        
         if (e is GoogleSignInException && e.code == GoogleSignInExceptionCode.canceled) {
-          debugPrint('Google Sign-In was canceled by the user.');
+          debugPrint('AI_DEBUG: User canceled the sign-in flow.');
           return null;
         }
         rethrow;
