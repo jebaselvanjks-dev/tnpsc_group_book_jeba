@@ -194,7 +194,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Daily Quiz Highlight
-                            _buildDailyQuizCard(context, isDark),
+                            ValueListenableBuilder(
+                              valueListenable: Hive.box(HiveService.userBoxName).listenable(),
+                              builder: (context, box, child) {
+                                return _buildDailyQuizCard(context, isDark);
+                              },
+                            ),
                             const SizedBox(height: 32),
                             Row(
                                   children: [

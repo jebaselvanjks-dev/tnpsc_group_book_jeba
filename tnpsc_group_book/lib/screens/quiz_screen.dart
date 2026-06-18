@@ -115,6 +115,31 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Future<void> _loadQuestions() async {
+    // Safety check for Daily and Mock quizzes
+    if (widget.subjectTitle == "Daily Quiz" || 
+        widget.subjectTitle == AppLanguage.getString('daily_quiz')) {
+      if (HiveService.isDailyQuizDone()) {
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLanguage.getString('completed'))),
+          );
+        }
+        return;
+      }
+    } else if (widget.subjectTitle == "Mock Quiz" ||
+               widget.subjectTitle == AppLanguage.getString('mock_quiz')) {
+      if (HiveService.isMockQuizDone()) {
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLanguage.getString('completed'))),
+          );
+        }
+        return;
+      }
+    }
+
     List<Question> questions = [];
     
     if (widget.customQuestions != null && widget.customQuestions!.isNotEmpty) {

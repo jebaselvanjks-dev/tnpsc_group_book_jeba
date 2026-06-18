@@ -144,7 +144,12 @@ class _SubjectScreenState extends State<SubjectScreen> {
                         const SizedBox(height: 20),
                         Padding(
                           padding: const EdgeInsets.only(left: 20.0,right: 20),
-                          child: _buildMockCard(context),
+                          child: ValueListenableBuilder(
+                            valueListenable: Hive.box(HiveService.userBoxName).listenable(),
+                            builder: (context, box, child) {
+                              return _buildMockCard(context);
+                            },
+                          ),
                         ),
                         // // Horizontal Scroll Highlight (Exam Categories)
                         // Padding(

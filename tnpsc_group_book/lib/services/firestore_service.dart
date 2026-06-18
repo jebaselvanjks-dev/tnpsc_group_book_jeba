@@ -607,22 +607,20 @@ class FirestoreService {
        }
 
       if (subject == "Daily Quiz") {
-        String? activeDate = Hive.box(HiveService.userBoxName).get('last_active_quiz_date') as String?;
-        activeDate ??= DateFormat('yyyy-MM-dd').format(DateTime.now());
+        String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
         await _db.collection('users').doc(uid).set({
-          'completedDailyQuizzes': activeDate,
+          'completedDailyQuizzes': today,
           'dailyquiz_complete': true,
         }, SetOptions(merge: true));
-        debugPrint("AI_DEBUG: Completed quiz date $activeDate synchronized to Firestore");
+        debugPrint("AI_DEBUG: Completed quiz date $today synchronized to Firestore");
       } else if (subject == "Mock Quiz") {
-        String? activeDate = Hive.box(HiveService.userBoxName).get('last_active_mock_quiz_date') as String?;
-        activeDate ??= DateFormat('yyyy-MM-dd').format(DateTime.now());
+        String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
         
         await _db.collection('users').doc(uid).set({
-          'completedMockQuizzes': activeDate,
+          'completedMockQuizzes': today,
         }, SetOptions(merge: true));
-        debugPrint("AI_DEBUG: Completed mock quiz date $activeDate synchronized to Firestore");
+        debugPrint("AI_DEBUG: Completed mock quiz date $today synchronized to Firestore");
       }
 
       // Update local Hive stats immediately for real-time UI update

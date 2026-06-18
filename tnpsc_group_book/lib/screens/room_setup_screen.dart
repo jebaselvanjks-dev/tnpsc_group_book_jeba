@@ -253,15 +253,17 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
   void _loadTeaserQuestions() {
     // Fetch some historical questions to show while loading
-    final cached = HiveService.getQuestions("Daily Quiz");
-    if (cached.isNotEmpty) {
-      setState(() {
-        _teaserQuestions = List<Question>.from(cached)..shuffle();
-        _teaserQuestions = _teaserQuestions.take(10).toList();
-        _teaserController = PageController();
-      });
-      _startTeaserTimer();
+    var cached = HiveService.getQuestions("Daily Quiz");
+    if (cached.isEmpty) {
+      cached = defaultRoomQuestions;
     }
+    
+    setState(() {
+      _teaserQuestions = List<Question>.from(cached)..shuffle();
+      _teaserQuestions = _teaserQuestions.take(10).toList();
+      _teaserController = PageController();
+    });
+    _startTeaserTimer();
   }
 
   void _startTeaserTimer() {
@@ -754,96 +756,102 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
           iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
         ),
       body: _isLoading
-          ? Expanded(
-        child: _showOnlySpinner || _teaserQuestions.isEmpty || _teaserController == null
-            ? const Center(child: CircularProgressIndicator())
-            : PageView.builder(
-          controller: _teaserController,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _teaserQuestions.length,
-          itemBuilder: (context, index) {
-            final q = _teaserQuestions[index];
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                    height: 150,
-                    child: Column(
-                      // mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 24),
-                        Text(
-                          AppLanguage.getString('loading_quiz'),
-                          style: AppTheme.getStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? AppTheme.secondaryColor : AppTheme.textSecondaryColor,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          lang == 'ta' ? 'காத்திருக்கும் நேரத்தில் சில வினாக்கள்...' : 'Learn while we load...',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  )
-                  ),
-                  const SizedBox(height: 40),
-                  Text(
-                    q.question.replaceAll('\\n', '\n'),
-                    style: AppTheme.getStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ...List.generate(q.options.length, (optIndex) {
-                    bool isCorrect = optIndex == q.correctOptionIndex;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: isCorrect ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isCorrect ? Colors.green : Colors.transparent,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isCorrect ? Icons.check_circle : Icons.circle_outlined,
-                            color: isCorrect ? Colors.green : Colors.grey,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _localizedOption(q.options[optIndex]),
-                              style: TextStyle(
-                                color: isCorrect ? Colors.green.shade700 : null,
-                                fontWeight: isCorrect ? FontWeight.bold : null,
+          ? Column(
+              children: [
+                if (_showOnlySpinner || _teaserQuestions.isEmpty || _teaserController == null)
+                  const Expanded(child: Center(child: CircularProgressIndicator()))
+                else
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _teaserController,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _teaserQuestions.length,
+                      itemBuilder: (context, index) {
+                        final q = _teaserQuestions[index];
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.all(32.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Center(
+                                child: Container(
+                                height: 150,
+                                child: Column(
+                                  // mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    const CircularProgressIndicator(),
+                                    const SizedBox(height: 24),
+                                    Text(
+                                      AppLanguage.getString('loading_quiz'),
+                                      style: AppTheme.getStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? AppTheme.secondaryColor : AppTheme.textSecondaryColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      lang == 'ta' ? 'காத்திருக்கும் நேரத்தில் சில வினாக்கள்...' : 'Learn while we load...',
+                                      style: const TextStyle(color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
+                              )
                               ),
-                            ),
+                              const SizedBox(height: 40),
+                              Text(
+                                q.question.replaceAll('\\n', '\n'),
+                                style: AppTheme.getStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              ...List.generate(q.options.length, (optIndex) {
+                                bool isCorrect = optIndex == q.correctOptionIndex;
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: isCorrect ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isCorrect ? Colors.green : Colors.transparent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        isCorrect ? Icons.check_circle : Icons.circle_outlined,
+                                        color: isCorrect ? Colors.green : Colors.grey,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          _localizedOption(q.options[optIndex]),
+                                          style: TextStyle(
+                                            color: isCorrect ? Colors.green.shade700 : null,
+                                            fontWeight: isCorrect ? FontWeight.bold : null,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
                           ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            );
-          },
-        ),)
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(

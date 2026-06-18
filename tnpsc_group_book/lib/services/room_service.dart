@@ -402,12 +402,13 @@ class RoomService {
 
       // AI_DEBUG: Add roomCode to user's room_history in the 'users' collection
       try {
+        String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
         await _db.collection('users').doc(uid).set({
-          'room_history': FieldValue.arrayUnion([roomCode]),
+          'room_history': "$roomCode|$today",
           'last_room_played': roomCode,
           'last_room_at': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
-        debugPrint("AI_DEBUG: Added $roomCode to user's room_history");
+        debugPrint("AI_DEBUG: Added $roomCode|$today to user's room_history");
         
         // Refresh user data immediately after save to sync history
         await _firestoreService.getUserData(forceRefresh: true);
@@ -573,18 +574,11 @@ class RoomService {
     try {
       // AI_DEBUG: Store in users document field for faster access (Consolidated)
       await _db.collection('users').doc(uid).set({
-        'room_history': FieldValue.arrayUnion(["$roomCode|$date"]),
+        'room_history': "$roomCode|$date",
         'last_room_played': roomCode,
         'last_room_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint("AI_DEBUG: Added $roomCode to user's room_history field");
-
-      // Backward compatibility: Still add to subcollection for now
-      await _db.collection('users').doc(uid).collection('room_history').doc(roomCode).set({
-        'roomCode': roomCode,
-        'date': date,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+      debugPrint("AI_DEBUG: Added $roomCode|$date to user's room_history field");
     } catch (e) {
       debugPrint("Error adding to room history: $e");
     }
@@ -599,7 +593,14 @@ class RoomService {
       final userDoc = await _db.collection('users').doc(uid).get();
       final userData = userDoc.data() as Map<String, dynamic>?;
       
-      List<dynamic> historyStrings = userData?['room_history'] ?? [];
+      dynamic rawHistory = userData?['room_history'];
+      List<dynamic> historyStrings = [];
+
+      if (rawHistory is String) {
+        historyStrings = [rawHistory];
+      } else if (rawHistory is List) {
+        historyStrings = rawHistory;
+      }
 
       // 2. Migration: If field is empty, check old subcollection
       if (historyStrings.isEmpty) {
@@ -624,12 +625,13 @@ class RoomService {
           }
           
           if (migratedStrings.isNotEmpty) {
-            // Update the user document with migrated data
+            // Update the user document with migrated data - Save only the LATEST as a string
+            String latestRoom = migratedStrings.first;
             await _db.collection('users').doc(uid).set({
-              'room_history': migratedStrings,
+              'room_history': latestRoom,
             }, SetOptions(merge: true));
-            debugPrint("AI_DEBUG: Migrated ${migratedStrings.length} items to room_history field");
-            historyStrings = migratedStrings;
+            debugPrint("AI_DEBUG: Migrated latest item to room_history field: $latestRoom");
+            historyStrings = [latestRoom];
           }
         }
       }
