@@ -175,8 +175,12 @@ class AiService {
         '''
 Generate 10 UNIQUE TNPSC General Tamil MCQs (SSLC Standard). 
 Focus on different chapters of Samacheer Kalvi books. $avoidPrompt
-Each question MUST be bilingual: English and Tamil separated by a newline. Format: "English question\\nTamil question". 
-Each option and explanation MUST be bilingual separated by a space-slash-space: "English / Tamil". 
+QUALITY REQUIREMENTS:
+1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages (like Hindi, etc.).
+2. Ensure there are NO spelling mistakes in either Tamil or English.
+3. Questions, options, and explanations must be factually correct and clear.
+4. Each question MUST be bilingual: English and Tamil separated by a newline. Format: "English question\\nTamil question". 
+5. Each option and explanation MUST be bilingual separated by a space-slash-space: "English / Tamil". 
 Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
@@ -184,7 +188,11 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
         '''
 Generate 6 UNIQUE TNPSC General Studies MCQs (SSLC Standard). 
 Rotate between Science, History, Polity, and Economy. $avoidPrompt
-Format: Question: English\\nTamil. Options: English / Tamil.
+QUALITY REQUIREMENTS:
+1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
+2. Ensure there are NO spelling mistakes in either Tamil or English.
+3. Questions, options, and explanations must be factually correct and clear.
+4. Format: Question: English\\nTamil. Options: English / Tamil.
 Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
@@ -192,7 +200,11 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
         '''
 Generate 4 UNIQUE TNPSC Aptitude MCQs (SSLC Standard). 
 Topics: HCF/LCM, Ratio, Time & Work, Interest, or Mensuration. $avoidPrompt
-Format: Question: English\\nTamil. Options: English / Tamil.
+QUALITY REQUIREMENTS:
+1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
+2. Ensure there are NO spelling mistakes in either Tamil or English.
+3. Questions, options, and explanations must be factually correct and clear.
+4. Format: Question: English\\nTamil. Options: English / Tamil.
 Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
@@ -294,7 +306,11 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
         '''
 Generate 25 UNIQUE TNPSC General Tamil MCQs (SSLC Standard). 
 Cover Grammar, Literature, and Tamil Scholars. $avoidPrompt
-Format: Question: English\\nTamil. Options/Explanation: English / Tamil.
+QUALITY REQUIREMENTS:
+1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
+2. Ensure there are NO spelling mistakes in either Tamil or English.
+3. Questions, options, and explanations must be factually correct and clear.
+4. Format: Question: English\\nTamil. Options/Explanation: English / Tamil.
 Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
@@ -302,7 +318,11 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
         '''
 Generate 15 UNIQUE TNPSC General Studies MCQs (SSLC Standard). 
 Cover Science, History, Geography, Polity, and Economy. $avoidPrompt
-Format: Question: English\\nTamil. Options: English / Tamil.
+QUALITY REQUIREMENTS:
+1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
+2. Ensure there are NO spelling mistakes in either Tamil or English.
+3. Questions, options, and explanations must be factually correct and clear.
+4. Format: Question: English\\nTamil. Options: English / Tamil.
 Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
@@ -310,7 +330,11 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
         '''
 Generate 10 UNIQUE TNPSC Aptitude MCQs (SSLC Standard). 
 Cover HCF/LCM, Ratio, Time & Work, Interest, Mensuration, and Reasoning. $avoidPrompt
-Format: Question: English\\nTamil. Options: English / Tamil.
+QUALITY REQUIREMENTS:
+1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
+2. Ensure there are NO spelling mistakes in either Tamil or English.
+3. Questions, options, and explanations must be factually correct and clear.
+4. Format: Question: English\\nTamil. Options: English / Tamil.
 Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
@@ -454,8 +478,12 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
     final prompt =
         '''
 Generate EXACTLY $count TNPSC MCQs for the subject '$subjectTitle' based on the syllabus: $syllabusPrompt.
-Each question MUST be bilingual: contain both English and Tamil text. Format: "English question text\\nTamil question text". 
-Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
+QUALITY REQUIREMENTS:
+1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
+2. Ensure there are NO spelling mistakes in either Tamil or English.
+3. Questions, options, and explanations must be factually correct and clear.
+4. Each question MUST be bilingual: contain both English and Tamil text. Format: "English question text\\nTamil question text". 
+5. Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
 Strictly use this JSON format: 
 [{"question": "English question text\\nTamil question text", 
 "options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
@@ -539,23 +567,35 @@ Return only the raw JSON array of EXACTLY $count items.
       specializedPrompt = '''
 Generate 20 UNIQUE TNPSC General Tamil (பொதுத்தமிழ்) MCQs (SSLC Standard). 
 Cover Part A: Grammar (இலக்கணம்), Part B: Literature (இலக்கியம்), and Part C: Tamil Scholars.
+QUALITY REQUIREMENTS:
+1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
+2. Ensure there are NO spelling mistakes in either Tamil or English.
+3. Questions, options, and explanations must be factually correct and clear.
 Format: Question: English\\nTamil. Options/Explanation: English / Tamil.
 ''';
     } else if (subject == 'general_studies') {
       specializedPrompt = '''
 Generate 20 UNIQUE TNPSC General Studies (பொது அறிவு) MCQs (SSLC Standard). 
 Rotate between Science, History, Geography, Polity, and Economy.
+QUALITY REQUIREMENTS:
+1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
+2. Ensure there are NO spelling mistakes in either Tamil or English.
+3. Questions, options, and explanations must be factually correct and clear.
 Format: Question: English\\nTamil. Options/Explanation: English / Tamil.
 ''';
     } else if (subject == 'aptitude') {
       specializedPrompt = '''
 Generate 20 UNIQUE TNPSC Aptitude and Mental Ability MCQs (SSLC Standard). 
 Cover Simplification, Percentage, HCF/LCM, Ratio, Interest, Area, Volume, Time and Work.
+QUALITY REQUIREMENTS:
+1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
+2. Ensure there are NO spelling mistakes in either Tamil or English.
+3. Questions, options, and explanations must be factually correct and clear.
 Format: Question: English\\nTamil. Options/Explanation: English / Tamil.
 ''';
     } else {
       specializedPrompt =
-          "Create 25 UNIQUE TNPSC MCQs for '$subject' (Bilingual). Format: Question: English\\nTamil. Options/Explanation: English / Tamil.";
+          "Create 25 UNIQUE TNPSC MCQs for '$subject' (Bilingual). QUALITY REQUIREMENTS: 1. STRICTLY use ONLY Pure Tamil and English. DO NOT include other languages. 2. NO spelling mistakes. 3. Factually correct. Format: Question: English\\nTamil. Options/Explanation: English / Tamil.";
     }
 
     final prompt =
@@ -624,7 +664,7 @@ Only return the raw JSON array, no other text or markdown formatting.
     String? category,
   }) async {
     final prompt =
-        "Create 25 structured TNPSC study points for '$subject'. Use this JSON format: [{\"id\": 1, \"tamil\": \"...\", \"english\": \"...\"}]. Only return the JSON array.";
+        "Create 25 structured TNPSC study points for '$subject'. QUALITY REQUIREMENTS: 1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages. 2. Ensure NO spelling mistakes. 3. Content must be factually correct. Use this JSON format: [{\"id\": 1, \"tamil\": \"...\", \"english\": \"...\"}]. Only return the JSON array.";
     final res = await _generateWithFallback(prompt);
     if (res != null) {
       try {
@@ -679,12 +719,12 @@ Only return the raw JSON array, no other text or markdown formatting.
     String context,
   ) async {
     final prompt =
-        "TNPSC Tutor context search: $context. Question: $message. Bilingual.";
+        "TNPSC Tutor context search: $context. Question: $message. QUALITY REQUIREMENTS: 1. Use ONLY Pure Tamil and English. NO other languages. 2. NO spelling mistakes. 3. Factually correct. Bilingual.";
     return await _generateWithFallback(prompt);
   }
 
   static Future<String?> chatWithAi(String message) async {
-    final prompt = "TNPSC Doubt: $message. Answer in Tamil & English.";
+    final prompt = "TNPSC Doubt: $message. QUALITY REQUIREMENTS: 1. Use ONLY Pure Tamil and English. NO other languages. 2. NO spelling mistakes. 3. Factually correct. Answer in Tamil & English.";
     return await _generateWithFallback(prompt);
   }
 
@@ -694,13 +734,13 @@ Only return the raw JSON array, no other text or markdown formatting.
     String correctAnswer,
   ) async {
     final prompt =
-        "Explain TNPSC question: $question. Answer: $correctAnswer. Bilingual.";
+        "Explain TNPSC question: $question. Answer: $correctAnswer. QUALITY REQUIREMENTS: 1. Use ONLY Pure Tamil and English. NO other languages. 2. NO spelling mistakes. 3. Factually correct. Bilingual.";
     final res = await _generateWithFallback(prompt);
     return res ?? "Explanation unavailable.";
   }
 
   static Future<String> generateStructuredStudyMaterial(String topic) async {
-    final prompt = "Generate TNPSC study guide for '$topic'. Bilingual.";
+    final prompt = "Generate TNPSC study guide for '$topic'. QUALITY REQUIREMENTS: 1. Use ONLY Pure Tamil and English. NO other languages. 2. NO spelling mistakes. 3. Factually correct. Bilingual.";
     final res = await _generateWithFallback(prompt);
     return res ?? "Guide unavailable.";
   }
@@ -709,7 +749,11 @@ Only return the raw JSON array, no other text or markdown formatting.
     final prompt =
         '''
 Generate 20 TNPSC MCQs for '$topic' in both Tamil and English (Bilingual). 
-Each question MUST contain both English and Tamil text separated by a newline (\n). 
+QUALITY REQUIREMENTS:
+1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
+2. Ensure there are NO spelling mistakes in either Tamil or English.
+3. Questions, options, and explanations must be factually correct and clear.
+Each question MUST contain both English and Tamil text separated by a newline (\\n).
 Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). 
 Strictly use this JSON format: 
 [{"question": "English question text\\nTamil question text", 
