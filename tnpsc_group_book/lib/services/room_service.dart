@@ -7,6 +7,7 @@ import '../models/question.dart';
 import 'firestore_service.dart';
 import 'ai_service.dart';
 import 'hive_service.dart';
+import 'package:hive/hive.dart';
 import 'package:flutter/foundation.dart';
 
 class RoomService {
@@ -15,6 +16,33 @@ class RoomService {
   static const int maxRoomPlayers = 100;
   static const int roomCreateCostPoints = 200;
   static const int extraPlayersCostPoints = 100;
+
+  /// Centralized logic to calculate room creation cost.
+  /// Admin always pays 0. First attempt of the day is free (base cost).
+  static int calculateRoomCost({
+    required int maxPlayers,
+    required int dailyAttempts,
+    required bool isAdmin,
+  }) {
+    if (isAdmin) return 0;
+
+    // First daily attempt is free (no base cost)
+    int baseCost = dailyAttempts > 0 ? roomCreateCostPoints : 0;
+
+    // Extra cost logic:
+    // 10-30 players: Flat 100 points
+    // 31-100 players: +100 points for every additional 10 players
+    int extraCost = 0;
+    if (maxPlayers > baseMaxPlayers) {
+      extraCost = 100; // Flat 100 for 11-30 players
+      if (maxPlayers > 30) {
+        int additionalPlayers = maxPlayers - 30;
+        extraCost += ((additionalPlayers + 9) ~/ 10) * 100;
+      }
+    }
+
+    return baseCost + extraCost;
+  }
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -102,6 +130,11 @@ class RoomService {
     String? uid = _auth.currentUser?.uid;
     if (uid == null) return null;
 
+    // Admin check logic matching RoomSetupScreen
+    bool isAdmin = _auth.currentUser?.phoneNumber == '+918754236411' || 
+                   _auth.currentUser?.email == 'adminjeba@gmail.com' || 
+                   _auth.currentUser?.email == 'kjebaselvan987@gmail.com';
+
     try {
       if (maxPlayers < 2 || maxPlayers > maxRoomPlayers) {
         return 'invalid_player_limit';
@@ -110,9 +143,64 @@ class RoomService {
       bool canPlay = await canPlayToday();
       if (!canPlay) return 'limit_reached';
 
+      // 1. Point Deduction & Attempt Logic via Transaction
+      int cost = 0;
+      String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      
+      final userRef = _db.collection('users').doc(uid);
+      final attemptRef = _db.collection('daily_room_attempts')
+          .doc('daily_$today')
+          .collection('attempts')
+          .doc(uid);
+
+      final transactionResult = await _db.runTransaction((transaction) async {
+        final userSnap = await transaction.get(userRef);
+        final attemptSnap = await transaction.get(attemptRef);
+
+        int currentAttempts = 0;
+        if (attemptSnap.exists) {
+          currentAttempts = (attemptSnap.data() as Map<String, dynamic>)['attemptsCount'] ?? 0;
+        }
+
+        cost = calculateRoomCost(
+          maxPlayers: maxPlayers,
+          dailyAttempts: currentAttempts,
+          isAdmin: isAdmin,
+        );
+
+        int currentPoints = 0;
+        int currentPointsAlt = 0;
+        
+        if (userSnap.exists) {
+          currentPoints = (userSnap.data()?['totalScore'] as num?)?.toInt() ?? 0;
+          currentPointsAlt = (userSnap.data()?['points'] as num?)?.toInt() ?? 0;
+        }
+
+        if (currentPoints < cost) {
+          return 'insufficient_points';
+        }
+
+        // Deduct points from both fields for consistency
+        transaction.set(userRef, {
+          'totalScore': currentPoints - cost,
+          'points': currentPointsAlt - cost,
+        }, SetOptions(merge: true));
+
+        // Increment attempts
+        transaction.set(attemptRef, {
+          'attemptsCount': currentAttempts + 1,
+          'lastAttempt': today,
+          'timestamp': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        return 'success';
+      });
+
+      if (transactionResult == 'insufficient_points') return 'insufficient_points';
+      if (transactionResult == 'user_not_found') return null;
+
       String roomCode = _generateRoomCode();
       
-      String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
       currentRoomDate = today;
 
       // Ensure unique room code
@@ -250,6 +338,14 @@ class RoomService {
       await _addToRoomHistory(roomCode, today);
       await HiveService.saveHostRoom(roomCode, today);
       
+      // Update Hive local state for points and attempts
+      final userBox = Hive.box(HiveService.userBoxName);
+      int currentPoints = userBox.get('totalScore', defaultValue: 0) as int;
+      await userBox.put('totalScore', currentPoints - cost);
+      
+      int currentAttempts = userBox.get('room_create_attempts_$today', defaultValue: 0) as int;
+      await userBox.put('room_create_attempts_$today', currentAttempts + 1);
+
       return roomCode;
     } catch (e) {
       debugPrint("Error creating room: $e");
@@ -529,11 +625,17 @@ class RoomService {
     final userRef = _db.collection('users').doc(uid);
     await _db.runTransaction((tx) async {
       final userSnap = await tx.get(userRef);
-      final current = (userSnap.data()?['points'] as num?)?.toInt() ?? 0;
+      int currentScore = 0;
+      int currentPoints = 0;
+      if (userSnap.exists) {
+        currentScore = (userSnap.data()?['totalScore'] as num?)?.toInt() ?? 0;
+        currentPoints = (userSnap.data()?['points'] as num?)?.toInt() ?? 0;
+      }
       tx.set(
         userRef,
         {
-          'points': current + groupTestRewardPoints,
+          'totalScore': currentScore + groupTestRewardPoints,
+          'points': currentPoints + groupTestRewardPoints,
           'lastGroupRewardAt': FieldValue.serverTimestamp(),
         },
         SetOptions(merge: true),
@@ -541,9 +643,14 @@ class RoomService {
     });
 
     final cached = HiveService.getCachedUserData() ?? {};
-    cached['points'] =
-        ((cached['points'] as num?)?.toInt() ?? 0) + groupTestRewardPoints;
+    cached['totalScore'] = ((cached['totalScore'] as num?)?.toInt() ?? 0) + groupTestRewardPoints;
+    cached['points'] = ((cached['points'] as num?)?.toInt() ?? 0) + groupTestRewardPoints;
     await HiveService.cacheUserData(cached);
+    
+    // Also update Hive individual values
+    final box = Hive.box(HiveService.userBoxName);
+    int hiveScore = box.get('totalScore', defaultValue: 0) as int;
+    await box.put('totalScore', hiveScore + groupTestRewardPoints);
   }
 
   Future<bool> hasClaimedGroupReward(String roomCode) async {

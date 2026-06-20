@@ -70,28 +70,15 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
   // Compute required points based on daily attempts and selected max players
   int _requiredRoomPoints() {
-    if (_isAdmin) return 0; // Admins create rooms for free
-
     String today = DateTime.now().toString().split(' ')[0];
     var box = Hive.box(HiveService.userBoxName);
     int attempts = box.get('room_create_attempts_$today', defaultValue: 0) as int;
     
-    // First daily attempt is free (no base cost)
-    int baseCost = attempts > 0 ? RoomService.roomCreateCostPoints : 0;
-    
-    // Extra cost logic:
-    // 10-30 players: Flat 100 points
-    // 31-100 players: +100 points for every additional 10 players
-    int extraCost = 0;
-    if (_selectedMaxPlayers > RoomService.baseMaxPlayers) {
-      extraCost = 100; // Flat 100 for 11-30 players
-      if (_selectedMaxPlayers > 30) {
-        int additionalPlayers = _selectedMaxPlayers - 30;
-        extraCost += ((additionalPlayers + 9) ~/ 10) * 100;
-      }
-    }
-
-    return baseCost + extraCost;
+    return RoomService.calculateRoomCost(
+      maxPlayers: _selectedMaxPlayers,
+      dailyAttempts: attempts,
+      isAdmin: _isAdmin,
+    );
   }
 
   bool _hasEnoughPointsForRoom() =>
@@ -165,29 +152,12 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
       if (code == 'limit_reached') {
         _showRoomLimitDialog(context);
+      } else if (code == 'insufficient_points') {
+        _showNeedPointsMessage();
       } else if (code == 'no_questions') {
         _showError("No questions could be loaded or generated. Please try again.");
       } else if (code != null) {
-        // Handle point deduction and attempt increment
-        var box = Hive.box(HiveService.userBoxName);
-        String today = DateTime.now().toString().split(' ')[0];
-        int attempts = box.get('room_create_attempts_$today', defaultValue: 0) as int;
-        int newScore = (box.get('totalScore', defaultValue: 0) as int);
-        
-        if (!_isAdmin) {
-          if (attempts == 0) {
-            if (_selectedMaxPlayers > RoomService.baseMaxPlayers) {
-              newScore -= _requiredRoomPoints();
-            } else {
-              newScore += 10; // Bonus for first free room
-            }
-          } else {
-            newScore -= _requiredRoomPoints();
-          }
-          box.put('totalScore', newScore);
-        }
-        box.put('room_create_attempts_$today', attempts + 1);
-
+        // Point deduction and attempt increment are now handled in RoomService.createRoom transaction
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLanguage.getString('room_created_success').replaceAll('{points}', '${_requiredRoomPoints()}')),
