@@ -145,29 +145,45 @@ class AiService {
   }
 
   // -----------------------------------------------------------------
+  // Helper to get topics/questions from last 30 days to avoid repeats
+  // -----------------------------------------------------------------
+  static Future<String> _getRecentQuizContext(String collectionName, int days) async {
+    String context = "";
+    DateTime cutoff = DateTime.now().subtract(Duration(days: days));
+    try {
+      final docs = await FirebaseFirestore.instance
+          .collection(collectionName)
+          .where('createdAt', isGreaterThan: cutoff)
+          .orderBy('createdAt', descending: true)
+          .limit(20) // Limit to last 20 quizzes to avoid prompt bloat
+          .get();
+      
+      for (var doc in docs.docs) {
+        List qs = doc.get('questions') ?? [];
+        // Take a few representative questions from each quiz
+        for (var q in qs.take(5)) {
+          String text = q['question'].toString().split('\n').first;
+          if (text.length > 60) text = text.substring(0, 60);
+          context += "$text, ";
+        }
+      }
+    } catch (e) {
+      print("AI_DEBUG: Context fetch error ($collectionName): $e");
+    }
+    return context;
+  }
+
+  // -----------------------------------------------------------------
   // Daily quiz (10 Tamil, 6 GS, 4 Aptitude) generation
   // -----------------------------------------------------------------
   static Future<bool> generateAndSaveDailyQuiz(DateTime date) async {
     final dateStr = DateFormat('yyyy-MM-dd').format(date);
 
-    // Get a few recent questions to avoid repeats
-    String recentContext = "";
-    try {
-      final recentDocs = await FirebaseFirestore.instance
-          .collection('quizzes')
-          .orderBy('createdAt', descending: true)
-          .limit(2)
-          .get();
-      for (var doc in recentDocs.docs) {
-        List qs = doc.get('questions') ?? [];
-        for (var q in qs.take(5)) {
-          recentContext += "${q['question'].toString().split('\n').first}, ";
-        }
-      }
-    } catch (e) {}
+    // Get topics from last 30 days to avoid repeats
+    String recentContext = await _getRecentQuizContext('quizzes', 30);
 
     final avoidPrompt = recentContext.isNotEmpty
-        ? "\nSTRICTLY DO NOT REPEAT these recent questions or topics: $recentContext"
+        ? "\nSTRICTLY DO NOT REPEAT these recent questions or specific topics from the last 30 days: $recentContext"
         : "";
 
     // Prompt definitions ------------------------------------------------
@@ -200,11 +216,11 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
         '''
 Generate 4 UNIQUE TNPSC Aptitude MCQs (SSLC Standard). 
 Topics: HCF/LCM, Ratio, Time & Work, Interest, or Mensuration. $avoidPrompt
-QUALITY REQUIREMENTS:
-1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
-2. Ensure there are NO spelling mistakes in either Tamil or English.
-3. Questions, options, and explanations must be factually correct and clear.
-4. Format: Question: English\\nTamil. Options: English / Tamil.
+CRITICAL INSTRUCTIONS:
+1. Ensure the 'correctOptionIndex' (0-3) EXACTLY points to the correct answer in the 'options' list. 
+2. Double-check your calculation. The explanation must prove why the selected index is correct.
+3. STRICTLY use ONLY Pure Tamil and English.
+4. Each question MUST be bilingual: English\\nTamil. Options: English / Tamil.
 Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
 
@@ -281,24 +297,11 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
   static Future<bool> generateAndSaveMockQuiz(DateTime date) async {
     final dateStr = DateFormat('yyyy-MM-dd').format(date);
 
-    // Get a few recent questions to avoid repeats in mock tests
-    String recentContext = "";
-    try {
-      final recentDocs = await FirebaseFirestore.instance
-          .collection('mock_tests')
-          .orderBy('createdAt', descending: true)
-          .limit(1)
-          .get();
-      if (recentDocs.docs.isNotEmpty) {
-        List qs = recentDocs.docs.first.get('questions') ?? [];
-        for (var q in qs.take(10)) {
-          recentContext += "${q['question'].toString().split('\n').first}, ";
-        }
-      }
-    } catch (e) {}
+    // Get topics from last 30 days to avoid repeats in mock tests
+    String recentContext = await _getRecentQuizContext('mock_tests', 30);
 
     final avoidPrompt = recentContext.isNotEmpty
-        ? "\nSTRICTLY DO NOT REPEAT these recent questions or topics: $recentContext"
+        ? "\nSTRICTLY DO NOT REPEAT these recent questions or specific topics from the last 30 days: $recentContext"
         : "";
 
     // Prompt definitions ------------------------------------------------
@@ -330,10 +333,10 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
         '''
 Generate 10 UNIQUE TNPSC Aptitude MCQs (SSLC Standard). 
 Cover HCF/LCM, Ratio, Time & Work, Interest, Mensuration, and Reasoning. $avoidPrompt
-QUALITY REQUIREMENTS:
-1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
-2. Ensure there are NO spelling mistakes in either Tamil or English.
-3. Questions, options, and explanations must be factually correct and clear.
+CRITICAL INSTRUCTIONS:
+1. Ensure the 'correctOptionIndex' (0-3) EXACTLY points to the correct answer in the 'options' list. 
+2. Double-check your calculation. The explanation must prove why the selected index is correct.
+3. STRICTLY use ONLY Pure Tamil and English.
 4. Format: Question: English\\nTamil. Options: English / Tamil.
 Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
 ''';
@@ -587,10 +590,10 @@ Format: Question: English\\nTamil. Options/Explanation: English / Tamil.
       specializedPrompt = '''
 Generate 20 UNIQUE TNPSC Aptitude and Mental Ability MCQs (SSLC Standard). 
 Cover Simplification, Percentage, HCF/LCM, Ratio, Interest, Area, Volume, Time and Work.
-QUALITY REQUIREMENTS:
-1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
-2. Ensure there are NO spelling mistakes in either Tamil or English.
-3. Questions, options, and explanations must be factually correct and clear.
+CRITICAL INSTRUCTIONS:
+1. Double-check the 'correctOptionIndex' (0, 1, 2, or 3) for EVERY math question. It MUST match the right answer in your options list.
+2. The 'explanation' field must clearly show the step-by-step math to verify the answer.
+3. STRICTLY use ONLY Pure Tamil and English.
 Format: Question: English\\nTamil. Options/Explanation: English / Tamil.
 ''';
     } else {
@@ -749,10 +752,10 @@ Only return the raw JSON array, no other text or markdown formatting.
     final prompt =
         '''
 Generate 20 TNPSC MCQs for '$topic' in both Tamil and English (Bilingual). 
-QUALITY REQUIREMENTS:
-1. STRICTLY use ONLY Pure Tamil and English. DO NOT include any other languages.
-2. Ensure there are NO spelling mistakes in either Tamil or English.
-3. Questions, options, and explanations must be factually correct and clear.
+CRITICAL INSTRUCTIONS:
+1. Ensure the 'correctOptionIndex' (0-3) EXACTLY points to the correct answer in the 'options' list. 
+2. For Math/Aptitude, double-check your calculations. The explanation must prove why the selected index is correct.
+3. STRICTLY use ONLY Pure Tamil and English.
 Each question MUST contain both English and Tamil text separated by a newline (\\n).
 Each option and explanation MUST contain both English and Tamil text separated by a slash ( / ). 
 Strictly use this JSON format: 

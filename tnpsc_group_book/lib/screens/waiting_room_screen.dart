@@ -28,6 +28,55 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   String _subject = 'General';
 
   void _shareRoomCode() async {
+    final isTamil = AppLanguage.languageNotifier.value == 'ta';
+
+    // Show selection dialog
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isTamil ? "அழைப்பிதழைப் பகிரவும்" : "Share Invitation",
+              style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.text_fields_rounded, color: Colors.blue),
+              title: Text(isTamil ? "உரைச் செய்தியாக (Text Message)" : "Share as Text"),
+              onTap: () {
+                Navigator.pop(context);
+                _shareAsText();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.image_rounded, color: Colors.orange),
+              title: Text(isTamil ? "அழைப்பிதழ் அட்டையாக (Image Card)" : "Share as Image Card"),
+              onTap: () {
+                Navigator.pop(context);
+                _shareAsImage();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _shareAsText() async {
+    final String subjectName = AppLanguage.getString(_subject);
+    final String message = 'Join my TNPSC Live Quiz Battle!\n\n'
+        'Room Code: ${widget.roomCode}\n'
+        'Subject: $subjectName\n\n'
+        'Download App: https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book';
+    
+    await Share.share(message);
+  }
+
+  void _shareAsImage() async {
     // Show a loading indicator while capturing
     showDialog(
       context: context,
@@ -50,7 +99,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
         text: 'Join my TNPSC Live Quiz Battle!\n\n'
               'Room Code: ${widget.roomCode}\n'
               'Subject: ${AppLanguage.getString(_subject)}\n\n'
-              // 'Download App: https://play.google.com/store/apps/details?id=com.tnpsc.master',
+              'Download App: https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book',
       );
     } catch (e) {
       if (mounted) {
@@ -295,6 +344,23 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                             Flexible(child: Text(AppLanguage.getString('players_joined'), style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold))),
                             // Moved to screenshot area
                           ],
+                        ),
+                        const SizedBox(height: 16),
+                        Center(
+                          child: ElevatedButton.icon(
+                            onPressed: _shareRoomCode,
+                            icon: const Icon(Icons.share_rounded, size: 18),
+                            label: Text(
+                              AppLanguage.languageNotifier.value == 'ta' ? "நண்பர்களை அழைக்கவும்" : "Invite Friends",
+                              style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue.shade700,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Expanded(

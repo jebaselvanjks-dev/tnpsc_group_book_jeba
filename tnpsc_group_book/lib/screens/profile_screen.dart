@@ -470,6 +470,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 if (email != null) {
                                   await CredentialStorage.clearPassword(email);
                                 }
+                                await HiveService.resetSessionLeaderboardFetched();
                                 await FirebaseAuth.instance.signOut();
                                 if (mounted) {
                                   Navigator.pushReplacement(

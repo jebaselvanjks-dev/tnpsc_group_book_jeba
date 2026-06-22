@@ -482,6 +482,7 @@ class FirestoreService {
       // Update Hive cache
       await HiveService.saveLeaderboardData(isDaily, data);
       await HiveService.setLastLeaderboardFetch(isDaily);
+      await HiveService.markSessionLeaderboardFetched();
 
       return data;
     } catch (e, stack) {
@@ -550,18 +551,21 @@ class FirestoreService {
         userName = (userDoc.data() as Map<String, dynamic>)['name'] ?? AppLanguage.getString('user_fallback');
       }
 
-      // REMOVED: Saving to 'results' collection as per user request
-      // We only keep leaderboard updates and completion flags
+      WriteBatch batch = _db.batch();
       
-       // Update Daily and Weekly Leaderboards if score > 0 AND it's a Daily Quiz (Mock Quiz scores should NOT affect leaderboard)
-       if (score > 0 && subject == "Daily Quiz") {
+      // AI_DEBUG: Only update leaderboard if score is better than previous best today
+      Map<String, dynamic>? bestResult = await getUserBestResultToday(isDaily: subject == "Daily Quiz");
+      int existingBest = (bestResult?['score'] as num?)?.toInt() ?? -1;
+
+       // Update Daily and Weekly Leaderboards if score > existingBest AND it's a Daily Quiz
+       if (score > 0 && subject == "Daily Quiz" && score > existingBest) {
          String today = DateFormat('yyyy-MM-dd', 'en_US').format(DateTime.now());
          String monday = _getMondayDateString();
 
          var scoreData = {
            'userId': uid,
            'userName': userName,
-           'score': score, // OVERWRITE: User's latest attempt for the day
+           'score': score, // OVERWRITE: User's latest BEST attempt for the day
            'totalQuestions': totalQuestions,
            'timeTaken': timeTaken,
            'timestamp': FieldValue.serverTimestamp(),
@@ -569,24 +573,20 @@ class FirestoreService {
          };
 
          // Update Daily (Subcollection format for TTL)
-         await _db.collection('leaderboards').doc('daily_$today').collection('scores').doc(uid).set(scoreData, SetOptions(merge: true));
-         debugPrint("AI_DEBUG: Saved Daily Score to path: leaderboards/daily_$today/scores/$uid");
+         batch.set(_db.collection('leaderboards').doc('daily_$today').collection('scores').doc(uid), scoreData, SetOptions(merge: true));
+         debugPrint("AI_DEBUG: BATCH: Daily Score updated (New Best: $score > $existingBest)");
 
          // Update Weekly (Subcollection format for TTL)
-         await _db.collection('leaderboards').doc('weekly_$monday').collection('scores').doc(uid).set(scoreData, SetOptions(merge: true));
-         debugPrint("AI_DEBUG: Saved Weekly Score to path: leaderboards/weekly_$monday/scores/$uid");
-         
-         debugPrint("AI_DEBUG: Daily and Weekly leaderboards updated (Mock Quiz excluded)");
+         batch.set(_db.collection('leaderboards').doc('weekly_$monday').collection('scores').doc(uid), scoreData, SetOptions(merge: true));
          
          // AI_DEBUG: Reset daily leaderboard fetch tracking to force refresh on next visit
          await HiveService.saveLeaderboardData(true, []); // Clear local cache
-         // We don't need to call setLastLeaderboardFetch here, 
-         // because clearing the data or changing the date logic will trigger a fetch.
-         // Actually, let's just make sure the next getLeaderboard call sees it needs a refresh.
+       } else if (subject == "Daily Quiz") {
+         debugPrint("AI_DEBUG: Daily Leaderboard write SKIPPED (Score $score <= Best $existingBest)");
        }
 
        // --- NEW: Save Mock Quiz Result to Scheduled Leaderboard ---
-       if (score > 0 && subject == "Mock Quiz") {
+       if (score > 0 && subject == "Mock Quiz" && score > existingBest) {
          String docId = _getMockLeaderboardDocId();
          var scoreData = {
            'userId': uid,
@@ -598,29 +598,30 @@ class FirestoreService {
            'expiresAt': DateTime.now().add(const Duration(days: 7)), 
          };
 
-         await _db.collection('leaderboards').doc(docId).collection('scores').doc(uid).set(scoreData, SetOptions(merge: true));
-         debugPrint("AI_DEBUG: Saved Mock Score to path: leaderboards/$docId/scores/$uid");
-         debugPrint("AI_DEBUG: Mock leaderboard updated for $docId");
+         batch.set(_db.collection('leaderboards').doc(docId).collection('scores').doc(uid), scoreData, SetOptions(merge: true));
+         debugPrint("AI_DEBUG: BATCH: Mock Score updated (New Best: $score > $existingBest)");
 
          // AI_DEBUG: Reset mock leaderboard fetch tracking
          await HiveService.saveLeaderboardData(false, []);
+       } else if (subject == "Mock Quiz") {
+         debugPrint("AI_DEBUG: Mock Leaderboard write SKIPPED (Score $score <= Best $existingBest)");
        }
 
       if (subject == "Daily Quiz") {
         String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-        await _db.collection('users').doc(uid).set({
+        batch.set(_db.collection('users').doc(uid), {
           'completedDailyQuizzes': today,
           'dailyquiz_complete': true,
         }, SetOptions(merge: true));
-        debugPrint("AI_DEBUG: Completed quiz date $today synchronized to Firestore");
+        debugPrint("AI_DEBUG: BATCH: Completed quiz date $today");
       } else if (subject == "Mock Quiz") {
         String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
         
-        await _db.collection('users').doc(uid).set({
+        batch.set(_db.collection('users').doc(uid), {
           'completedMockQuizzes': today,
         }, SetOptions(merge: true));
-        debugPrint("AI_DEBUG: Completed mock quiz date $today synchronized to Firestore");
+        debugPrint("AI_DEBUG: BATCH: Completed mock quiz date $today");
       }
 
       // Update local Hive stats immediately for real-time UI update
@@ -631,11 +632,14 @@ class FirestoreService {
       await userBox.put('quizzesCompleted', currentQuizzes + 1);
 
       // Update user overall stats in Firestore
-      await _db.collection('users').doc(uid).set({
+      batch.set(_db.collection('users').doc(uid), {
         'totalScore': FieldValue.increment(score),
         'quizzesCompleted': FieldValue.increment(1),
       }, SetOptions(merge: true));
-      debugPrint("AI_DEBUG: User stats updated in Firestore and local Hive");
+      
+      // Commit the batch
+      await batch.commit();
+      debugPrint("AI_DEBUG: Quiz result saved via WriteBatch");
 
       // Refresh user data immediately after save to sync all stats
       await getUserData(forceRefresh: true);

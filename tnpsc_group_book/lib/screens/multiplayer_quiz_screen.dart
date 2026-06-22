@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/question.dart';
 import '../services/hive_service.dart';
@@ -7,6 +8,7 @@ import '../services/room_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
 import '../services/reward_service.dart';
+import '../services/tts_service.dart';
 import 'room_leaderboard_screen.dart';
 class MultiplayerQuizScreen extends StatefulWidget {
   final String roomCode;
@@ -121,6 +123,20 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
     setState(() {
       _selectedAnswers[_currentQuestionIndex] = index;
     });
+
+    final isCorrect = index == _questions[_currentQuestionIndex].correctOptionIndex;
+    if (HiveService.isVibrationEnabled()) {
+      if (isCorrect) {
+        HapticFeedback.lightImpact();
+      } else {
+        HapticFeedback.heavyImpact();
+      }
+    }
+
+    // Stop speaking if option is tapped
+    if (TtsService.isSpeaking(_getQuestionTtsText(_questions[_currentQuestionIndex]))) {
+      TtsService.stop();
+    }
   }
 
   void _nextQuestion() {
@@ -129,6 +145,14 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
     } else {
       _submitQuiz();
     }
+  }
+
+  String _getQuestionTtsText(Question q) {
+    String text = _formatBilingual(q.question);
+    for (var i = 0; i < q.options.length; i++) {
+      text += ". Option ${i + 1}: " + _formatBilingual(q.options[i]);
+    }
+    return text;
   }
 
   int _calculateScore() {
@@ -241,7 +265,38 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("${AppLanguage.getString('question')} ${_currentQuestionIndex + 1}", style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.secondaryColor)),
+                  Row(
+                    children: [
+                      Text("${AppLanguage.getString('question')} ${_currentQuestionIndex + 1}", style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.secondaryColor)),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(
+                          TtsService.isSpeaking(_getQuestionTtsText(_questions[_currentQuestionIndex])) ? Icons.volume_up_rounded : Icons.volume_up_outlined,
+                          color: _selectedAnswers[_currentQuestionIndex] != null ? AppTheme.secondaryColor : Colors.grey.withOpacity(0.5),
+                          size: 20,
+                        ),
+                        onPressed: _selectedAnswers[_currentQuestionIndex] != null ? () {
+                          final textToSpeak = _getQuestionTtsText(_questions[_currentQuestionIndex]);
+                          if (TtsService.isSpeaking(textToSpeak)) {
+                            TtsService.stop();
+                          } else {
+                            TtsService.speak(textToSpeak);
+                          }
+                          setState(() {});
+                        } : () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(AppLanguage.languageNotifier.value == 'ta' 
+                                ? "பதிலளித்த பிறகுதான் ஆடியோ கேட்க முடியும்" 
+                                : "Answer the question first to enable audio"),
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                   Text("${_currentQuestionIndex + 1}/${_questions.length}", style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
                 ],
               ),

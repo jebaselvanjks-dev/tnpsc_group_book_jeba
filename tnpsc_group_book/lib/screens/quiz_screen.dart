@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/question.dart';
 import '../utils/app_theme.dart';
@@ -10,6 +11,7 @@ import 'package:percent_indicator/percent_indicator.dart';
 import '../services/hive_service.dart';
 import '../services/analytics_service.dart';
 import '../services/ai_service.dart';
+import '../services/tts_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/reward_service.dart';
 import 'package:flutter/material.dart';
@@ -272,6 +274,15 @@ class _QuizScreenState extends State<QuizScreen> {
     final correctIndex = _visibleQuestions[_currentQuestionIndex].correctOptionIndex;
     final isCorrect = index == correctIndex;
 
+    // Trigger haptic feedback and sound
+    if (HiveService.isVibrationEnabled()) {
+      if (isCorrect) {
+        HapticFeedback.lightImpact();
+      } else {
+        HapticFeedback.heavyImpact();
+      }
+    }
+
     // Increment reward points ONLY for correct answers (+2 points)
     if (isCorrect) {
       await RewardService.addPoints(2);
@@ -291,6 +302,11 @@ class _QuizScreenState extends State<QuizScreen> {
       ),
     );
     Future.delayed(const Duration(milliseconds: 600), _nextQuestion);
+
+    // Stop speaking if option is tapped
+    if (TtsService.isSpeaking(_getQuestionTtsText(_visibleQuestions[_currentQuestionIndex]))) {
+      TtsService.stop();
+    }
   }
 
   Future<void> _checkBookmarkStatus() async {
@@ -384,6 +400,14 @@ class _QuizScreenState extends State<QuizScreen> {
       _shuffledOptionIndices[questionIndex] = indices;
     }
     return _shuffledOptionIndices[questionIndex]!;
+  }
+
+  String _getQuestionTtsText(Question q) {
+    String text = _formatBilingual(q.question);
+    for (var i = 0; i < q.options.length; i++) {
+      text += ". ${AppLanguage.getString('option')} ${i + 1}: " + _formatBilingual(q.options[i]);
+    }
+    return text;
   }
 
 
@@ -736,6 +760,43 @@ class _QuizScreenState extends State<QuizScreen> {
                       ),
                       Row(
                         children: [
+                          Builder(
+                            builder: (context) {
+                              bool isDailyOrMock = widget.subjectTitle == "Daily Quiz" || 
+                                                  widget.subjectTitle == AppLanguage.getString('daily_quiz') ||
+                                                  widget.subjectTitle == "Mock Quiz" ||
+                                                  widget.subjectTitle == AppLanguage.getString('mock_quiz') ||
+                                                  widget.isMockTest;
+                              bool hasAttempted = _selectedAnswers[_currentQuestionIndex] != null;
+                              bool canClickAudio = !isDailyOrMock || hasAttempted;
+
+                              return IconButton(
+                                icon: Icon(
+                                  TtsService.isSpeaking(_getQuestionTtsText(_visibleQuestions[_currentQuestionIndex])) ? Icons.volume_up_rounded : Icons.volume_up_outlined,
+                                  color: canClickAudio ? AppTheme.secondaryColor : Colors.grey.withOpacity(0.5),
+                                  size: 24,
+                                ),
+                                onPressed: canClickAudio ? () {
+                                  final textToSpeak = _getQuestionTtsText(_visibleQuestions[_currentQuestionIndex]);
+                                  if (TtsService.isSpeaking(textToSpeak)) {
+                                    TtsService.stop();
+                                  } else {
+                                    TtsService.speak(textToSpeak);
+                                  }
+                                  setState(() {});
+                                } : () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(AppLanguage.languageNotifier.value == 'ta' 
+                                        ? "பதிலளித்த பிறகுதான் ஆடியோ கேட்க முடியும்" 
+                                        : "Answer the question first to enable audio"),
+                                      duration: const Duration(seconds: 1),
+                                    ),
+                                  );
+                                },
+                              );
+                            }
+                          ),
                           if (isAdmin)
                             _isGenerating
                                 ? const Padding(

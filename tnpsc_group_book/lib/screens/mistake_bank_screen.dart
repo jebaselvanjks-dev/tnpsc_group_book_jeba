@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:tnpsc_group_book/services/tts_service.dart';
 import '../models/question.dart';
 import '../services/firestore_service.dart';
 import '../utils/app_theme.dart';
@@ -55,6 +56,26 @@ class _MistakeBankScreenState extends State<MistakeBankScreen> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(TtsService.currentTextNotifier.value == "mistake_bank_all" ? Icons.stop_circle_rounded : Icons.play_circle_fill_rounded, color: AppTheme.secondaryColor),
+            onPressed: () async {
+              if (TtsService.currentTextNotifier.value == "mistake_bank_all") {
+                TtsService.stop();
+              } else {
+                TtsService.stop();
+                String fullText = "";
+                for (var q in _mistakes) {
+                  fullText += q.question + ". Correct Answer is " + q.options[q.correctOptionIndex] + ". ";
+                }
+                TtsService.speak(fullText);
+                // Tag it so we can show stop icon
+                TtsService.currentTextNotifier.value = "mistake_bank_all";
+              }
+              setState(() {});
+            },
+          )
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

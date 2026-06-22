@@ -143,64 +143,8 @@ class RoomService {
       bool canPlay = await canPlayToday();
       if (!canPlay) return 'limit_reached';
 
-      // 1. Point Deduction & Attempt Logic via Transaction
-      int cost = 0;
-      String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      
-      final userRef = _db.collection('users').doc(uid);
-      final attemptRef = _db.collection('daily_room_attempts')
-          .doc('daily_$today')
-          .collection('attempts')
-          .doc(uid);
-
-      final transactionResult = await _db.runTransaction((transaction) async {
-        final userSnap = await transaction.get(userRef);
-        final attemptSnap = await transaction.get(attemptRef);
-
-        int currentAttempts = 0;
-        if (attemptSnap.exists) {
-          currentAttempts = (attemptSnap.data() as Map<String, dynamic>)['attemptsCount'] ?? 0;
-        }
-
-        cost = calculateRoomCost(
-          maxPlayers: maxPlayers,
-          dailyAttempts: currentAttempts,
-          isAdmin: isAdmin,
-        );
-
-        int currentPoints = 0;
-        int currentPointsAlt = 0;
-        
-        if (userSnap.exists) {
-          currentPoints = (userSnap.data()?['totalScore'] as num?)?.toInt() ?? 0;
-          currentPointsAlt = (userSnap.data()?['points'] as num?)?.toInt() ?? 0;
-        }
-
-        if (currentPoints < cost) {
-          return 'insufficient_points';
-        }
-
-        // Deduct points from both fields for consistency
-        transaction.set(userRef, {
-          'totalScore': currentPoints - cost,
-          'points': currentPointsAlt - cost,
-        }, SetOptions(merge: true));
-
-        // Increment attempts
-        transaction.set(attemptRef, {
-          'attemptsCount': currentAttempts + 1,
-          'lastAttempt': today,
-          'timestamp': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-
-        return 'success';
-      });
-
-      if (transactionResult == 'insufficient_points') return 'insufficient_points';
-      if (transactionResult == 'user_not_found') return null;
-
       String roomCode = _generateRoomCode();
-      
+      String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
       currentRoomDate = today;
 
       // Ensure unique room code
@@ -324,27 +268,96 @@ class RoomService {
         questions: questionsMap,
       );
 
-      await _getRoomRef(roomCode).set(newRoom.toMap());
+      // 1. Point Deduction & Attempt Logic via Transaction
+      int cost = 0;
       
-      // Add creator as player
-      DocumentSnapshot userDoc = await _firestoreService.getUserData() ?? await _db.collection('users').doc(uid).get();
-      String name = 'Player';
-      if (userDoc.exists) {
-        name = (userDoc.data() as Map<String, dynamic>?)?['name'] ?? 'Player';
-      }
-      RoomPlayer hostPlayer = RoomPlayer(uid: uid, name: name);
-      await _getRoomRef(roomCode).collection('players').doc(uid).set(hostPlayer.toMap());
+      final userRef = _db.collection('users').doc(uid);
+      final attemptRef = _db.collection('daily_room_attempts')
+          .doc('daily_$today')
+          .collection('attempts')
+          .doc(uid);
 
-      await _addToRoomHistory(roomCode, today);
+      final transactionResult = await _db.runTransaction((transaction) async {
+        final userSnap = await transaction.get(userRef);
+        final attemptSnap = await transaction.get(attemptRef);
+
+        int currentAttempts = 0;
+        if (attemptSnap.exists) {
+          currentAttempts = (attemptSnap.data() as Map<String, dynamic>)['attemptsCount'] ?? 0;
+        }
+
+        cost = calculateRoomCost(
+          maxPlayers: maxPlayers,
+          dailyAttempts: currentAttempts,
+          isAdmin: isAdmin,
+        );
+
+        int currentPoints = 0;
+        int currentPointsAlt = 0;
+        
+        if (userSnap.exists) {
+          currentPoints = (userSnap.data()?['totalScore'] as num?)?.toInt() ?? 0;
+          currentPointsAlt = (userSnap.data()?['points'] as num?)?.toInt() ?? 0;
+        }
+
+        if (currentPoints < cost) {
+          return 'insufficient_points';
+        }
+
+        // 1. Deduct points & Update room history & Set last played
+        transaction.set(userRef, {
+          'totalScore': currentPoints - cost,
+          'points': currentPointsAlt - cost,
+          'room_history': "$roomCode|$today",
+          'last_room_played': roomCode,
+          'last_room_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        // 2. Increment attempts
+        transaction.set(attemptRef, {
+          'attemptsCount': currentAttempts + 1,
+          'lastAttempt': today,
+          'timestamp': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        // 3. Create the room document
+        transaction.set(_getRoomRef(roomCode), newRoom.toMap());
+
+        // 4. Add creator as player
+        String name = 'Player';
+        if (userSnap.exists) {
+          name = (userSnap.data()?['name']) ?? 'Player';
+        }
+        RoomPlayer hostPlayer = RoomPlayer(uid: uid, name: name);
+        transaction.set(_getRoomRef(roomCode).collection('players').doc(uid), hostPlayer.toMap());
+
+        return 'success';
+      });
+
+      if (transactionResult == 'insufficient_points') return 'insufficient_points';
+      if (transactionResult == 'user_not_found') return null;
+
       await HiveService.saveHostRoom(roomCode, today);
+
       
       // Update Hive local state for points and attempts
       final userBox = Hive.box(HiveService.userBoxName);
-      int currentPoints = userBox.get('totalScore', defaultValue: 0) as int;
-      await userBox.put('totalScore', currentPoints - cost);
+      
+      // Get latest data from the successful transaction
+      int newScore = (userBox.get('totalScore', defaultValue: 0) as int) - cost;
+      await userBox.put('totalScore', newScore);
       
       int currentAttempts = userBox.get('room_create_attempts_$today', defaultValue: 0) as int;
       await userBox.put('room_create_attempts_$today', currentAttempts + 1);
+
+      // AI_DEBUG: Update the cached user data map as well for Profile screen
+      Map<String, dynamic> cachedData = HiveService.getCachedUserData() ?? {};
+      cachedData['totalScore'] = newScore;
+      cachedData['points'] = (cachedData['points'] ?? 0) - cost;
+      await HiveService.cacheUserData(cachedData);
+
+      // Force refresh user data from Firestore to ensure UI is in sync
+      await _firestoreService.getUserData(forceRefresh: true);
 
       return roomCode;
     } catch (e) {
@@ -419,10 +432,19 @@ class RoomService {
         name = (userDoc.data() as Map<String, dynamic>?)?['name'] ?? 'Player';
       }
 
+      WriteBatch batch = _db.batch();
       RoomPlayer player = RoomPlayer(uid: uid, name: name);
-      await roomRef.collection('players').doc(uid).set(player.toMap());
+      batch.set(roomRef.collection('players').doc(uid), player.toMap());
       
-      await _addToRoomHistory(roomCode, today);
+      // Update room history field in user document
+      batch.set(_db.collection('users').doc(uid), {
+        'room_history': "$roomCode|$today",
+        'last_room_played': roomCode,
+        'last_room_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      await batch.commit();
+      debugPrint("AI_DEBUG: Joined room and updated history in one batch");
       
       return 'success';
     } catch (e) {
@@ -447,9 +469,6 @@ class RoomService {
         'mode': 'group_test',
         'expectedPlayerCount': playersSnap.docs.length,
         'playerIdsAtStart': playerIds,
-        'playingCount': playersSnap.docs.length,
-        'finishedCount': 0,
-        'abandonedCount': 0,
         'rewardDistributed': false,
         'startedAt': FieldValue.serverTimestamp(),
       });
@@ -485,9 +504,10 @@ class RoomService {
     if (uid == null) return false;
 
     try {
-      final playerRef =
-          _getRoomRef(roomCode).collection('players').doc(uid);
-      await playerRef.update({
+      WriteBatch batch = _db.batch();
+      final playerRef = _getRoomRef(roomCode).collection('players').doc(uid);
+      
+      batch.update(playerRef, {
         'score': score,
         'timeTaken': timeTaken,
         'hasFinished': true,
@@ -497,20 +517,18 @@ class RoomService {
       });
 
       // AI_DEBUG: Add roomCode to user's room_history in the 'users' collection
-      try {
-        String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-        await _db.collection('users').doc(uid).set({
-          'room_history': "$roomCode|$today",
-          'last_room_played': roomCode,
-          'last_room_at': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-        debugPrint("AI_DEBUG: Added $roomCode|$today to user's room_history");
-        
-        // Refresh user data immediately after save to sync history
-        await _firestoreService.getUserData(forceRefresh: true);
-      } catch (e) {
-        debugPrint("AI_DEBUG: Error updating user room_history: $e");
-      }
+      String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      batch.set(_db.collection('users').doc(uid), {
+        'room_history': "$roomCode|$today",
+        'last_room_played': roomCode,
+        'last_room_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      await batch.commit();
+      debugPrint("AI_DEBUG: Score submitted and history updated in one batch");
+      
+      // Refresh user data immediately after save to sync history
+      await _firestoreService.getUserData(forceRefresh: true);
 
       return await _checkAndMarkRoomFinished(roomCode);
     } catch (e) {
@@ -549,16 +567,6 @@ class RoomService {
         playing++;
       }
     }
-
-    await roomRef.set(
-      {
-        'playingCount': playing,
-        'finishedCount': finished,
-        'abandonedCount': abandoned,
-        'lastProgressAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
 
     return {'playing': playing, 'finished': finished, 'abandoned': abandoned};
   }
@@ -620,17 +628,26 @@ class RoomService {
     if (playerSnap.data()?['abandoned'] == true) return;
     if (playerSnap.data()?['hasFinished'] != true) return;
 
-    await playerRef.update({'rewardClaimed': true});
-
     final userRef = _db.collection('users').doc(uid);
     await _db.runTransaction((tx) async {
       final userSnap = await tx.get(userRef);
+      final pSnap = await tx.get(playerRef);
+
+      if (pSnap.exists && pSnap.data()?['rewardClaimed'] == true) {
+        return; // Already claimed
+      }
+
       int currentScore = 0;
       int currentPoints = 0;
       if (userSnap.exists) {
         currentScore = (userSnap.data()?['totalScore'] as num?)?.toInt() ?? 0;
         currentPoints = (userSnap.data()?['points'] as num?)?.toInt() ?? 0;
       }
+      
+      // Update player
+      tx.update(playerRef, {'rewardClaimed': true});
+
+      // Update user points
       tx.set(
         userRef,
         {
@@ -670,25 +687,6 @@ class RoomService {
 
   Stream<QuerySnapshot> playersStream(String roomCode, {String? date}) {
     return _getRoomRef(roomCode, date: date).collection('players').snapshots();
-  }
-
-  // --- ROOM HISTORY ---
-
-  Future<void> _addToRoomHistory(String roomCode, String date) async {
-    String? uid = _auth.currentUser?.uid;
-    if (uid == null) return;
-
-    try {
-      // AI_DEBUG: Store in users document field for faster access (Consolidated)
-      await _db.collection('users').doc(uid).set({
-        'room_history': "$roomCode|$date",
-        'last_room_played': roomCode,
-        'last_room_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      debugPrint("AI_DEBUG: Added $roomCode|$date to user's room_history field");
-    } catch (e) {
-      debugPrint("Error adding to room history: $e");
-    }
   }
 
   Future<List<Map<String, dynamic>>> getUserRoomHistory() async {

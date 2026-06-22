@@ -14,6 +14,38 @@ class HiveService {
     await Hive.openBox(userBoxName);
     await Hive.openBox(questionsBoxName);
     await Hive.openBox(studyMaterialBoxName);
+    
+    // AI_DEBUG: Run daily cleanup to reduce mobile memory usage
+    await _cleanupOldDailyData();
+  }
+
+  // AI_DEBUG: Deletes old daily stat keys to prevent local storage growth
+  static Future<void> _cleanupOldDailyData() async {
+    var box = Hive.box(userBoxName);
+    String today = _todayDate();
+    String? lastCleanupDate = box.get('last_daily_cleanup_date') as String?;
+    
+    if (lastCleanupDate != today) {
+      List<dynamic> keys = box.keys.toList();
+      for (var key in keys) {
+        if (key is String && (
+            key.startsWith('reward_points_') ||
+            key.startsWith('ai_usage_') ||
+            key.startsWith('extra_room_attempts_') ||
+            key.startsWith('room_ad_watches_') ||
+            key.startsWith('reward_ad_watches_') ||
+            key.startsWith('quiz_ad_watches_') ||
+            key.startsWith('room_create_attempts_')
+        )) {
+          // If the key belongs to a different date, delete it
+          if (!key.endsWith(today)) {
+             await box.delete(key);
+          }
+        }
+      }
+      await box.put('last_daily_cleanup_date', today);
+      debugPrint("AI_DEBUG: Mobile Memory Cleanup: Removed old daily stat keys from Hive.");
+    }
   }
 
   static Future<void> saveThemeMode(ThemeMode mode) async {
@@ -34,9 +66,11 @@ class HiveService {
     }
   }
 
-  // Save questions for a topic
+  // Save questions for a topic with memory optimization (Keep last 10 subjects only)
   static Future<void> saveQuestions(String topic, List<Question> questions) async {
     var box = Hive.box(questionsBoxName);
+    var userBox = Hive.box(userBoxName);
+    
     List<Map<String, dynamic>> questionsJson = questions.map((q) => {
       'question': q.question,
       'options': q.options,
@@ -44,7 +78,28 @@ class HiveService {
       'explanation': q.explanation,
     }).toList();
     
+    // Save the questions
     await box.put(topic, jsonEncode(questionsJson));
+
+    // AI_DEBUG: Check if full sync is done. If so, we keep everything.
+    bool syncDone = userBox.get('is_initial_sync_done', defaultValue: false) as bool;
+    if (syncDone) return;
+
+    // Cleanup logic: Keep track of cached topics order (Only before full sync)
+    List<String> cachedTopics = List<String>.from(userBox.get('cached_topics_list', defaultValue: []) as List);
+    
+    // Remove if already exists to move it to the end (MRU)
+    cachedTopics.remove(topic);
+    cachedTopics.add(topic);
+
+    // If more than 10 topics, remove the oldest one
+    if (cachedTopics.length > 10) {
+      String oldest = cachedTopics.removeAt(0);
+      await box.delete(oldest);
+      debugPrint("AI_DEBUG: Memory Cleanup: Removed old subject cache for $oldest");
+    }
+
+    await userBox.put('cached_topics_list', cachedTopics);
   }
 
   // Get questions for a topic
@@ -273,6 +328,15 @@ class HiveService {
     return Hive.box(userBoxName).get('font_size_factor', defaultValue: 1.0) as double;
   }
 
+  // Vibration Setting
+  static Future<void> setVibrationEnabled(bool enabled) async {
+    await Hive.box(userBoxName).put('vibration_enabled', enabled);
+  }
+
+  static bool isVibrationEnabled() {
+    return Hive.box(userBoxName).get('vibration_enabled', defaultValue: true) as bool;
+  }
+
   // ------------------- Study Material -------------------
   static Future<void> saveStudyMaterial(String subject, List<Map<String, dynamic>> material) async {
     var box = Hive.box(studyMaterialBoxName);
@@ -304,8 +368,29 @@ class HiveService {
     String? lastFetch = box.get(key) as String?;
     String? cachedData = box.get(dataKey) as String?;
 
+    // AI_DEBUG: Check if this is the first time fetching in the current session
+    bool sessionFetched = box.get('session_leaderboard_fetched', defaultValue: false) as bool;
+
     // Fetch if never fetched today OR if cache was explicitly cleared (after a quiz)
-    return lastFetch != DateTime.now().toString().split(' ')[0] || cachedData == null || cachedData == "[]";
+    bool shouldFetch = lastFetch != DateTime.now().toString().split(' ')[0] || cachedData == null || cachedData == "[]";
+    
+    // If it's a "login/app start" fresh fetch, we allow it once per session regardless of date
+    if (!shouldFetch && !sessionFetched) {
+       debugPrint("AI_DEBUG: Forcing leaderboard fetch for new session");
+       return true;
+    }
+
+    return shouldFetch;
+  }
+
+  static Future<void> markSessionLeaderboardFetched() async {
+    final box = Hive.box(userBoxName);
+    await box.put('session_leaderboard_fetched', true);
+  }
+
+  static Future<void> resetSessionLeaderboardFetched() async {
+    final box = Hive.box(userBoxName);
+    await box.put('session_leaderboard_fetched', false);
   }
 
   static Future<void> saveLeaderboardData(bool isDaily, List<Map<String, dynamic>> data) async {

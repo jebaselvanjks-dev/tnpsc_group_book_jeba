@@ -158,6 +158,9 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         _showError("No questions could be loaded or generated. Please try again.");
       } else if (code != null) {
         // Point deduction and attempt increment are now handled in RoomService.createRoom transaction
+        // UI Refresh: Force rebuild to show updated points if they come back to this screen
+        if (mounted) setState(() {}); 
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLanguage.getString('room_created_success').replaceAll('{points}', '${_requiredRoomPoints()}')),
@@ -470,6 +473,13 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         }
 
         final history = snapshot.data!;
+        // Filter history to show only today's rooms
+        final today = DateTime.now().toString().split(' ')[0];
+        final filteredHistory = history.where((room) => room['date'] == today).toList();
+
+        if (filteredHistory.isEmpty) {
+          return const SizedBox.shrink();
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -481,7 +491,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                 style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
-            ...history.map((room) {
+            ...filteredHistory.map((room) {
               final code = room['roomCode'] as String;
               final date = room['date'] as String;
               

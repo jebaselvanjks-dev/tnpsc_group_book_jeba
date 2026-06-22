@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
+import 'hive_service.dart';
 
 class GoogleAuthService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
@@ -61,6 +62,7 @@ class GoogleAuthService {
 
   static Future<void> signOut() async {
     try {
+      await HiveService.resetSessionLeaderboardFetched();
       await _googleSignIn.signOut();
       await _auth.signOut();
     } catch (e) {

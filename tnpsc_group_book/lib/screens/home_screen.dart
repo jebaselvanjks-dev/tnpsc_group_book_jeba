@@ -26,6 +26,7 @@ import '../widgets/ad_banner.dart';
 import '../services/version_service.dart';
 import '../services/tts_service.dart';
 import 'room_setup_screen.dart';
+import '../services/content_sync_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,6 +41,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _checkInitialSync();
+  }
+
+  Future<void> _checkInitialSync() async {
+    bool required = await ContentSyncService.isSyncRequired();
+    if (required) {
+      // AI_DEBUG: Silent Background Sync - No overlay shown
+      ContentSyncService.performInitialSync();
+    }
   }
 
   @override
@@ -235,12 +245,12 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppTheme.primaryColor.withOpacity(0.8), AppTheme.primaryColor],
+          colors: [AppTheme.primaryColor.withValues(alpha: 0.8), AppTheme.primaryColor],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.3),
+            color: AppTheme.primaryColor.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 5),
           )
@@ -257,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   AppLanguage.getString('listening_now'),
                   style: AppTheme.getStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -291,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: colors),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: colors.first.withOpacity(0.3), blurRadius: 8)],
+        boxShadow: [BoxShadow(color: colors.first.withValues(alpha: 0.3), blurRadius: 8)],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -320,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.4),
+            color: AppTheme.primaryColor.withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 10),
           )
@@ -344,7 +354,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 10),
           Text(
             AppLanguage.getString('today_quiz_ready'),
-            style: AppTheme.getStyle(color: Colors.white.withOpacity(0.9), fontSize: 15),
+            style: AppTheme.getStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 15),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -379,58 +389,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHorizontalExamCard(BuildContext context, String key, String icon, Color color) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MockTestScreen(category: key))),
-      child: Container(
-        width: 100,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark 
-              ? [color.withOpacity(0.2), color.withOpacity(0.4)]
-              : [color.withOpacity(0.7), color],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            )
-          ],
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Text(icon, style: const TextStyle(fontSize: 24)),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              AppLanguage.getString(key),
-              textAlign: TextAlign.center,
-              style: AppTheme.getStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildQuickActionCard(BuildContext context, {required String title, required String icon, required Color color, required VoidCallback onTap}) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
@@ -439,9 +397,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark ? color.withOpacity(0.15) : color.withOpacity(0.1),
+            color: isDark ? color.withValues(alpha: 0.15) : color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -463,73 +421,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildMasteryList(BuildContext context, bool isDark) {
-    return FutureBuilder<Map<String, double>>(
-      future: _firestoreService.getMasteryData(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: Padding(
-            padding: EdgeInsets.all(20.0),
-            child: CircularProgressIndicator(),
-          ));
-        }
-
-        final mastery = snapshot.data ?? {};
-        
-        // Use tnpscSubjects list to ensure real data matches our app's categories
-        final displaySubjects = tnpscSubjects.where((s) => mastery.containsKey(s.titleEn) || mastery.containsKey(s.titleTa) || mastery.containsKey(s.id)).toList();
-
-        if (displaySubjects.isEmpty && mastery.isEmpty) {
-          return Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
-            ),
-            child: Text(
-              AppLanguage.getString('no_mastery_data') ?? "Complete quizzes to see your mastery progress!",
-              textAlign: TextAlign.center,
-              style: AppTheme.getStyle(color: Colors.grey, fontSize: 14),
-            ),
-          );
-        }
-
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Show top 6 subjects from our list
-              ...tnpscSubjects.take(6).map((subject) {
-                // Try to find mastery by English title, Tamil title, or ID
-                double progress = mastery[subject.titleEn] ?? mastery[subject.titleTa] ?? mastery[subject.id] ?? 0.0;
-                
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: InkWell(
-                    onTap: () => openSubject(context, subject),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: _buildMasteryRow(subject.title, progress, subject.color),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -662,7 +553,6 @@ class _HomeScreenState extends State<HomeScreen> {
     int attempted = total;
     int wrong = attempted - correct;
     double correctPercentage = attempted > 0 ? (correct / attempted) * 100 : 0;
-    double wrongPercentage = attempted > 0 ? (wrong / attempted) * 100 : 0;
 
     // Determine progress color based on overall accuracy (same as before)
     double accuracy = correctPercentage;
@@ -801,7 +691,7 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: value,
-                backgroundColor: color.withOpacity(0.1),
+                backgroundColor: color.withValues(alpha: 0.1),
                 valueColor: AlwaysStoppedAnimation<Color>(color),
                 minHeight: 8,
               ),

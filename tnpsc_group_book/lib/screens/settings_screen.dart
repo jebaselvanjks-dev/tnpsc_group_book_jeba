@@ -340,6 +340,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                   ),
+                  const SizedBox(height: 24),
+
+                  // App Settings Section
+                  Text(
+                    lang == 'ta' ? 'ஆப் அமைப்புகள்' : 'App Settings',
+                    style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accentColor),
+                  ),
+                  const SizedBox(height: 10),
+                  Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 2,
+                    child: Column(
+                      children: [
+                        SwitchListTile(
+                          secondary: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), shape: BoxShape.circle),
+                            child: const Icon(Icons.vibration_rounded, color: Colors.orange),
+                          ),
+                          title: Text(lang == 'ta' ? 'அதிர்வு (Vibration)' : 'Vibration Feedback'),
+                          subtitle: Text(lang == 'ta' ? 'சரியான/தவறான பதில்களுக்கு அதிர்வை இயக்கு' : 'Vibrate on correct/wrong answers'),
+                          value: HiveService.isVibrationEnabled(),
+                          activeThumbColor: AppTheme.secondaryColor,
+                          onChanged: (bool value) async {
+                            await HiveService.setVibrationEnabled(value);
+                            setState(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                   // const SizedBox(height: 20),
                   //  // General Settings Section
                   // Text(
