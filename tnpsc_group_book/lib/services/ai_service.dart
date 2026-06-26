@@ -64,22 +64,42 @@ class AiService {
             discoveredModels.add(mName);
           }
         }
-        print(
-          "AI_DEBUG: Discovered ${discoveredModels.length} models: $discoveredModels",
-        );
       }
     } catch (e) {
       print("AI_DEBUG: Discovery failed: $e");
     }
 
-    // 2. Fallback defaults if discovery failed
-    if (discoveredModels.isEmpty) {
-      discoveredModels = ['gemini-1.5-flash', 'gemini-pro'];
+    // 2. Model Priority logic
+    final preferredModels = [
+      'gemini-2.5-flash',
+      'gemini-2.5-pro',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+    ];
+
+    List<String> finalModelsToTry = [];
+    for (var p in preferredModels) {
+      if (discoveredModels.contains(p)) {
+        finalModelsToTry.add(p);
+      }
     }
+    // Add remaining discovered ones that aren't in preferred list
+    for (var d in discoveredModels) {
+      if (!finalModelsToTry.contains(d)) {
+        finalModelsToTry.add(d);
+      }
+    }
+    // Final fallback if everything else empty
+    if (finalModelsToTry.isEmpty) {
+      finalModelsToTry = ['gemini-1.5-flash', 'gemini-pro'];
+    }
+
+    print("AI_DEBUG: Trying models in priority: $finalModelsToTry");
 
     // 3. Try each model (v1 then v1beta)
     for (String version in ['v1', 'v1beta']) {
-      for (String modelName in discoveredModels) {
+      for (String modelName in finalModelsToTry) {
         try {
           print("AI_DEBUG: REST Call - Trying $modelName on $version...");
           final url = Uri.parse(
@@ -118,18 +138,45 @@ class AiService {
                   ],
                   'generationConfig': {
                     'responseMimeType': 'application/json',
-                    'temperature': 0.7,
+                    'temperature': 0.9,
+                    'topP': 0.95,
+                    'topK': 40,
+                    'maxOutputTokens': 8192,
                   },
                 }),
               )
-              .timeout(const Duration(seconds: 45));
+              .timeout(const Duration(seconds: 90));
 
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body);
-            final text = data['candidates'][0]['content']['parts'][0]['text'];
+            
+            // 8. Check Finish Reason
+            final candidate = data['candidates'][0];
+            if (candidate['finishReason'] != 'STOP') {
+              print("AI_DEBUG: Bad finish reason: ${candidate['finishReason']}");
+              continue;
+            }
+
+            String? text = candidate['content']['parts'][0]['text'];
             if (text != null) {
-              print("AI_DEBUG: REST SUCCESS with $modelName on $version");
-              return text;
+              // 5. JSON Cleaning & Validation
+              text = text.trim();
+              if (text.startsWith("```")) {
+                text = text
+                    .replaceAll("```json", "")
+                    .replaceAll("```", "")
+                    .trim();
+              }
+
+              // 6. Retry if JSON Invalid
+              try {
+                jsonDecode(text);
+                print("AI_DEBUG: REST SUCCESS with $modelName on $version");
+                return text;
+              } catch (e) {
+                print("AI_DEBUG: Invalid JSON from $modelName. Error: $e");
+                continue;
+              }
             }
           } else {
             print(
@@ -186,50 +233,144 @@ class AiService {
     String recentContext = await _getRecentQuizContext('quizzes', 30);
 
     final avoidPrompt = recentContext.isNotEmpty
-        ? "\nSTRICTLY DO NOT REPEAT these recent questions or specific topics from the last 30 days: $recentContext"
+        ? """
+STRICTLY DO NOT create questions that are identical, very similar, or based on these recent questions/topics from the last 30 days:
+$recentContext
+
+Rules:
+- Do NOT repeat the same question.
+- Do NOT repeat the same answer choices with different wording.
+- Do NOT repeat the same concept unless it is from a completely different chapter.
+"""
         : "";
 
+    final commonRules = """
+STRICT QUALITY RULES (MUST FOLLOW)
+
+1. Return ONLY valid JSON.
+2. No Markdown.
+3. No extra text before or after JSON.
+4. Generate NEW and ORIGINAL questions.
+5. Never repeat questions, options, explanations, or question patterns.
+6. Every question must test a different concept.
+7. Questions must be suitable for TNPSC SSLC Standard.
+8. Grammar must be 100% correct in BOTH Tamil and English.
+9. English must be natural and error-free.
+10. Tamil must use proper literary Tamil without spelling mistakes.
+11. Do NOT mix Tamil and English in the same sentence.
+12. Do NOT use Hindi or any other language.
+13. Every question must have exactly four options.
+14. Only ONE option must be correct.
+15. Verify the correct answer before assigning correctOptionIndex.
+16. correctOptionIndex MUST exactly match the correct option (0-3).
+17. Explanation must clearly justify why the answer is correct.
+18. Explanation must contain:
+    - First: Correct English explanation.
+    - Next: Correct Tamil explanation.
+19. Avoid vague or ambiguous questions.
+20. Avoid duplicate option values.
+21. Avoid options like "All of the above" or "None of the above".
+22. Do not generate trick questions.
+23. Ensure every question is unique.
+24. Ensure every option is unique.
+25. Ensure every explanation is unique.
+26. Maintain balanced difficulty.
+27. Use proper punctuation.
+28. Do not use unnecessary quotation marks.
+29. Never invent incorrect historical or scientific facts.
+30. Validate every answer before returning JSON.
+
+Before generating the JSON, internally verify:
+- Grammar accuracy (Tamil & English)
+- No duplicate questions or patterns
+- No duplicate options
+- Correctness of correctOptionIndex
+- Step-by-step math accuracy (for Aptitude)
+- Explanation clarity and accuracy
+
+Question format:
+English Question
+தமிழ் வினா
+
+Option format:
+English Option / தமிழ் விருப்பம்
+
+Explanation format:
+English explanation.
+தமிழ் விளக்கம்.
+
+Output Format:
+
+[
+  {
+    "question":"...",
+    "options":[
+      "...",
+      "...",
+      "...",
+      "..."
+    ],
+    "correctOptionIndex":0,
+    "explanation":"..."
+  }
+]
+
+Return ONLY the final verified JSON array.
+""";
+
     // Prompt definitions ------------------------------------------------
-    final promptTamil =
-        '''
-Generate 10 UNIQUE TNPSC General Tamil MCQs (SSLC Standard). 
-Focus on different chapters of Samacheer Kalvi books. $avoidPrompt
-STRICT BILINGUAL & QUALITY REQUIREMENTS:
-1. EVERY FIELD (question, each option, and explanation) MUST contain BOTH Pure Tamil and Pure English.
-2. NO MIXED LANGUAGE: English sentences must be 100% English. Tamil sentences must be 100% Tamil.
-3. NO OTHER LANGUAGES: Strictly DO NOT include Hindi, etc.
-4. Each question MUST follow format: "English question text\\nதமிழ் வினா". 
-5. Each option MUST follow format: "English Option / தமிழ் விருப்பம்". 
-6. Each explanation MUST follow format: "English explanation. தமிழ் விளக்கம்."
-7. Ensure exactly 10 questions are returned.
-Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
-''';
+    final promptTamil = """
+Generate exactly 10 UNIQUE TNPSC General Tamil MCQs.
 
-    final promptGS =
-        '''
-Generate 6 UNIQUE TNPSC General Studies MCQs (SSLC Standard). 
-Rotate between Science, History, Polity, and Economy. $avoidPrompt
-STRICT BILINGUAL & QUALITY REQUIREMENTS:
-1. EVERY FIELD (question, each option, and explanation) MUST contain BOTH Pure Tamil and Pure English.
-2. NO MIXED LANGUAGE: English sentences must be 100% English. Tamil sentences must be 100% Tamil.
-3. NO OTHER LANGUAGES: Strictly DO NOT include Hindi, etc.
-4. Format: Question: "English question\\nதமிழ் வினா". Options: "English Option / தமிழ் விருப்பம்". Explanation: "English explanation. தமிழ் விளக்கம்."
-5. Ensure exactly 6 questions are returned.
-Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
-''';
+Requirements:
+- SSLC Standard
+- Cover different Samacheer Kalvi chapters.
+- Cover different grammar and literature concepts.
+- No repeated chapter.
+- No repeated question pattern.
+$avoidPrompt
 
-    final promptAptitude =
-        '''
-Generate 4 UNIQUE TNPSC Aptitude MCQs (SSLC Standard). 
-Topics: HCF/LCM, Ratio, Time & Work, Interest, or Mensuration. $avoidPrompt
-STRICT BILINGUAL & QUALITY REQUIREMENTS:
-1. EVERY FIELD (question, each option, and explanation) MUST contain BOTH Pure Tamil and Pure English.
-2. Ensure the 'correctOptionIndex' (0-3) EXACTLY points to the correct answer. 
-3. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. NO OTHER LANGUAGES.
-4. Each question MUST follow format: "English question\\nதமிழ் வினா". Options: "English Option / தமிழ் விருப்பம்". Explanation: "English explanation. தமிழ் விளக்கம்."
-5. Ensure exactly 4 questions are returned.
-Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
-''';
+$commonRules
+""";
+
+    final promptGS = """
+Generate exactly 6 UNIQUE TNPSC General Studies MCQs.
+
+Requirements:
+Rotate equally between:
+- Science
+- History
+- Geography
+- Polity
+- Economy
+- Current General Knowledge (timeless TNPSC syllabus)
+
+$avoidPrompt
+
+$commonRules
+""";
+
+    final promptAptitude = """
+Generate exactly 4 UNIQUE TNPSC Aptitude MCQs.
+
+Topics:
+- HCF
+- LCM
+- Ratio
+- Percentage
+- Profit & Loss
+- Time & Work
+- Time & Distance
+- Simple Interest
+- Compound Interest
+- Mensuration
+
+Each question must require calculation.
+
+$avoidPrompt
+
+$commonRules
+""";
 
     // --------------------------------------------------------------------
     // Daily quiz generation with quiz_type tagging
@@ -243,10 +384,9 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
     ) async {
       final res = await _generateWithFallback(prompt);
       if (res != null) {
-        int start = res.indexOf('[');
-        int end = res.lastIndexOf(']');
-        if (start != -1 && end != -1) {
-          List q = jsonDecode(res.substring(start, end + 1));
+        try {
+          // Note: _generateWithFallback already trims and handles code blocks
+          List q = jsonDecode(res);
 
           // Validation: Trim if more, fail if less
           if (q.length > expectedCount) q = q.sublist(0, expectedCount);
@@ -260,6 +400,8 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
           allQuestions.addAll(
             q.map((item) => {...item, 'quiz_type': quizType}),
           );
+        } catch (e) {
+          print("AI_DEBUG: JSON Decode Error in fetchAndTag ($quizType): $e");
         }
       }
     }
@@ -308,43 +450,141 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
     String recentContext = await _getRecentQuizContext('mock_tests', 30);
 
     final avoidPrompt = recentContext.isNotEmpty
-        ? "\nSTRICTLY DO NOT REPEAT these recent questions or specific topics from the last 30 days: $recentContext"
+        ? """
+STRICTLY DO NOT create questions that are identical, very similar, or based on these recent questions/topics from the last 30 days:
+$recentContext
+
+Rules:
+- Do NOT repeat the same question.
+- Do NOT repeat the same answer choices with different wording.
+- Do NOT repeat the same concept unless it is from a completely different chapter.
+"""
         : "";
 
+    final commonRules = """
+STRICT QUALITY RULES (MUST FOLLOW)
+
+1. Return ONLY valid JSON.
+2. No Markdown.
+3. No extra text before or after JSON.
+4. Generate NEW and ORIGINAL questions.
+5. Never repeat questions, options, explanations, or question patterns.
+6. Every question must test a different concept.
+7. Questions must be suitable for TNPSC SSLC Standard.
+8. Grammar must be 100% correct in BOTH Tamil and English.
+9. English must be natural and error-free.
+10. Tamil must use proper literary Tamil without spelling mistakes.
+11. Do NOT mix Tamil and English in the same sentence.
+12. Do NOT use Hindi or any other language.
+13. Every question must have exactly four options.
+14. Only ONE option must be correct.
+15. Verify the correct answer before assigning correctOptionIndex.
+16. correctOptionIndex MUST exactly match the correct option (0-3).
+17. Explanation must clearly justify why the answer is correct.
+18. Explanation must contain:
+    - First: Correct English explanation.
+    - Next: Correct Tamil explanation.
+19. Avoid vague or ambiguous questions.
+20. Avoid duplicate option values.
+21. Avoid options like "All of the above" or "None of the above".
+22. Do not generate trick questions.
+23. Ensure every question is unique.
+24. Ensure every option is unique.
+25. Ensure every explanation is unique.
+26. Maintain balanced difficulty.
+27. Use proper punctuation.
+28. Do not use unnecessary quotation marks.
+29. Never invent incorrect historical or scientific facts.
+30. Validate every answer before returning JSON.
+
+Before generating the JSON, internally verify:
+- Grammar accuracy (Tamil & English)
+- No duplicate questions or patterns
+- No duplicate options
+- Correctness of correctOptionIndex
+- Step-by-step math accuracy (for Aptitude)
+- Explanation clarity and accuracy
+
+Question format:
+English Question
+தமிழ் வினா
+
+Option format:
+English Option / தமிழ் விருப்பம்
+
+Explanation format:
+English explanation.
+தமிழ் விளக்கம்.
+
+Output Format:
+
+[
+  {
+    "question":"...",
+    "options":[
+      "...",
+      "...",
+      "...",
+      "..."
+    ],
+    "correctOptionIndex":0,
+    "explanation":"..."
+  }
+]
+
+Return ONLY the final verified JSON array.
+""";
+
     // Prompt definitions ------------------------------------------------
-    final promptTamil =
-        '''
-Generate 25 UNIQUE TNPSC General Tamil MCQs (SSLC Standard). 
-Cover Grammar, Literature, and Tamil Scholars. $avoidPrompt
-STRICT BILINGUAL REQUIREMENTS:
-1. EVERY field (question, options, explanation) MUST contain BOTH Pure Tamil and Pure English.
-2. NO MIXED LANGUAGE. NO OTHER LANGUAGES (Hindi, etc.).
-3. Format: Question: "English question\\nதமிழ் வினா". Options: "English Option / தமிழ் விருப்பம்". Explanation: "English explanation. தமிழ் விளக்கம்."
-Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
-''';
+    final promptTamil = """
+Generate exactly 25 UNIQUE TNPSC General Tamil MCQs.
 
-    final promptGS =
-        '''
-Generate 15 UNIQUE TNPSC General Studies MCQs (SSLC Standard). 
-Cover Science, History, Geography, Polity, and Economy. $avoidPrompt
-STRICT BILINGUAL REQUIREMENTS:
-1. EVERY field (question, options, explanation) MUST contain BOTH Pure Tamil and Pure English.
-2. NO MIXED LANGUAGE. NO OTHER LANGUAGES (Hindi, etc.).
-3. Format: Question: "English question\\nதமிழ் வினா". Options: "English Option / தமிழ் விருப்பம்". Explanation: "English explanation. தமிழ் விளக்கம்."
-Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
-''';
+Requirements:
+- SSLC Standard
+- Cover different Samacheer Kalvi chapters.
+- Cover Grammar, Literature, and Tamil Scholars.
+- No repeated chapter.
+- No repeated question pattern.
+$avoidPrompt
 
-    final promptAptitude =
-        '''
-Generate 10 UNIQUE TNPSC Aptitude MCQs (SSLC Standard). 
-Cover HCF/LCM, Ratio, Time & Work, Interest, Mensuration, and Reasoning. $avoidPrompt
-STRICT BILINGUAL REQUIREMENTS:
-1. EVERY field (question, options, explanation) MUST contain BOTH Pure Tamil and Pure English.
-2. Ensure the 'correctOptionIndex' (0-3) is correct.
-3. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. NO OTHER LANGUAGES.
-4. Format: Question: "English question\\nதமிழ் வினா". Options: "English Option / தமிழ் விருப்பம்". Explanation: "English explanation. தமிழ் விளக்கம்."
-Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", "..."], "correctOptionIndex": 0, "explanation": "..."}].
-''';
+$commonRules
+""";
+
+    final promptGS = """
+Generate exactly 15 UNIQUE TNPSC General Studies MCQs.
+
+Requirements:
+Rotate equally between:
+- Science
+- History
+- Geography
+- Polity
+- Economy
+- Indian National Movement
+
+$avoidPrompt
+
+$commonRules
+""";
+
+    final promptAptitude = """
+Generate exactly 10 UNIQUE TNPSC Aptitude MCQs.
+
+Topics:
+- HCF & LCM
+- Ratio & Proportion
+- Percentage
+- Simple & Compound Interest
+- Time & Work
+- Area & Volume
+- Logical Reasoning
+
+Each question must require calculation.
+
+$avoidPrompt
+
+$commonRules
+""";
 
     // --------------------------------------------------------------------
     List<dynamic> allQuestions = [];
@@ -354,19 +594,13 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
     final resTamil = await _generateWithFallback(promptTamil);
     if (resTamil != null) {
       try {
-        int start = resTamil.indexOf('[');
-        int end = resTamil.lastIndexOf(']');
-        if (start != -1 && end != -1) {
-          List<dynamic> tamilQuestions = jsonDecode(
-            resTamil.substring(start, end + 1),
+        List<dynamic> tamilQuestions = jsonDecode(resTamil);
+        if (tamilQuestions.length > 25)
+          tamilQuestions = tamilQuestions.sublist(0, 25);
+        if (tamilQuestions.length == 25) {
+          allQuestions.addAll(
+            tamilQuestions.map((q) => {...q, 'quiz_type': 'general_tamil'}),
           );
-          if (tamilQuestions.length > 25)
-            tamilQuestions = tamilQuestions.sublist(0, 25);
-          if (tamilQuestions.length == 25) {
-            allQuestions.addAll(
-              tamilQuestions.map((q) => {...q, 'quiz_type': 'general_tamil'}),
-            );
-          }
         }
       } catch (e) {
         print("AI_DEBUG: Tamil JSON Parse Error: $e");
@@ -378,18 +612,12 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
     final resGS = await _generateWithFallback(promptGS);
     if (resGS != null) {
       try {
-        int start = resGS.indexOf('[');
-        int end = resGS.lastIndexOf(']');
-        if (start != -1 && end != -1) {
-          List<dynamic> gsQuestions = jsonDecode(
-            resGS.substring(start, end + 1),
+        List<dynamic> gsQuestions = jsonDecode(resGS);
+        if (gsQuestions.length > 15) gsQuestions = gsQuestions.sublist(0, 15);
+        if (gsQuestions.length == 15) {
+          allQuestions.addAll(
+            gsQuestions.map((q) => {...q, 'quiz_type': 'general_studies'}),
           );
-          if (gsQuestions.length > 15) gsQuestions = gsQuestions.sublist(0, 15);
-          if (gsQuestions.length == 15) {
-            allQuestions.addAll(
-              gsQuestions.map((q) => {...q, 'quiz_type': 'general_studies'}),
-            );
-          }
         }
       } catch (e) {
         print("AI_DEBUG: GS JSON Parse Error: $e");
@@ -401,19 +629,13 @@ Strictly use JSON format: [{"question": "...", "options": ["...", "...", "...", 
     final resAptitude = await _generateWithFallback(promptAptitude);
     if (resAptitude != null) {
       try {
-        int start = resAptitude.indexOf('[');
-        int end = resAptitude.lastIndexOf(']');
-        if (start != -1 && end != -1) {
-          List<dynamic> aptitudeQuestions = jsonDecode(
-            resAptitude.substring(start, end + 1),
+        List<dynamic> aptitudeQuestions = jsonDecode(resAptitude);
+        if (aptitudeQuestions.length > 10)
+          aptitudeQuestions = aptitudeQuestions.sublist(0, 10);
+        if (aptitudeQuestions.length == 10) {
+          allQuestions.addAll(
+            aptitudeQuestions.map((q) => {...q, 'quiz_type': 'aptitude'}),
           );
-          if (aptitudeQuestions.length > 10)
-            aptitudeQuestions = aptitudeQuestions.sublist(0, 10);
-          if (aptitudeQuestions.length == 10) {
-            allQuestions.addAll(
-              aptitudeQuestions.map((q) => {...q, 'quiz_type': 'aptitude'}),
-            );
-          }
         }
       } catch (e) {
         print("AI_DEBUG: Aptitude JSON Parse Error: $e");

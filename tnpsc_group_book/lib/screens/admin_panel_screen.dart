@@ -8,6 +8,7 @@ import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
 
 import 'admin_feedback_screen.dart';
+import 'admin_quiz_manage_screen.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
@@ -91,6 +92,17 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               icon: Icons.auto_awesome_motion_rounded,
               color: Colors.deepPurple,
               onTap: _showBulk5DaysQuizGenDialog,
+            ),
+            const SizedBox(height: 12),
+            // Manage Quizzes
+            _buildAdminCard(
+              context,
+              title: "Manage Quizzes",
+              icon: Icons.edit_calendar_rounded,
+              color: Colors.indigo,
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminQuizManageScreen()));
+              },
             ),
             const SizedBox(height: 12),
             // Manual Content placeholder
