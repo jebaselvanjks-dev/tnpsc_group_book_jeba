@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:tnpsc_group_book/utils/app_language.dart';
-import 'package:flutter_background/flutter_background.dart';
 import 'package:tnpsc_group_book/services/hive_service.dart';
 
 class TtsService {
@@ -10,43 +9,6 @@ class TtsService {
   static String? _currentText;
   static final ValueNotifier<String?> currentTextNotifier = ValueNotifier<String?>(null);
   static Function? onComplete;
-  static bool _backgroundInitialized = false;
-
-  static Future<void> initBackgroundService() async {
-    if (_backgroundInitialized) return;
-    try {
-      const androidConfig = FlutterBackgroundAndroidConfig(
-        notificationTitle: "TNPSC Master",
-        notificationText: "ஆடியோ பின்னணியில் இயங்குகிறது | Audio guide is playing",
-        notificationImportance: AndroidNotificationImportance.normal,
-        notificationIcon: AndroidResource(name: 'ic_launcher', defType: 'mipmap'),
-      );
-      _backgroundInitialized = await FlutterBackground.initialize(androidConfig: androidConfig);
-    } catch (e) {
-      debugPrint("Error initializing flutter_background: $e");
-    }
-  }
-
-  static Future<void> startBackgroundMode() async {
-    await initBackgroundService();
-    if (_backgroundInitialized && !FlutterBackground.isBackgroundExecutionEnabled) {
-      try {
-        await FlutterBackground.enableBackgroundExecution();
-      } catch (e) {
-        debugPrint("Error enabling background execution: $e");
-      }
-    }
-  }
-
-  static Future<void> stopBackgroundMode() async {
-    if (_backgroundInitialized && FlutterBackground.isBackgroundExecutionEnabled) {
-      try {
-        await FlutterBackground.disableBackgroundExecution();
-      } catch (e) {
-        debugPrint("Error disabling background execution: $e");
-      }
-    }
-  }
 
   static Future<void> init() async {
     await _flutterTts.setVolume(1.0);
@@ -96,4 +58,8 @@ class TtsService {
   static bool isSpeaking(String text) {
     return _isPlaying && _currentText == text;
   }
+
+  // Fallback methods for background mode (now no-op)
+  static Future<void> startBackgroundMode() async {}
+  static Future<void> stopBackgroundMode() async {}
 }
