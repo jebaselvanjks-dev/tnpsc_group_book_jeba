@@ -594,6 +594,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                       const SizedBox(height: 24),
                                       Text(
                                         AppLanguage.getString('loading_quiz'),
+                                        textAlign: TextAlign.center,
                                         style: AppTheme.getStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
@@ -603,6 +604,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                       const SizedBox(height: 8),
                                       Text(
                                         lang == 'ta' ? 'காத்திருக்கும் நேரத்தில் சில வினாக்கள்...' : 'Learn while we load...',
+                                        textAlign: TextAlign.center,
                                         style: const TextStyle(color: Colors.grey),
                                       ),
                                     ],
@@ -682,10 +684,10 @@ class _QuizScreenState extends State<QuizScreen> {
                 children: [
                   const Icon(Icons.quiz_outlined, size: 80, color: Colors.grey),
                   const SizedBox(height: 20),
-                  Text(AppLanguage.getString('no_questions'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(AppLanguage.getString('no_questions'), textAlign: TextAlign.center,style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
                   if (isAdmin) ...[
-                  Text(AppLanguage.getString('generate_questions_desc'), style: const TextStyle(color: Colors.grey)),
+                  Text(AppLanguage.getString('generate_questions_desc'), textAlign: TextAlign.center,style: const TextStyle(color: Colors.grey)),
                   const SizedBox(height: 30),
                     _isGenerating
                         ? const CircularProgressIndicator()
@@ -760,43 +762,43 @@ class _QuizScreenState extends State<QuizScreen> {
                       ),
                       Row(
                         children: [
-                          Builder(
-                            builder: (context) {
-                              bool isDailyOrMock = widget.subjectTitle == "Daily Quiz" || 
-                                                  widget.subjectTitle == AppLanguage.getString('daily_quiz') ||
-                                                  widget.subjectTitle == "Mock Quiz" ||
-                                                  widget.subjectTitle == AppLanguage.getString('mock_quiz') ||
-                                                  widget.isMockTest;
-                              bool hasAttempted = _selectedAnswers[_currentQuestionIndex] != null;
-                              bool canClickAudio = !isDailyOrMock || hasAttempted;
-
-                              return IconButton(
-                                icon: Icon(
-                                  TtsService.isSpeaking(_getQuestionTtsText(_visibleQuestions[_currentQuestionIndex])) ? Icons.volume_up_rounded : Icons.volume_up_outlined,
-                                  color: canClickAudio ? AppTheme.secondaryColor : Colors.grey.withOpacity(0.5),
-                                  size: 24,
-                                ),
-                                onPressed: canClickAudio ? () {
-                                  final textToSpeak = _getQuestionTtsText(_visibleQuestions[_currentQuestionIndex]);
-                                  if (TtsService.isSpeaking(textToSpeak)) {
-                                    TtsService.stop();
-                                  } else {
-                                    TtsService.speak(textToSpeak);
-                                  }
-                                  setState(() {});
-                                } : () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(AppLanguage.languageNotifier.value == 'ta' 
-                                        ? "பதிலளித்த பிறகுதான் ஆடியோ கேட்க முடியும்" 
-                                        : "Answer the question first to enable audio"),
-                                      duration: const Duration(seconds: 1),
-                                    ),
-                                  );
-                                },
-                              );
-                            }
-                          ),
+                          // Builder(
+                          //   builder: (context) {
+                          //     bool isDailyOrMock = widget.subjectTitle == "Daily Quiz" ||
+                          //                         widget.subjectTitle == AppLanguage.getString('daily_quiz') ||
+                          //                         widget.subjectTitle == "Mock Quiz" ||
+                          //                         widget.subjectTitle == AppLanguage.getString('mock_quiz') ||
+                          //                         widget.isMockTest;
+                          //     bool hasAttempted = _selectedAnswers[_currentQuestionIndex] != null;
+                          //     bool canClickAudio = !isDailyOrMock || hasAttempted;
+                          //
+                          //     return IconButton(
+                          //       icon: Icon(
+                          //         TtsService.isSpeaking(_getQuestionTtsText(_visibleQuestions[_currentQuestionIndex])) ? Icons.volume_up_rounded : Icons.volume_up_outlined,
+                          //         color: canClickAudio ? AppTheme.secondaryColor : Colors.grey.withOpacity(0.5),
+                          //         size: 24,
+                          //       ),
+                          //       onPressed: canClickAudio ? () {
+                          //         final textToSpeak = _getQuestionTtsText(_visibleQuestions[_currentQuestionIndex]);
+                          //         if (TtsService.isSpeaking(textToSpeak)) {
+                          //           TtsService.stop();
+                          //         } else {
+                          //           TtsService.speak(textToSpeak);
+                          //         }
+                          //         setState(() {});
+                          //       } : () {
+                          //         ScaffoldMessenger.of(context).showSnackBar(
+                          //           SnackBar(
+                          //             content: Text(AppLanguage.languageNotifier.value == 'ta'
+                          //               ? "பதிலளித்த பிறகுதான் ஆடியோ கேட்க முடியும்"
+                          //               : "Answer the question first to enable audio"),
+                          //             duration: const Duration(seconds: 1),
+                          //           ),
+                          //         );
+                          //       },
+                          //     );
+                          //   }
+                          // ),
                           if (isAdmin)
                             _isGenerating
                                 ? const Padding(

@@ -15,7 +15,8 @@ class AdminQuizManageScreen extends StatefulWidget {
 
 class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
-  String _quizType = 'daily_quiz'; // 'daily_quiz' or 'mock_quiz'
+  String _quizType = 'daily_quiz'; // 'daily_quiz', 'mock_quiz', 'room_quiz'
+  String _selectedSubject = 'general_tamil';
   bool _isLoading = false;
   List<Question> _questions = [];
   String? _docId;
@@ -33,24 +34,42 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
       _docId = null;
     });
 
-    String dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-    String collection = _quizType == 'daily_quiz' ? 'quizzes' : 'mock_tests';
-    String typeFilter = _quizType == 'daily_quiz' ? 'daily_quiz' : 'daily_quiz'; // Both use 'daily_quiz' type field in firestore but in different collections
-
     try {
-      final query = await FirebaseFirestore.instance
-          .collection(collection)
-          .where('date', isEqualTo: dateStr)
-          .where('type', isEqualTo: typeFilter)
-          .get();
+      if (_quizType == 'room_quiz') {
+        final query = await FirebaseFirestore.instance
+            .collection('room_predefined_quizzes')
+            .where('subject', isEqualTo: _selectedSubject)
+            .orderBy('createdAt', descending: true)
+            .limit(1)
+            .get();
 
-      if (query.docs.isNotEmpty) {
-        final doc = query.docs.first;
-        _docId = doc.id;
-        List<dynamic> qList = doc.get('questions') ?? [];
-        setState(() {
-          _questions = qList.map((q) => Question.fromMap(q as Map<String, dynamic>)).toList();
-        });
+        if (query.docs.isNotEmpty) {
+          final doc = query.docs.first;
+          _docId = doc.id;
+          List<dynamic> qList = doc.get('questions') ?? [];
+          setState(() {
+            _questions = qList.map((q) => Question.fromMap(q as Map<String, dynamic>)).toList();
+          });
+        }
+      } else {
+        String dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+        String collection = _quizType == 'daily_quiz' ? 'quizzes' : 'mock_tests';
+        String typeFilter = 'daily_quiz';
+
+        final query = await FirebaseFirestore.instance
+            .collection(collection)
+            .where('date', isEqualTo: dateStr)
+            .where('type', isEqualTo: typeFilter)
+            .get();
+
+        if (query.docs.isNotEmpty) {
+          final doc = query.docs.first;
+          _docId = doc.id;
+          List<dynamic> qList = doc.get('questions') ?? [];
+          setState(() {
+            _questions = qList.map((q) => Question.fromMap(q as Map<String, dynamic>)).toList();
+          });
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -65,7 +84,9 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
     if (_docId == null) return;
 
     setState(() => _isLoading = true);
-    String collection = _quizType == 'daily_quiz' ? 'quizzes' : 'mock_tests';
+    String collection = _quizType == 'daily_quiz'
+        ? 'quizzes'
+        : (_quizType == 'mock_quiz' ? 'mock_tests' : 'room_predefined_quizzes');
 
     try {
       await FirebaseFirestore.instance.collection(collection).doc(_docId).update({
@@ -89,8 +110,10 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
     bool success = false;
     if (_quizType == 'daily_quiz') {
       success = await AiService.generateAndSaveDailyQuiz(_selectedDate);
-    } else {
+    } else if (_quizType == 'mock_quiz') {
       success = await AiService.generateAndSaveMockQuiz(_selectedDate);
+    } else {
+      success = await AiService.generateAndSaveRoomPredefinedQuiz(_selectedSubject);
     }
 
     if (success) {
@@ -202,24 +225,42 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
               children: [
                 Row(
                   children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.calendar_month_rounded),
-                        label: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: _selectedDate,
-                            firstDate: DateTime.now().subtract(const Duration(days: 30)),
-                            lastDate: DateTime.now().add(const Duration(days: 90)),
-                          );
-                          if (picked != null) {
-                            setState(() => _selectedDate = picked);
+                    if (_quizType != 'room_quiz')
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.calendar_month_rounded),
+                          label: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _selectedDate,
+                              firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                              lastDate: DateTime.now().add(const Duration(days: 90)),
+                            );
+                            if (picked != null) {
+                              setState(() => _selectedDate = picked);
+                              _fetchQuiz();
+                            }
+                          },
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedSubject,
+                          decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
+                          items: const [
+                            DropdownMenuItem(value: 'general_tamil', child: Text("General Tamil")),
+                            DropdownMenuItem(value: 'general_studies', child: Text("General Studies")),
+                            DropdownMenuItem(value: 'aptitude', child: Text("Aptitude")),
+                            DropdownMenuItem(value: 'current_affairs', child: Text("Current Affairs")),
+                          ],
+                          onChanged: (val) {
+                            setState(() => _selectedSubject = val!);
                             _fetchQuiz();
-                          }
-                        },
+                          },
+                        ),
                       ),
-                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: DropdownButtonFormField<String>(
@@ -228,6 +269,7 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                         items: const [
                           DropdownMenuItem(value: 'daily_quiz', child: Text("Daily Quiz")),
                           DropdownMenuItem(value: 'mock_quiz', child: Text("Mock Quiz")),
+                          DropdownMenuItem(value: 'room_quiz', child: Text("Room Quiz")),
                         ],
                         onChanged: (val) {
                           setState(() => _quizType = val!);

@@ -261,12 +261,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                               title: const Text("தமிழ் / English"),
-                              trailing: Switch(
-                                value: lang == 'en',
-                                activeColor: AppTheme.secondaryColor,
-                                onChanged: (val) => AppLanguage.changeLanguage(
-                                  val ? 'en' : 'ta',
-                                ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    "தமிழ்",
+                                    style: TextStyle(
+                                      fontWeight: lang == 'ta'
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: lang == 'ta'
+                                          ? AppTheme.secondaryColor
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                  Switch(
+                                    value: lang == 'en',
+                                    activeColor: AppTheme.secondaryColor,
+                                    inactiveThumbColor: AppTheme.secondaryColor,
+                                    onChanged: (val) =>
+                                        AppLanguage.changeLanguage(
+                                      val ? 'en' : 'ta',
+                                    ),
+                                  ),
+                                  Text(
+                                    "English",
+                                    style: TextStyle(
+                                      fontWeight: lang == 'en'
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: lang == 'en'
+                                          ? AppTheme.secondaryColor
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             const Divider(height: 1),

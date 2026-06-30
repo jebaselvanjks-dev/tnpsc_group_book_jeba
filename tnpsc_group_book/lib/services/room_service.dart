@@ -154,16 +154,48 @@ class RoomService {
         existing = await _getRoomRef(roomCode).get();
       }
 
-      // 1. Force AI Generation first for Room Matches
+      // 1. Priority: Fetch pre-generated room quiz from admin
       List<Question> allQuestions = [];
-      debugPrint("RoomService: Forcing AI generation for subject: $subject...");
       try {
-        bool generated = await AiService.generateSubjectQuestions(subject);
-        if (generated) {
-          allQuestions = await _firestoreService.getSubjectQuestions(subject);
+        debugPrint("RoomService: Checking for pre-generated room quiz for $subject...");
+        final roomQuizQuery = await _db
+            .collection('room_predefined_quizzes')
+            .where('subject', isEqualTo: subject)
+            .orderBy('createdAt', descending: true)
+            .limit(1)
+            .get();
+
+        if (roomQuizQuery.docs.isNotEmpty) {
+          final data = roomQuizQuery.docs.first.data() as Map<String, dynamic>;
+          List? qs = data['questions'];
+          if (qs != null && qs.isNotEmpty) {
+            for (var q in qs) {
+              allQuestions.add(Question(
+                question: q['question'] ?? '',
+                options: List<String>.from(q['options'] ?? []),
+                correctOptionIndex: q['correctOptionIndex'] ?? 0,
+                explanation: q['explanation'] ?? '',
+                subject: subject,
+              ));
+            }
+            debugPrint("RoomService: Found pre-generated quiz with ${allQuestions.length} questions.");
+          }
         }
       } catch (e) {
-        debugPrint("RoomService: AI generation failed: $e");
+        debugPrint("RoomService: Error fetching pre-generated room quiz: $e");
+      }
+
+      // 2. Force AI Generation if pre-generated is not found or empty
+      if (allQuestions.isEmpty) {
+        debugPrint("RoomService: No pre-generated quiz. Forcing AI generation for subject: $subject...");
+        try {
+          bool generated = await AiService.generateSubjectQuestions(subject);
+          if (generated) {
+            allQuestions = await _firestoreService.getSubjectQuestions(subject);
+          }
+        } catch (e) {
+          debugPrint("RoomService: AI generation failed: $e");
+        }
       }
 
       // 3. Fallback: Retrieve questions from historical quizzes in the 'quizzes' collection

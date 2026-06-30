@@ -66,6 +66,14 @@ class HiveService {
     }
   }
 
+  static Future<void> saveLanguage(String code) async {
+    await Hive.box(userBoxName).put('app_language', code);
+  }
+
+  static String getLanguage() {
+    return Hive.box(userBoxName).get('app_language', defaultValue: 'ta') as String;
+  }
+
   // Save questions for a topic with memory optimization (Keep last 10 subjects only)
   static Future<void> saveQuestions(String topic, List<Question> questions) async {
     var box = Hive.box(questionsBoxName);

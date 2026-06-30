@@ -5,15 +5,13 @@ import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:http/http.dart' as http;
 
 class AiService {
-  static String? _cachedApiKey;
+  static List<String>? _cachedApiKeys;
+  static List<String>? _cachedPreferredModels;
 
   // -----------------------------------------------------------------
-  // API key handling (Remote Config)
+  // Remote Config fetcher for API key and Model Priority
   // -----------------------------------------------------------------
-  static Future<String> _getApiKey() async {
-    if (_cachedApiKey != null && _cachedApiKey!.isNotEmpty) {
-      return _cachedApiKey!;
-    }
+  static Future<void> _fetchRemoteConfig() async {
     try {
       final remoteConfig = FirebaseRemoteConfig.instance;
       await remoteConfig.setConfigSettings(
@@ -23,173 +21,185 @@ class AiService {
         ),
       );
       await remoteConfig.fetchAndActivate();
-      _cachedApiKey = remoteConfig.getString('gemini_api_key');
-      if (_cachedApiKey != null && _cachedApiKey!.length > 10) {
-        print(
-          "AI_DEBUG: Key picked: " +
-              _cachedApiKey!.substring(0, 5) +
-              "..." +
-              _cachedApiKey!.substring(_cachedApiKey!.length - 5),
-        );
+
+      // 1. API Keys (Rotation support)
+      String keysStr = remoteConfig.getString('gemini_api_key');
+      if (keysStr.isNotEmpty) {
+        _cachedApiKeys =
+            keysStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        print("AI_DEBUG: Loaded ${_cachedApiKeys!.length} API keys from Remote Config");
       }
-      return _cachedApiKey!;
+
+      // 2. Preferred Models
+      String modelsStr = remoteConfig.getString('gemini_preferred_models');
+      if (modelsStr.isNotEmpty) {
+        _cachedPreferredModels =
+            modelsStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        print("AI_DEBUG: Preferred Models from Remote Config: $_cachedPreferredModels");
+      }
     } catch (e) {
       print("AI_DEBUG: Remote Config Error: $e");
-      return "";
     }
+  }
+
+  static Future<List<String>> _getApiKeys() async {
+    if (_cachedApiKeys == null || _cachedApiKeys!.isEmpty) {
+      await _fetchRemoteConfig();
+    }
+    return _cachedApiKeys ?? [];
+  }
+
+  static Future<List<String>> _getPreferredModels() async {
+    if (_cachedPreferredModels == null) {
+      await _fetchRemoteConfig();
+    }
+    // Final hardcoded fallback if Remote Config fails or is empty
+    return _cachedPreferredModels ??
+        [
+          'gemini-2.0-flash',
+          'gemini-1.5-flash',
+          'gemini-1.5-pro',
+          'gemini-2.0-pro-exp',
+        ];
   }
 
   // -----------------------------------------------------------------
   // Core request helper – discovers models, falls back, and returns raw text
   // -----------------------------------------------------------------
   static Future<String?> _generateWithFallback(String prompt) async {
-    final apiKey = await _getApiKey();
-    if (apiKey.isEmpty) return null;
+    final apiKeys = await _getApiKeys();
+    if (apiKeys.isEmpty) return null;
 
-    // 1. Discover available models
-    List<String> discoveredModels = [];
-    try {
-      print("AI_DEBUG: Discovering available models...");
-      final listUrl = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1/models?key=$apiKey',
-      );
-      final listRes = await http
-          .get(listUrl)
-          .timeout(const Duration(seconds: 10));
-      if (listRes.statusCode == 200) {
-        final listData = jsonDecode(listRes.body);
-        for (var m in listData['models']) {
-          String mName = m['name'].toString().replaceFirst('models/', '');
-          if (m['supportedGenerationMethods'].contains('generateContent')) {
-            discoveredModels.add(mName);
+    // Try each API key in rotation
+    for (String apiKey in apiKeys) {
+      // 1. Discover available models
+      List<String> discoveredModels = [];
+      try {
+        print("AI_DEBUG: Discovering models with key: ${apiKey.substring(0, 5)}...");
+        final listUrl = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1/models?key=$apiKey',
+        );
+        final listRes = await http.get(listUrl).timeout(const Duration(seconds: 10));
+        if (listRes.statusCode == 200) {
+          final listData = jsonDecode(listRes.body);
+          for (var m in listData['models']) {
+            String mName = m['name'].toString().replaceFirst('models/', '');
+            if (m['supportedGenerationMethods'].contains('generateContent')) {
+              discoveredModels.add(mName);
+            }
           }
+        } else {
+          print("AI_DEBUG: Key ${apiKey.substring(0, 5)} discovery failed (${listRes.statusCode}). Trying next key...");
+          continue; // Try next API key
+        }
+      } catch (e) {
+        print("AI_DEBUG: Discovery failed for key ${apiKey.substring(0, 5)}: $e");
+        continue;
+      }
+
+      // 2. Model Priority logic
+      final preferredModels = await _getPreferredModels();
+
+      List<String> finalModelsToTry = [];
+      for (var p in preferredModels) {
+        if (discoveredModels.contains(p)) {
+          finalModelsToTry.add(p);
         }
       }
-    } catch (e) {
-      print("AI_DEBUG: Discovery failed: $e");
-    }
-
-    // 2. Model Priority logic
-    final preferredModels = [
-      'gemini-2.5-flash',
-      'gemini-2.5-pro',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash',
-      'gemini-1.5-pro',
-    ];
-
-    List<String> finalModelsToTry = [];
-    for (var p in preferredModels) {
-      if (discoveredModels.contains(p)) {
-        finalModelsToTry.add(p);
+      for (var d in discoveredModels) {
+        if (!finalModelsToTry.contains(d)) {
+          finalModelsToTry.add(d);
+        }
       }
-    }
-    // Add remaining discovered ones that aren't in preferred list
-    for (var d in discoveredModels) {
-      if (!finalModelsToTry.contains(d)) {
-        finalModelsToTry.add(d);
+      if (finalModelsToTry.isEmpty) {
+        finalModelsToTry = ['gemini-1.5-flash', 'gemini-pro'];
       }
-    }
-    // Final fallback if everything else empty
-    if (finalModelsToTry.isEmpty) {
-      finalModelsToTry = ['gemini-1.5-flash', 'gemini-pro'];
-    }
 
-    print("AI_DEBUG: Trying models in priority: $finalModelsToTry");
+      print("AI_DEBUG: Trying models: $finalModelsToTry");
 
-    // 3. Try each model (v1 then v1beta)
-    for (String version in ['v1', 'v1beta']) {
-      for (String modelName in finalModelsToTry) {
-        try {
-          print("AI_DEBUG: REST Call - Trying $modelName on $version...");
-          final url = Uri.parse(
-            'https://generativelanguage.googleapis.com/$version/models/$modelName:generateContent?key=$apiKey',
-          );
-
-          final response = await http
-              .post(
-                url,
-                headers: {'Content-Type': 'application/json'},
-                body: jsonEncode({
-                  'contents': [
-                    {
-                      'parts': [
-                        {'text': prompt},
-                      ],
-                    },
-                  ],
-                  'safetySettings': [
-                    {
-                      'category': 'HARM_CATEGORY_HARASSMENT',
-                      'threshold': 'BLOCK_NONE',
-                    },
-                    {
-                      'category': 'HARM_CATEGORY_HATE_SPEECH',
-                      'threshold': 'BLOCK_NONE',
-                    },
-                    {
-                      'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                      'threshold': 'BLOCK_NONE',
-                    },
-                    {
-                      'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                      'threshold': 'BLOCK_NONE',
-                    },
-                  ],
-                  'generationConfig': {
-                    'responseMimeType': 'application/json',
-                    'temperature': 0.9,
-                    'topP': 0.95,
-                    'topK': 40,
-                    'maxOutputTokens': 8192,
-                  },
-                }),
-              )
-              .timeout(const Duration(seconds: 90));
-
-          if (response.statusCode == 200) {
-            final data = jsonDecode(response.body);
-            
-            // 8. Check Finish Reason
-            final candidate = data['candidates'][0];
-            if (candidate['finishReason'] != 'STOP') {
-              print("AI_DEBUG: Bad finish reason: ${candidate['finishReason']}");
-              continue;
-            }
-
-            String? text = candidate['content']['parts'][0]['text'];
-            if (text != null) {
-              // 5. JSON Cleaning & Validation
-              text = text.trim();
-              if (text.startsWith("```")) {
-                text = text
-                    .replaceAll("```json", "")
-                    .replaceAll("```", "")
-                    .trim();
-              }
-
-              // 6. Retry if JSON Invalid
-              try {
-                jsonDecode(text);
-                print("AI_DEBUG: REST SUCCESS with $modelName on $version");
-                return text;
-              } catch (e) {
-                print("AI_DEBUG: Invalid JSON from $modelName. Error: $e");
-                continue;
-              }
-            }
-          } else {
-            print(
-              "AI_DEBUG: REST FAIL ($version/$modelName) - Status: " +
-                  response.statusCode.toString() +
-                  ", Body: " +
-                  response.body,
+      // 3. Try each model (v1 then v1beta)
+      bool keyFailed = false;
+      for (String version in ['v1', 'v1beta']) {
+        if (keyFailed) break;
+        for (String modelName in finalModelsToTry) {
+          try {
+            print("AI_DEBUG: REST Call - Trying $modelName on $version...");
+            final url = Uri.parse(
+              'https://generativelanguage.googleapis.com/$version/models/$modelName:generateContent?key=$apiKey',
             );
+
+            final response = await http
+                .post(
+                  url,
+                  headers: {'Content-Type': 'application/json'},
+                  body: jsonEncode({
+                    'contents': [
+                      {
+                        'parts': [
+                          {'text': prompt},
+                        ],
+                      },
+                    ],
+                    'safetySettings': [
+                      {
+                        'category': 'HARM_CATEGORY_HARASSMENT',
+                        'threshold': 'BLOCK_NONE',
+                      },
+                      {
+                        'category': 'HARM_CATEGORY_HATE_SPEECH',
+                        'threshold': 'BLOCK_NONE',
+                      },
+                      {
+                        'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                        'threshold': 'BLOCK_NONE',
+                      },
+                      {
+                        'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                        'threshold': 'BLOCK_NONE',
+                      },
+                    ],
+                    'generationConfig': {
+                      'responseMimeType': 'application/json',
+                      'temperature': 0.9,
+                      'topP': 0.95,
+                      'topK': 40,
+                      'maxOutputTokens': 8192,
+                    },
+                  }),
+                )
+                .timeout(const Duration(seconds: 90));
+
+            if (response.statusCode == 200) {
+              final data = jsonDecode(response.body);
+              final candidate = data['candidates'][0];
+              if (candidate['finishReason'] != 'STOP') continue;
+
+              String? text = candidate['content']['parts'][0]['text'];
+              if (text != null) {
+                text = text.trim();
+                if (text.startsWith("```")) {
+                  text = text.replaceAll("```json", "").replaceAll("```", "").trim();
+                }
+                try {
+                  jsonDecode(text);
+                  return text;
+                } catch (e) {
+                  continue;
+                }
+              }
+            } else if (response.statusCode == 429 || response.statusCode == 403) {
+              print("AI_DEBUG: Key limit reached or invalid (Status: ${response.statusCode}). Switching key...");
+              keyFailed = true;
+              break;
+            } else {
+              print("AI_DEBUG: REST FAIL - Status: ${response.statusCode}");
+            }
+          } catch (e) {
+            print("AI_DEBUG: REST Error: $e");
           }
-        } catch (e) {
-          print("AI_DEBUG: REST Error ($version/$modelName): $e");
         }
       }
+      // If we reach here and keyFailed is true, the outer loop continues to next API key
     }
     return null;
   }
@@ -676,6 +686,113 @@ $commonRules
   }
 
   // -----------------------------------------------------------------
+  // Room specific pre-defined quiz generation
+  // -----------------------------------------------------------------
+  static Future<bool> generateAndSaveRoomPredefinedQuiz(String subject) async {
+    String specializedPrompt = "";
+
+    if (subject == 'general_tamil') {
+      specializedPrompt = '''
+Generate 20 UNIQUE TNPSC General Tamil (பொதுத்தமிழ்) MCQs (SSLC Standard). 
+Cover Part A: Grammar (இலக்கணம்), Part B: Literature (இலக்கியம்), and Part C: Tamil Scholars.
+STRICT LANGUAGE REQUIREMENTS:
+1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE.
+2. NO OTHER LANGUAGES (No Hindi, etc.).
+3. Ensure there are NO spelling mistakes.
+Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
+''';
+    } else if (subject == 'general_studies') {
+      specializedPrompt = '''
+Generate 20 UNIQUE TNPSC General Studies (பொது அறிவு) MCQs (SSLC Standard). 
+Rotate between Science, History, Geography, Polity, and Economy.
+STRICT LANGUAGE REQUIREMENTS:
+1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE.
+2. NO OTHER LANGUAGES (No Hindi, etc.).
+3. Ensure there are NO spelling mistakes.
+Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
+''';
+    } else if (subject == 'aptitude') {
+      specializedPrompt = '''
+Generate 20 UNIQUE TNPSC Aptitude and Mental Ability MCQs (SSLC Standard). 
+Cover Simplification, Percentage, HCF/LCM, Ratio, Interest, Area, Volume, Time and Work.
+CRITICAL INSTRUCTIONS:
+1. Double-check the 'correctOptionIndex' (0, 1, 2, or 3).
+2. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. NO OTHER LANGUAGES (Hindi, etc.).
+Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
+''';
+    } else if (subject == 'current_affairs') {
+      specializedPrompt = '''
+Generate 20 UNIQUE TNPSC Current Affairs (நடப்பு நிகழ்வுகள்) MCQs. 
+Focus on important national and international events, awards, sports, and Tamil Nadu specific news from the last 6 months.
+STRICT LANGUAGE REQUIREMENTS:
+1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE.
+2. NO OTHER LANGUAGES (No Hindi, etc.).
+3. Ensure there are NO spelling mistakes.
+Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
+''';
+    } else {
+      specializedPrompt =
+          "Create 20 UNIQUE TNPSC MCQs for '$subject' (Bilingual). STRICT LANGUAGE REQUIREMENTS: 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. 2. NO OTHER LANGUAGES (Hindi, etc.). 3. NO spelling mistakes. Format: Question: 'English\\nதமிழ்'. Options: 'English / தமிழ்'. Explanation: 'English. தமிழ்.'";
+    }
+
+    final prompt =
+        '''
+$specializedPrompt
+Strictly use this JSON format: 
+[{"question": "English\\nதமிழ்", 
+"options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
+"correctOptionIndex": 0, 
+"explanation": "English explanation. தமிழ் விளக்கம்."}]. 
+Only return the raw JSON array, no other text or markdown formatting.
+''';
+
+    final res = await _generateWithFallback(prompt);
+    if (res != null) {
+      try {
+        int start = res.indexOf('[');
+        int end = res.lastIndexOf(']');
+        if (start != -1 && end != -1) {
+          List<dynamic> questions = jsonDecode(
+            res.substring(start, end + 1),
+          );
+
+          if (questions.length < 20) return false;
+
+          final collection = FirebaseFirestore.instance.collection('room_predefined_quizzes');
+
+          // 1. Add new quiz
+          await collection.add({
+            'subject': subject,
+            'questions': questions.map((q) => {...q, 'quiz_type': 'room_quiz'}).toList(),
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+          // 2. Rotation Logic: Keep only latest 500 quizzes
+          try {
+            final snap = await collection.orderBy('createdAt', descending: true).get();
+            if (snap.docs.length > 500) {
+              final toDelete = snap.docs.sublist(500);
+              final batch = FirebaseFirestore.instance.batch();
+              for (var doc in toDelete) {
+                batch.delete(doc.reference);
+              }
+              await batch.commit();
+              print("AI_DEBUG: Deleted ${toDelete.length} old room quizzes to maintain 500 limit");
+            }
+          } catch (e) {
+            print("AI_DEBUG: Rotation error: $e");
+          }
+
+          return true;
+        }
+      } catch (e) {
+        print("AI_DEBUG: Room Predefined Quiz JSON Parse Error: $e");
+      }
+    }
+    return false;
+  }
+
+  // -----------------------------------------------------------------
   // Scheduled quiz generation (used by bulk‑7‑day flow)
   // -----------------------------------------------------------------
   static Future<bool> generateScheduledQuiz(
@@ -821,6 +938,16 @@ Cover Simplification, Percentage, HCF/LCM, Ratio, Interest, Area, Volume, Time a
 CRITICAL INSTRUCTIONS:
 1. Double-check the 'correctOptionIndex' (0, 1, 2, or 3).
 2. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. NO OTHER LANGUAGES (Hindi, etc.).
+Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
+''';
+    } else if (subject == 'current_affairs') {
+      specializedPrompt = '''
+Generate 20 UNIQUE TNPSC Current Affairs (நடப்பு நிகழ்வுகள்) MCQs. 
+Focus on important national and international events, awards, sports, and Tamil Nadu specific news from the last 6 months.
+STRICT LANGUAGE REQUIREMENTS:
+1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE.
+2. NO OTHER LANGUAGES (No Hindi, etc.).
+3. Ensure there are NO spelling mistakes.
 Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
 ''';
     } else {

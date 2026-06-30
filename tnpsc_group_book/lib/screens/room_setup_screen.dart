@@ -7,6 +7,7 @@ import '../services/room_service.dart';
 import '../utils/app_language.dart';
 import '../utils/app_theme.dart';
 import '../models/subject.dart';
+import 'admin_quiz_manage_screen.dart';
 import 'waiting_room_screen.dart';
 import '../services/hive_service.dart';
 import '../services/reward_service.dart';
@@ -766,6 +767,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                     const SizedBox(height: 24),
                                     Text(
                                       AppLanguage.getString('loading_quiz'),
+                                      textAlign: TextAlign.center,
                                       style: AppTheme.getStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold,
@@ -775,6 +777,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                     const SizedBox(height: 8),
                                     Text(
                                       lang == 'ta' ? 'காத்திருக்கும் நேரத்தில் சில வினாக்கள்...' : 'Learn while we load...',
+                                      textAlign: TextAlign.center,
                                       style: const TextStyle(color: Colors.grey),
                                     ),
                                   ],
@@ -968,7 +971,8 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                 items: [
                                   'general_tamil',
                                   'general_studies',
-                                  'aptitude'
+                                  'aptitude',
+                                  'current_affairs'
                                 ].map((key) => DropdownMenuItem(
                                   value: key,
                                   child: Text(AppLanguage.getString(key), style: AppTheme.getStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16, fontWeight: FontWeight.w400)),
@@ -1027,6 +1031,50 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
                   const SizedBox(height: 30),
                   
+                  if (_isAdmin) ...[
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      margin: const EdgeInsets.only(bottom: 25),
+                      decoration: BoxDecoration(
+                        color: Colors.blueGrey.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.blueGrey.withOpacity(0.4), width: 1.5),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.admin_panel_settings_rounded, color: Colors.blueGrey, size: 28),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Admin Controls",
+                                style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminQuizManageScreen()));
+                              },
+                              icon: const Icon(Icons.auto_awesome_rounded),
+                              label: const Text("Manage Pre-defined Quizzes"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blueGrey,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   // Join Room Section
                   Container(
                     padding: const EdgeInsets.all(20),

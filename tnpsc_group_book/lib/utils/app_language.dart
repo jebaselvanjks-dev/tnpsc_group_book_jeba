@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../services/hive_service.dart';
 
 class AppLanguage {
-  static final ValueNotifier<String> languageNotifier = ValueNotifier<String>('ta');
+  static final ValueNotifier<String> languageNotifier = ValueNotifier<String>(HiveService.getLanguage());
 
   static void changeLanguage(String code) {
     languageNotifier.value = code;
+    HiveService.saveLanguage(code);
   }
 
   static String getString(String key) {
@@ -710,6 +712,8 @@ class AppLanguage {
         return ta ? 'பொது அறிவு' : 'General Studies ';
       case 'aptitude':
         return ta ? 'கணிதத் திறன் & மனத்திறன்' : 'Aptitude & Mental Ability';
+      case 'current_affairs':
+        return ta ? 'நடப்பு நிகழ்வுகள்' : 'Current Affairs';
       case 'audio_settings':
         return ta ? 'ஆடியோ அமைப்புகள்' : 'Audio Settings';
       case 'voice_speed':
