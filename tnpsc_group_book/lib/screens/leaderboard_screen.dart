@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
 import '../services/firestore_service.dart';
@@ -46,11 +46,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
           appBar: AppBar(
             backgroundColor: isDark ? Colors.black : Colors.white,
             elevation: 0,
+            scrolledUnderElevation: 0,
+            surfaceTintColor: Colors.transparent,
             title: Text(
               AppLanguage.getString('leaderboard'),
-              style: GoogleFonts.outfit(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
+              style: AppTheme.getStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 18,
                 color: isDark ? Colors.white : AppTheme.textMainColor,
               ),
             ),
@@ -68,8 +70,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
                   child: Text(
                     AppLanguage.getString('daily'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12
+                    style: AppTheme.getStyle(
+                      fontSize: 13
                     ),
                     maxLines: 2,
                   ),
@@ -78,8 +80,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
                   child: Text(
                     AppLanguage.getString('mock'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 12
+                    style: AppTheme.getStyle(
+                        fontSize: 13
                     ),
                     maxLines: 2,
                   ),
@@ -187,7 +189,7 @@ class _MyRankStickyCardState extends State<_MyRankStickyCard> {
                             children: [
                               Text(
                                 AppLanguage.getString('best_performance_today'),
-                                style: GoogleFonts.outfit(
+                                style: AppTheme.getStyle(
                                   color: Colors.white70,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -195,7 +197,7 @@ class _MyRankStickyCardState extends State<_MyRankStickyCard> {
                               ),
                               Text(
                                 "${AppLanguage.getString('you_label')}: ${data['userName'] ?? AppLanguage.getString('anonymous')}",
-                                style: GoogleFonts.outfit(
+                                style: AppTheme.getStyle(
                                   color: Colors.white,
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -213,7 +215,7 @@ class _MyRankStickyCardState extends State<_MyRankStickyCard> {
                           children: [
                             Text(
                               "${AppLanguage.getString('score')}: ${data['score']}/${data['totalQuestions'] ?? (widget.isDaily ? 20 : 50)}",
-                              style: GoogleFonts.outfit(
+                              style: AppTheme.getStyle(
                                 color: Colors.white,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -229,7 +231,7 @@ class _MyRankStickyCardState extends State<_MyRankStickyCard> {
                                     : "$sec ${AppLanguage.getString('sec')}";
                                 return Text(
                                   timeDisplay,
-                                  style: GoogleFonts.outfit(
+                                  style: AppTheme.getStyle(
                                     color: Colors.white70,
                                     fontSize: 13,
                                   ),
@@ -320,16 +322,16 @@ class _LeaderboardListState extends State<_LeaderboardList> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("🏆", style: TextStyle(fontSize: 60)),
+                        Text("🏆", style: AppTheme.getStyle(fontSize: 60)),
                         const SizedBox(height: 16),
                         Text(
                           AppLanguage.getString('no_results_today'),
-                          style: GoogleFonts.outfit(fontSize: 18, color: Colors.grey),
+                          style: AppTheme.getStyle(fontSize: 18, color: Colors.grey),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           lang == 'ta' ? 'தேர்வை முடித்து முதலில் இங்கே வரவும்!' : 'Finish a quiz and be the first one here!',
-                          style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey.shade400),
+                          style: AppTheme.getStyle(fontSize: 14, color: Colors.grey.shade400),
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
@@ -396,12 +398,12 @@ class _LeaderboardListState extends State<_LeaderboardList> {
                           child: isTop3
                               ? Text(
                                   index == 0 ? "🥇" : index == 1 ? "🥈" : "🥉",
-                                  style: const TextStyle(fontSize: 24),
+                                  style: AppTheme.getStyle(fontSize: 24),
                                   textAlign: TextAlign.center,
                                 )
                               : Text(
                                   "#${index + 1}",
-                                  style: GoogleFonts.outfit(
+                                  style: AppTheme.getStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.grey,
@@ -416,8 +418,8 @@ class _LeaderboardListState extends State<_LeaderboardList> {
                             children: [
                               Text(
                                 user["userName"] ?? AppLanguage.getString('anonymous'),
-                                style: GoogleFonts.outfit(
-                                  fontSize: 17,
+                                style: AppTheme.getStyle(
+                                  fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppTheme.textMainColor,
                                 ),
@@ -429,7 +431,7 @@ class _LeaderboardListState extends State<_LeaderboardList> {
                                   const SizedBox(width: 4),
                                   Text(
                                     timeDisplay,
-                                    style: GoogleFonts.outfit(
+                                    style: AppTheme.getStyle(
                                       fontSize: 12,
                                       color: Colors.grey,
                                     ),
@@ -447,7 +449,7 @@ class _LeaderboardListState extends State<_LeaderboardList> {
                           ),
                           child: Text(
                             "${user['score']}/${user['totalQuestions'] ?? (widget.isDaily ? 20 : 50)}",
-                            style: GoogleFonts.outfit(
+                            style: AppTheme.getStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: isDark ? Colors.white70 : Colors.black54,

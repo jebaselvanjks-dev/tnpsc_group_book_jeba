@@ -16,6 +16,7 @@ import '../services/version_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/question.dart';
+import '../services/deep_link_service.dart';
 
 class RoomSetupScreen extends StatefulWidget {
   const RoomSetupScreen({super.key});
@@ -29,10 +30,11 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   final TextEditingController _codeController = TextEditingController();
   bool _isLoading = false;
   bool _showOnlySpinner = false;
+  bool _canPop = false;
   String _selectedSubject = 'general_tamil';
   int _selectedMaxPlayers = RoomService.baseMaxPlayers;
   bool _isFirstAttempt = true;
-  String? _existingRoomCode;
+  Map<String, dynamic>? _activeRoomData;
 
   // Teaser for loading screen
   List<Question> _teaserQuestions = [];
@@ -49,22 +51,48 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   void initState() {
     super.initState();
     _loadTeaserQuestions();
-    _existingRoomCode = HiveService.getHostRoomCode();
     _refreshExistingRoom();
+
+    // Listen for deep link codes
+    DeepLinkService().pendingRoomCode.addListener(_handleDeepLinkCode);
+    
+    // Check if there's already a code when entering
+    if (DeepLinkService().pendingRoomCode.value != null) {
+      _handleDeepLinkCode();
+    }
+  }
+
+  void _handleDeepLinkCode() {
+    final code = DeepLinkService().pendingRoomCode.value;
+    if (code != null && mounted) {
+      setState(() {
+        _codeController.text = code;
+      });
+      DeepLinkService().clearPendingCode();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLanguage.languageNotifier.value == 'ta' 
+              ? "ரூம் கோட் தானாகப் பயன்படுத்தப்பட்டது: $code" 
+              : "Room code applied automatically: $code"),
+          backgroundColor: Colors.blue,
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
+    DeepLinkService().pendingRoomCode.removeListener(_handleDeepLinkCode);
     _teaserTimer?.cancel();
     _teaserController?.dispose();
     super.dispose();
   }
 
   Future<void> _refreshExistingRoom() async {
-    String? serverCode = await _roomService.getActiveHostRoom();
+    final serverData = await _roomService.getActiveHostRoom();
     if (mounted) {
       setState(() {
-        _existingRoomCode = serverCode;
+        _activeRoomData = serverData;
       });
     }
   }
@@ -114,17 +142,18 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     // 3. Check for Existing Room (Server sync)
     setState(() => _isLoading = true);
     _startSpinnerTimer();
-    final activeCode = await _roomService.getActiveHostRoom() ?? HiveService.getHostRoomCode();
+    final activeData = await _roomService.getActiveHostRoom();
     setState(() => _isLoading = false);
 
-    if (activeCode != null) {
-      setState(() { _existingRoomCode = activeCode; });
+    if (activeData != null) {
+      String code = activeData['roomCode'];
+      setState(() { _activeRoomData = activeData; });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLanguage.getString('room_exists_error')), backgroundColor: Colors.orange),
       );
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => WaitingRoomScreen(roomCode: activeCode, isHost: true)),
+        MaterialPageRoute(builder: (context) => WaitingRoomScreen(roomCode: code, isHost: true)),
       );
       return;
     }
@@ -313,7 +342,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text(AppLanguage.getString('close_btn'), style: TextStyle(color: Colors.grey[600])),
+                  child: Text(AppLanguage.getString('close_btn'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey[600])),
                 ),
                 ElevatedButton.icon(
                   onPressed: () {
@@ -579,7 +608,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text(AppLanguage.getString('close_btn'), style: TextStyle(fontSize: 14,color: Colors.grey[600])),
+            child: Text(AppLanguage.getString('close_btn'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey[600])),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -589,7 +618,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
             ),
             child: Text(
               AppLanguage.languageNotifier.value == 'ta' ? 'வெளியேறு' : 'Exit',
-              style: TextStyle(fontSize: 14, color: isDark ? Colors.white : AppTheme.textMainColor),
+              style: AppTheme.getStyle(fontSize: 14, color: isDark ? Colors.white : AppTheme.textMainColor),
             ),
           ),
         ],
@@ -711,12 +740,18 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     String lang = AppLanguage.languageNotifier.value;
     return PopScope(
-      canPop: false,
+      canPop: _canPop,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final shouldPop = await _showExitConfirmation();
         if (shouldPop && mounted) {
-          Navigator.of(context).pop();
+          setState(() {
+            _canPop = true;
+          });
+          // Small delay to ensure the framework sees canPop: true before the next pop attempt
+          Future.microtask(() {
+            if (mounted) Navigator.of(context).pop();
+          });
         }
       },
       child: Scaffold(
@@ -724,11 +759,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         appBar: AppBar(
           leading: IconButton(
             icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
-            onPressed: () async {
-              if (await _showExitConfirmation()) {
-                if (mounted) Navigator.pop(context);
-              }
-            },
+            onPressed: () => Navigator.maybePop(context),
           ),
           title: Text(AppLanguage.getString('room_screen_title'), style: AppTheme.getStyle(
               fontSize: 15, fontWeight: FontWeight.bold)),
@@ -778,7 +809,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                     Text(
                                       lang == 'ta' ? 'காத்திருக்கும் நேரத்தில் சில வினாக்கள்...' : 'Learn while we load...',
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(color: Colors.grey),
+                                      style: AppTheme.getStyle(fontSize: 14, color: Colors.grey),
                                     ),
                                   ],
                                 ),
@@ -817,9 +848,10 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                       Expanded(
                                         child: Text(
                                           _localizedOption(q.options[optIndex]),
-                                          style: TextStyle(
-                                            color: isCorrect ? Colors.green.shade700 : null,
-                                            fontWeight: isCorrect ? FontWeight.bold : null,
+                                          style: AppTheme.getStyle(
+                                            fontSize: 15,
+                                            color: isCorrect ? Colors.green.shade700 : (isDark ? Colors.white : AppTheme.textMainColor),
+                                            fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
                                           ),
                                         ),
                                       ),
@@ -840,16 +872,16 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_existingRoomCode != null) ...[
+                  if (_activeRoomData != null) ...[
                     Container(
                       padding: const EdgeInsets.all(20),
                       margin: const EdgeInsets.only(bottom: 25),
                       decoration: BoxDecoration(
-                        color: AppTheme.secondaryColor.withOpacity(0.12),
+                        color: AppTheme.secondaryColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.secondaryColor.withOpacity(0.4), width: 1.5),
+                        border: Border.all(color: AppTheme.secondaryColor.withValues(alpha: 0.4), width: 1.5),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 5))
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 5))
                         ]
                       ),
                       child: Column(
@@ -861,17 +893,22 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                               const Icon(Icons.star_rounded, color: AppTheme.secondaryColor, size: 28),
                               const SizedBox(width: 8),
                               Flexible(
-                                child: Text(
-                                  AppLanguage.getString('active_room_available'),
-                                  style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      AppLanguage.getString('active_room_available'),
+                                      style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "${AppLanguage.getString('subject_name_label')}: ${AppLanguage.getString(_activeRoomData!['subject'] ?? 'general_tamil')}",
+                                      style: AppTheme.getStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54, fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            AppLanguage.getString('active_room_desc'),
-                            style: AppTheme.getStyle(fontSize: 14, color: isDark ? Colors.white70 : Colors.black54),
                           ),
                           const SizedBox(height: 14),
                           Center(
@@ -883,7 +920,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                 border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300, width: 1),
                               ),
                               child: Text(
-                                _existingRoomCode!,
+                                _activeRoomData!['roomCode'] ?? '',
                                 style: AppTheme.getStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -894,7 +931,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                           ),
                           const SizedBox(height: 18),
                           SizedBox(
-                            // width: double.infinity,
+                            width: double.infinity,
                             child: ElevatedButton.icon(
                               onPressed: () async {
                                 if (await VersionService.isUpdateRequired()) {
@@ -905,25 +942,16 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                   Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => WaitingRoomScreen(roomCode: _existingRoomCode!, isHost: true),
+                                      builder: (context) => WaitingRoomScreen(roomCode: _activeRoomData!['roomCode'], isHost: true),
                                     ),
                                   );
                                 }
                               },
-                              // icon: const Icon(Icons.login_rounded, color: Colors.black87),
                               label: Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        AppLanguage.getString('enter_waiting_room'),
-                                        textAlign: TextAlign.center,
-                                        style: AppTheme.getStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 14),
-                                      ),
-                                    ),
-                                  ],
+                                child: Text(
+                                  AppLanguage.getString('enter_waiting_room'),
+                                  style: AppTheme.getStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 14),
                                 ),
                               ),
                               style: ElevatedButton.styleFrom(
@@ -1031,49 +1059,49 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
                   const SizedBox(height: 30),
                   
-                  if (_isAdmin) ...[
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      margin: const EdgeInsets.only(bottom: 25),
-                      decoration: BoxDecoration(
-                        color: Colors.blueGrey.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.blueGrey.withOpacity(0.4), width: 1.5),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.admin_panel_settings_rounded, color: Colors.blueGrey, size: 28),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Admin Controls",
-                                style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminQuizManageScreen()));
-                              },
-                              icon: const Icon(Icons.auto_awesome_rounded),
-                              label: const Text("Manage Pre-defined Quizzes"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blueGrey,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  // if (_isAdmin) ...[
+                  //   Container(
+                  //     padding: const EdgeInsets.all(20),
+                  //     margin: const EdgeInsets.only(bottom: 25),
+                  //     decoration: BoxDecoration(
+                  //       color: Colors.blueGrey.withOpacity(0.12),
+                  //       borderRadius: BorderRadius.circular(20),
+                  //       border: Border.all(color: Colors.blueGrey.withOpacity(0.4), width: 1.5),
+                  //     ),
+                  //     child: Column(
+                  //       crossAxisAlignment: CrossAxisAlignment.start,
+                  //       children: [
+                  //         Row(
+                  //           children: [
+                  //             const Icon(Icons.admin_panel_settings_rounded, color: Colors.blueGrey, size: 28),
+                  //             const SizedBox(width: 8),
+                  //             Text(
+                  //               "Admin Controls",
+                  //               style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //         const SizedBox(height: 14),
+                  //         SizedBox(
+                  //           width: double.infinity,
+                  //           child: ElevatedButton.icon(
+                  //             onPressed: () {
+                  //               Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminQuizManageScreen()));
+                  //             },
+                  //             icon: const Icon(Icons.auto_awesome_rounded),
+                  //             label: const Text("Manage Pre-defined Quizzes"),
+                  //             style: ElevatedButton.styleFrom(
+                  //               backgroundColor: Colors.blueGrey,
+                  //               foregroundColor: Colors.white,
+                  //               padding: const EdgeInsets.symmetric(vertical: 14),
+                  //               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  //             ),
+                  //           ),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
+                  // ],
 
                   // Join Room Section
                   Container(
@@ -1102,7 +1130,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                             counterText: "",
                           ),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2),
+                          style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold).copyWith(letterSpacing: 2),
                         ),
                         const SizedBox(height: 20),
                         SizedBox(

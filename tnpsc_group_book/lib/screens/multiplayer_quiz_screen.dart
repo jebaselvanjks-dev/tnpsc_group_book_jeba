@@ -26,6 +26,7 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
   List<int?> _selectedAnswers = [];
   List<Question> _questions = [];
   bool _submitted = false;
+  bool _canPop = false;
   
   final Stopwatch _stopwatch = Stopwatch();
   Timer? _timer;
@@ -177,6 +178,49 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
     );
   }
 
+  Future<bool> _showExitConfirmation() async {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101F42) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          AppLanguage.languageNotifier.value == 'ta' ? 'வெளியேறவா?' : 'Exit Battle?',
+          style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
+        ),
+        content: Text(
+          AppLanguage.languageNotifier.value == 'ta' 
+            ? 'இந்தத் தேர்விலிருந்து வெளியேற விரும்புகிறீர்களா? நீங்கள் தோல்வியுற்றதாகக் கருதப்படுவீர்கள்.' 
+            : 'Are you sure you want to exit the battle? You will be marked as abandoned.',
+          style: AppTheme.getStyle(
+              fontSize: 15,
+              color: isDark ? Colors.white70 : AppTheme.textSecondaryColor
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppLanguage.getString('no'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(
+              AppLanguage.languageNotifier.value == 'ta' ? 'வெளியேறு' : 'Exit',
+              style: AppTheme.getStyle(fontSize: 14, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   Future<void> _submitQuiz() async {
     if (_submitted) return;
     _submitted = true;
@@ -222,9 +266,18 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
     double progress = (_currentQuestionIndex + 1) / _questions.length;
 
     return PopScope(
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) {
-          _abandonQuiz();
+      canPop: _canPop,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _showExitConfirmation();
+        if (shouldPop && mounted) {
+          await _abandonQuiz();
+          setState(() {
+            _canPop = true;
+          });
+          Future.microtask(() {
+            if (mounted) Navigator.of(context).pop();
+          });
         }
       },
       child: Scaffold(
@@ -232,9 +285,9 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.maybePop(context),
         ),
-        title: Text(AppLanguage.getString('battle_title') + ': ${widget.roomCode}', style: const TextStyle(fontSize: 16)),
+        title: Text(AppLanguage.getString('battle_title') + ': ${widget.roomCode}', style: AppTheme.getStyle(fontSize: 16)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
@@ -374,7 +427,7 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
                   style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
                   child: Text(
                     _currentQuestionIndex < _questions.length - 1 ? "Next" : "Submit",
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
+                    style: AppTheme.getStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
                   ),
                 ),
               ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
@@ -162,7 +162,7 @@ bool isAllowedDay = const [2, 4, 6, 7].contains(DateTime.now().weekday);
             ),
             child: Text(
               statusText,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 1.5),
+              style: AppTheme.getStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white).copyWith(letterSpacing: 1.5),
             ),
           ),
           const SizedBox(height: 16),

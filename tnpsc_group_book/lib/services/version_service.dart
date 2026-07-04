@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:tnpsc_group_book/utils/app_language.dart';
+import 'package:tnpsc_group_book/utils/app_theme.dart';
 
 class VersionService {
   static const String _playStoreUrl = "https://play.google.com/store/apps/details?id=com.tnpsc.master";
@@ -59,13 +60,13 @@ class VersionService {
           title: Text(AppLanguage.getString(mandatory ? 'update_required_title' : 'update_available')),
           content: Text(
             AppLanguage.getString(mandatory ? 'update_required_desc' : 'update_desc'),
-            style: const TextStyle(fontSize: 16),
+            style: AppTheme.getStyle(fontSize: 16),
           ),
           actions: [
             if (!mandatory)
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text(AppLanguage.getString('close_btn'), style: TextStyle(color: Colors.grey[600])),
+                child: Text(AppLanguage.getString('close_btn'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey[600])),
               ),
             TextButton(
               onPressed: () async {
@@ -74,7 +75,7 @@ class VersionService {
                   await launchUrl(url, mode: LaunchMode.externalApplication);
                 }
               },
-              child: Text(AppLanguage.getString('update_now'), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+              child: Text(AppLanguage.getString('update_now'), style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue)),
             ),
           ],
         ),

@@ -154,22 +154,24 @@ class RoomService {
         existing = await _getRoomRef(roomCode).get();
       }
 
-      // 1. Priority: Fetch pre-generated room quiz from admin
+      // 1. Priority: Fetch and shuffle from the pre-generated room quiz pool
       List<Question> allQuestions = [];
       try {
-        debugPrint("RoomService: Checking for pre-generated room quiz for $subject...");
-        final roomQuizQuery = await _db
+        debugPrint("RoomService: Checking for pre-generated room quiz pool for $subject...");
+        final roomQuizDoc = await _db
             .collection('room_predefined_quizzes')
-            .where('subject', isEqualTo: subject)
-            .orderBy('createdAt', descending: true)
-            .limit(1)
+            .doc(subject)
             .get();
 
-        if (roomQuizQuery.docs.isNotEmpty) {
-          final data = roomQuizQuery.docs.first.data() as Map<String, dynamic>;
+        if (roomQuizDoc.exists) {
+          final data = roomQuizDoc.data() as Map<String, dynamic>;
           List? qs = data['questions'];
           if (qs != null && qs.isNotEmpty) {
-            for (var q in qs) {
+            // Shuffle the entire pool and take roomQuestionCount
+            List pool = List.from(qs);
+            pool.shuffle();
+            
+            for (var q in pool.take(roomQuestionCount)) {
               allQuestions.add(Question(
                 question: q['question'] ?? '',
                 options: List<String>.from(q['options'] ?? []),
@@ -178,11 +180,11 @@ class RoomService {
                 subject: subject,
               ));
             }
-            debugPrint("RoomService: Found pre-generated quiz with ${allQuestions.length} questions.");
+            debugPrint("RoomService: Shuffled pool and selected ${allQuestions.length} unique questions.");
           }
         }
       } catch (e) {
-        debugPrint("RoomService: Error fetching pre-generated room quiz: $e");
+        debugPrint("RoomService: Error fetching pre-generated room quiz pool: $e");
       }
 
       // 2. Force AI Generation if pre-generated is not found or empty
@@ -399,7 +401,7 @@ class RoomService {
   }
 
   // Get active room hosted by current user today
-  Future<String?> getActiveHostRoom() async {
+  Future<Map<String, dynamic>?> getActiveHostRoom() async {
     String? uid = _auth.currentUser?.uid;
     if (uid == null) return null;
 
@@ -417,15 +419,23 @@ class RoomService {
       if (snap.docs.isNotEmpty) {
         String roomCode = snap.docs.first.id;
         await HiveService.saveHostRoom(roomCode, today);
-        return roomCode;
+        return {
+          'roomCode': roomCode,
+          'subject': snap.docs.first.get('subject'),
+          'maxPlayers': snap.docs.first.get('maxPlayers'),
+          'status': snap.docs.first.get('status'),
+        };
       } else {
         await HiveService.clearHostRoom();
         return null;
       }
     } catch (e) {
       debugPrint("Error in getActiveHostRoom: $e");
-      // Fallback to local cache if Firestore check fails
-      return HiveService.getHostRoomCode();
+      String? cachedCode = HiveService.getHostRoomCode();
+      if (cachedCode != null) {
+        return {'roomCode': cachedCode};
+      }
+      return null;
     }
   }
 

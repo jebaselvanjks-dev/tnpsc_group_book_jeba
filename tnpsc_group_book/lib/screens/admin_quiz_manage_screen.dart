@@ -36,17 +36,18 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
 
     try {
       if (_quizType == 'room_quiz') {
-        final query = await FirebaseFirestore.instance
+        final doc = await FirebaseFirestore.instance
             .collection('room_predefined_quizzes')
-            .where('subject', isEqualTo: _selectedSubject)
-            .orderBy('createdAt', descending: true)
-            .limit(1)
+            .doc(_selectedSubject)
             .get();
 
-        if (query.docs.isNotEmpty) {
-          final doc = query.docs.first;
+        if (doc.exists) {
           _docId = doc.id;
           List<dynamic> qList = doc.get('questions') ?? [];
+          // Display the last 50 questions if the pool is large
+          if (qList.length > 50) {
+            qList = qList.sublist(qList.length - 50);
+          }
           setState(() {
             _questions = qList.map((q) => Question.fromMap(q as Map<String, dynamic>)).toList();
           });
@@ -325,7 +326,7 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                                     children: [
                                       Text(
                                         "Question ${index + 1}",
-                                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                                        style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue),
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.edit_rounded, size: 20),
@@ -334,7 +335,7 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  Text(q.question, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                  Text(q.question, style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                                   const Divider(height: 24),
                                   ...List.generate(q.options.length, (optIdx) {
                                     bool isCorrect = optIdx == q.correctOptionIndex;
@@ -351,9 +352,10 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                                           Expanded(
                                             child: Text(
                                               q.options[optIdx],
-                                              style: TextStyle(
+                                              style: AppTheme.getStyle(
+                                                fontSize: 14,
                                                 color: isCorrect ? Colors.green : null,
-                                                fontWeight: isCorrect ? FontWeight.bold : null,
+                                                fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
                                               ),
                                             ),
                                           ),
@@ -362,11 +364,11 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                                     );
                                   }),
                                   const Divider(height: 24),
-                                  const Text("Explanation:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  Text("Explanation:", style: AppTheme.getStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 4),
                                   Text(
                                     q.explanation,
-                                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                    style: AppTheme.getStyle(fontSize: 13, color: Colors.grey),
                                   ),
                                 ],
                               ),

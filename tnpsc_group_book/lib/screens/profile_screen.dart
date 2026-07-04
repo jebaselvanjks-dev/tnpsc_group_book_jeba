@@ -192,7 +192,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ).listenable(),
                             builder: (context, box, child) {
                               int count =
-                                  box.get('quizzesCompleted', defaultValue: 0) as int;
+                                  box.get('quizzesCompleted', defaultValue: 0)
+                                      as int;
                               return _buildStatBox(
                                 context,
                                 AppLanguage.getString('quizzes'),
@@ -264,36 +265,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    "தமிழ்",
-                                    style: TextStyle(
-                                      fontWeight: lang == 'ta'
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      color: lang == 'ta'
-                                          ? AppTheme.secondaryColor
-                                          : Colors.grey,
-                                    ),
-                                  ),
+                                  lang == 'ta'
+                                      ? Text(
+                                          "தமிழ்",
+                                          style: AppTheme.getStyle(
+                                            fontSize: 10,
+                                            fontWeight: lang == 'ta'
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: lang == 'ta'
+                                                ? AppTheme.secondaryColor
+                                                : Colors.grey,
+                                          ),
+                                        )
+                                      : Text(
+                                          "English",
+                                          style: AppTheme.getStyle(
+                                            fontSize: 10,
+                                            fontWeight: lang == 'en'
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: lang == 'en'
+                                                ? AppTheme.secondaryColor
+                                                : Colors.grey,
+                                          ),
+                                        ),
                                   Switch(
                                     value: lang == 'en',
                                     activeColor: AppTheme.secondaryColor,
                                     inactiveThumbColor: AppTheme.secondaryColor,
                                     onChanged: (val) =>
                                         AppLanguage.changeLanguage(
-                                      val ? 'en' : 'ta',
-                                    ),
-                                  ),
-                                  Text(
-                                    "English",
-                                    style: TextStyle(
-                                      fontWeight: lang == 'en'
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      color: lang == 'en'
-                                          ? AppTheme.secondaryColor
-                                          : Colors.grey,
-                                    ),
+                                          val ? 'en' : 'ta',
+                                        ),
                                   ),
                                 ],
                               ),
@@ -359,7 +363,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ),
                                       Text(
                                         "${(fontSizeFactor * 100).round()}%",
-                                        style: const TextStyle(
+                                        style: AppTheme.getStyle(
+                                          fontSize: 13,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -447,7 +452,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: Colors.grey,
                               ),
                               title: Text(AppLanguage.getString('app_version')),
-                              trailing: Text(_appVersion),
+                              trailing: Text(_appVersion,
+                                style: AppTheme.getStyle(
+                                fontSize: 14,
+                                color: isDark
+                                    ? Colors.white70
+                                  : Colors.black54,
+                                fontWeight: FontWeight.w600,
+                              ),),
                             ),
                             const Divider(height: 1),
                             ListTile(
@@ -460,8 +472,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Icons.chevron_right_rounded,
                                 color: Colors.grey,
                               ),
-                              onTap: () =>
-                                  _launchURL('https://tnpscmasterapp.blogspot.com/2026/06/about-app.html'),
+                              onTap: () => _launchURL(
+                                'https://tnpscmasterapp.blogspot.com/2026/06/about-app.html',
+                              ),
                             ),
                             const Divider(height: 1),
                             ListTile(
@@ -488,7 +501,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               title: Text(
                                 AppLanguage.getString('logout'),
-                                style: const TextStyle(
+                                style: AppTheme.getStyle(
+                                  fontSize: 16,
                                   color: Colors.redAccent,
                                   fontWeight: FontWeight.bold,
                                 ),

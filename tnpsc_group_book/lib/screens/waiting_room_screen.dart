@@ -26,6 +26,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   final RoomService _roomService = RoomService();
   final ScreenshotController _screenshotController = ScreenshotController();
   String _subject = 'General';
+  bool _canPop = false;
 
   void _shareRoomCode() async {
     final isTamil = AppLanguage.languageNotifier.value == 'ta';
@@ -71,6 +72,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
     final String message = 'Join my TNPSC Live Quiz Battle!\n\n'
         'Room Code: ${widget.roomCode}\n'
         'Subject: $subjectName\n\n'
+        'Tap to Join: tnpscmaster://join?code=${widget.roomCode}\n\n'
         'Download App: https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book';
     
     await Share.share(message);
@@ -99,6 +101,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
         text: 'Join my TNPSC Live Quiz Battle!\n\n'
               'Room Code: ${widget.roomCode}\n'
               'Subject: ${AppLanguage.getString(_subject)}\n\n'
+              'Tap to Join: tnpscmaster://join?code=${widget.roomCode}\n\n'
               'Download App: https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book',
       );
     } catch (e) {
@@ -190,6 +193,49 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
     );
   }
 
+  Future<bool> _showExitConfirmation() async {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101F42) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          AppLanguage.languageNotifier.value == 'ta' ? 'வெளியேறவா?' : 'Exit Waiting Room?',
+          style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
+        ),
+        content: Text(
+          AppLanguage.languageNotifier.value == 'ta' 
+            ? 'இந்த ரூமில் இருந்து வெளியேற விரும்புகிறீர்களா?' 
+            : 'Are you sure you want to leave the waiting room?',
+          style: AppTheme.getStyle(
+              fontSize: 15,
+              color: isDark ? Colors.white70 : AppTheme.textSecondaryColor
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppLanguage.getString('no'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(
+              AppLanguage.languageNotifier.value == 'ta' ? 'வெளியேறு' : 'Exit',
+              style: AppTheme.getStyle(fontSize: 14, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -218,12 +264,26 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
 
         bool isCurrentUserHost = widget.isHost || (roomData?['hostId'] == FirebaseAuth.instance.currentUser?.uid);
 
-        return Scaffold(
+        return PopScope(
+      canPop: _canPop,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _showExitConfirmation();
+        if (shouldPop && mounted) {
+          setState(() {
+            _canPop = true;
+          });
+          Future.microtask(() {
+            if (mounted) Navigator.of(context).pop();
+          });
+        }
+      },
+      child: Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
             leading: IconButton(
               icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.maybePop(context),
             ),
             title: Text(AppLanguage.getString('group_test_lobby'), style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold)),
             backgroundColor: Colors.transparent,
@@ -243,12 +303,12 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                 const SizedBox(height: 50),
                 _buildEducationalTips(isDark),
                 const SizedBox(height: 40),
-                const Center(
+                Center(
                   child: Column(
                     children: [
-                      CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppTheme.secondaryColor)),
-                      SizedBox(height: 20),
-                      Text("Creating your room...", style: TextStyle(color: Colors.grey)),
+                      const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppTheme.secondaryColor)),
+                      const SizedBox(height: 20),
+                      Text("Creating your room...", style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)),
                     ],
                   ),
                 ),
@@ -369,7 +429,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                             builder: (context, playersSnapshot) {
                               var players = playersSnapshot.data?.docs ?? [];
                               if (players.isEmpty) {
-                                return Center(child: Text(AppLanguage.getString('no_history_title'), style: const TextStyle(color: Colors.grey)));
+                                return Center(child: Text(AppLanguage.getString('no_history_title'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)));
                               }
                               return ListView.builder(
                                 itemCount: players.length,
@@ -447,7 +507,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
               const SizedBox(height: 60),
             ],
           ),
-        );
+        ));
       },
     );
   }

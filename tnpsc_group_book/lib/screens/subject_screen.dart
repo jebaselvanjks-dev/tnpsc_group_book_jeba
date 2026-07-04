@@ -254,7 +254,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text("🧠", style: TextStyle(fontSize: 22)),
+              Text("🧠", style: AppTheme.getStyle(fontSize: 22)),
               const SizedBox(width: 12),
               Flexible(
                 child: Text(
@@ -382,7 +382,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
                 color: Colors.white.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
-              child: Text(icon, style: const TextStyle(fontSize: 24)),
+              child: Text(icon, style: AppTheme.getStyle(fontSize: 24)),
             ),
             const SizedBox(height: 8),
             Text(
@@ -474,7 +474,9 @@ class _SubjectCard extends StatelessWidget {
                               MaterialPageRoute(
                                 builder: (_) => QuizScreen(
                                   subjectTitle: subject.title,
-                                  category: topic,
+                                  topicKey: subject.getTopicKey(idx),
+                                  category: subject.title,
+                                  categoryKey: subject.titleTa,
                                 ),
                               ),
                             );
@@ -491,7 +493,9 @@ class _SubjectCard extends StatelessWidget {
                               MaterialPageRoute(
                                 builder: (context) => TopicDetailScreen(
                                   topic: topic,
+                                  topicKey: subject.getTopicKey(idx),
                                   category: subject.title,
+                                  categoryKey: subject.titleTa,
                                 ),
                               ),
                             );
@@ -547,7 +551,9 @@ class _SubjectCard extends StatelessWidget {
             MaterialPageRoute(
               builder: (context) => TopicDetailScreen(
                 topic: subject.title,
+                topicKey: subject.titleTa,
                 category: "General",
+                categoryKey: "General",
               ),
             ),
           );

@@ -48,8 +48,8 @@ class QuizScheduleScreen extends StatelessWidget {
               final title = quiz['title'] ?? 'Untitled Quiz';
               return ListTile(
                 leading: const Icon(Icons.calendar_today, color: Colors.amberAccent),
-                title: Text(date, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                subtitle: Text(title, style: const TextStyle(color: Colors.white70)),
+                title: Text(date, style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                subtitle: Text(title, style: AppTheme.getStyle(fontSize: 14, color: Colors.white70)),
                 trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white70),
                 onTap: () {
                   // Optionally navigate to a detail view later

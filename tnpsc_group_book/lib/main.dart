@@ -22,6 +22,7 @@ import 'firebase_options.dart';
 
 import 'services/firestore_service.dart';
 import 'services/version_service.dart';
+import 'services/deep_link_service.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
@@ -46,6 +47,7 @@ void main() async {
   await NotificationService.init();
   await AppTheme.loadThemePreference();
   await AppTheme.loadFontSizePreference();
+  DeepLinkService().init();
 
   // 2. Start heavy/network initializations in background
   _initServicesInBackground();
@@ -130,6 +132,7 @@ class _MainWrapperState extends State<MainWrapper> {
           onPopInvokedWithResult: (didPop, result) async {
             if (didPop) return;
             
+            // 1. If not on Home tab, switch to Home tab
             if (_selectedIndex != 0) {
               setState(() {
                 _selectedIndex = 0;
@@ -137,21 +140,24 @@ class _MainWrapperState extends State<MainWrapper> {
               return;
             }
             
+            // 2. If on Home tab, show exit confirmation
             final shouldPop = await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                backgroundColor: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).cardColor : Colors.white,
+                backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101F42) : Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 title: Text(
                   AppLanguage.getString('exit_app_title'),
-                  style: TextStyle(
+                  style: AppTheme.getStyle(
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
                   ),
                 ),
                 content: Text(
                   AppLanguage.getString('exit_app_desc'),
-                  style: TextStyle(
+                  style: AppTheme.getStyle(
+                    fontSize: 16,
                     color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black54,
                   ),
                 ),
@@ -160,7 +166,10 @@ class _MainWrapperState extends State<MainWrapper> {
                     onPressed: () => Navigator.pop(context, false),
                     child: Text(
                       AppLanguage.getString('no'),
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: AppTheme.getStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
                     ),
                   ),
                   ElevatedButton(

@@ -53,16 +53,32 @@ class AiService {
     if (_cachedPreferredModels == null) {
       await _fetchRemoteConfig();
     }
-    // Final hardcoded fallback if Remote Config fails or is empty
-    return _cachedPreferredModels ??
-        [
-          'gemini-2.0-flash',
-          'gemini-1.5-flash',
-          'gemini-1.5-pro',
-          'gemini-2.0-pro-exp',
-          'gemini-2.5-flash',
-          'gemini-2.5-pro',
-        ];
+    
+    // AI_DEBUG: Whitelist of stable models that are known to work
+    const whitelist = [
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+      'gemini-pro',
+    ];
+
+    if (_cachedPreferredModels != null && _cachedPreferredModels!.isNotEmpty) {
+      // Filter Remote Config models against our whitelist
+      List<String> filtered = _cachedPreferredModels!
+          .where((m) => whitelist.contains(m.toLowerCase().trim()))
+          .toList();
+      
+      if (filtered.isNotEmpty) return filtered;
+    }
+
+    // Default stable list if Remote Config is empty or invalid
+    return [
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+    ];
   }
 
   // -----------------------------------------------------------------
@@ -103,21 +119,26 @@ class AiService {
       final preferredModels = await _getPreferredModels();
 
       List<String> finalModelsToTry = [];
+
+      // AI_DEBUG: ONLY try models that are BOTH discovered AND in our preferred/whitelist
+      // This prevents trying experimental/invalid models that cause 400 errors
       for (var p in preferredModels) {
         if (discoveredModels.contains(p)) {
           finalModelsToTry.add(p);
         }
       }
-      for (var d in discoveredModels) {
-        if (!finalModelsToTry.contains(d)) {
-          finalModelsToTry.add(d);
-        }
+
+      // Final fallback if none of our preferred models were discovered on this key
+      if (finalModelsToTry.isEmpty) {
+        if (discoveredModels.contains('gemini-1.5-flash')) finalModelsToTry.add('gemini-1.5-flash');
+        else if (discoveredModels.contains('gemini-pro')) finalModelsToTry.add('gemini-pro');
       }
+
       if (finalModelsToTry.isEmpty) {
         finalModelsToTry = ['gemini-1.5-flash', 'gemini-pro'];
       }
 
-      print("AI_DEBUG: Trying models: $finalModelsToTry");
+      print("AI_DEBUG: Trying restricted stable models: $finalModelsToTry");
 
       // 3. Try each model (v1 then v1beta)
       bool keyFailed = false;
@@ -693,6 +714,20 @@ $commonRules
   static Future<bool> generateAndSaveRoomPredefinedQuiz(String subject) async {
     String specializedPrompt = "";
 
+    // Get topics from last 90 days to avoid repeats in room quizzes
+    String recentContext = await _getRecentQuizContext('room_predefined_quizzes', 90);
+
+    final avoidPrompt = recentContext.isNotEmpty
+        ? """
+STRICTLY DO NOT create questions that are identical, very similar, or based on these recent questions/topics:
+$recentContext
+
+Rules:
+- Do NOT repeat the same question.
+- Do NOT repeat the same concepts or historical facts.
+"""
+        : "";
+
     if (subject == 'general_tamil') {
       specializedPrompt = '''
 Generate 20 UNIQUE TNPSC General Tamil (பொதுத்தமிழ்) MCQs (SSLC Standard). 
@@ -740,6 +775,7 @@ Format: Question: "English\\nதமிழ்". Options: "English / தமிழ�
     final prompt =
         '''
 $specializedPrompt
+$avoidPrompt
 Strictly use this JSON format: 
 [{"question": "English\\nதமிழ்", 
 "options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
@@ -760,29 +796,30 @@ Only return the raw JSON array, no other text or markdown formatting.
 
           if (questions.length < 20) return false;
 
-          final collection = FirebaseFirestore.instance.collection('room_predefined_quizzes');
+          final docRef = FirebaseFirestore.instance.collection('room_predefined_quizzes').doc(subject);
 
-          // 1. Add new quiz
-          await collection.add({
+          // 1. Add new questions to the pool (using arrayUnion to avoid duplicates)
+          await docRef.set({
             'subject': subject,
-            'questions': questions.map((q) => {...q, 'quiz_type': 'room_quiz'}).toList(),
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+            'questions': FieldValue.arrayUnion(questions.map((q) => {...q, 'quiz_type': 'room_quiz'}).toList()),
+            'lastUpdated': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
 
-          // 2. Rotation Logic: Keep only latest 500 quizzes
+          // 2. Size Management: Keep the pool at a reasonable size (e.g., latest 400 questions)
+          // This prevents the document from exceeding the 1MB Firestore limit.
           try {
-            final snap = await collection.orderBy('createdAt', descending: true).get();
-            if (snap.docs.length > 500) {
-              final toDelete = snap.docs.sublist(500);
-              final batch = FirebaseFirestore.instance.batch();
-              for (var doc in toDelete) {
-                batch.delete(doc.reference);
+            final snap = await docRef.get();
+            if (snap.exists) {
+              List allQs = snap.get('questions') ?? [];
+              if (allQs.length > 400) {
+                await docRef.update({
+                  'questions': allQs.sublist(allQs.length - 400),
+                });
+                print("AI_DEBUG: Trimmed room quiz pool for $subject to 400 questions");
               }
-              await batch.commit();
-              print("AI_DEBUG: Deleted ${toDelete.length} old room quizzes to maintain 500 limit");
             }
           } catch (e) {
-            print("AI_DEBUG: Rotation error: $e");
+            print("AI_DEBUG: Pool maintenance error: $e");
           }
 
           return true;
@@ -913,6 +950,20 @@ Return only the raw JSON array of EXACTLY $count items.
   }) async {
     String specializedPrompt = "";
 
+    // Get topics from last 90 days to avoid repeats
+    String recentContext = await _getRecentQuizContext('subject_questions', 90);
+
+    final avoidPrompt = recentContext.isNotEmpty
+        ? """
+STRICTLY DO NOT create questions that are identical, very similar, or based on these recent questions/topics:
+$recentContext
+
+Rules:
+- Do NOT repeat the same question.
+- Do NOT repeat the same concepts or historical facts.
+"""
+        : "";
+
     if (subject == 'general_tamil') {
       specializedPrompt = '''
 Generate 20 UNIQUE TNPSC General Tamil (பொதுத்தமிழ்) MCQs (SSLC Standard). 
@@ -960,6 +1011,7 @@ Format: Question: "English\\nதமிழ்". Options: "English / தமிழ�
     final prompt =
         '''
 $specializedPrompt
+$avoidPrompt
 Strictly use this JSON format: 
 [{"question": "English\\nதமிழ்", 
 "options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 

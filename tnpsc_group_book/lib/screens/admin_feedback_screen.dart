@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:intl/intl.dart';
 import '../utils/app_theme.dart';
 
@@ -154,7 +154,7 @@ class AdminFeedbackScreen extends StatelessWidget {
               FirebaseFirestore.instance.collection('feedbacks').doc(docId).delete();
               Navigator.pop(context);
             },
-            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+            child: Text("Delete", style: AppTheme.getStyle(fontSize: 14, color: Colors.red)),
           ),
         ],
       ),

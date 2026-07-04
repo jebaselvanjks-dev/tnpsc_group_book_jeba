@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../services/firestore_service.dart';
 import '../services/analytics_service.dart';
 import '../utils/app_theme.dart';
@@ -109,7 +109,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               children: [
                 Text(
                   AppLanguage.getString('help_improve'),
-                  style: GoogleFonts.outfit(
+                  style: AppTheme.getStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : AppTheme.textMainColor,
@@ -118,7 +118,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 const SizedBox(height: 8),
                 Text(
                   AppLanguage.getString('feedback_desc'),
-                  style: TextStyle(
+                  style: AppTheme.getStyle(
                     fontSize: 16,
                     color: Colors.grey.shade600,
                   ),
@@ -161,7 +161,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     maxLines: 6,
                     decoration: InputDecoration(
                       hintText: AppLanguage.getString('feedback_hint'),
-                      hintStyle: const TextStyle(color: Colors.grey),
+                      hintStyle: AppTheme.getStyle(fontSize: 14, color: Colors.grey),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                         borderSide: BorderSide.none,
@@ -193,7 +193,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                           )
                         : Text(
                             AppLanguage.getString('submit_feedback'),
-                            style: GoogleFonts.outfit(
+                            style: AppTheme.getStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
@@ -206,7 +206,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   child: Text(
                     AppLanguage.getString('reach_us'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                    style: AppTheme.getStyle(fontSize: 14, color: Colors.grey.shade500),
                   ),
                 ),
               ],
@@ -239,7 +239,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         controller: controller,
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(color: Colors.grey),
+          hintStyle: AppTheme.getStyle(fontSize: 14, color: Colors.grey),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(20),
             borderSide: BorderSide.none,

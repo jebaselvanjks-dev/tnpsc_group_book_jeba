@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
 import '../services/firestore_service.dart';
@@ -12,14 +12,18 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 class TopicDetailScreen extends StatefulWidget {
   final String topic;
+  final String? topicKey;
   final String category;
+  final String? categoryKey;
   final List<String>? allTopics;
   final int? currentIndex;
 
   const TopicDetailScreen({
     super.key,
     required this.topic,
+    this.topicKey,
     required this.category,
+    this.categoryKey,
     this.allTopics,
     this.currentIndex,
   });
@@ -56,7 +60,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
   }
 
   Future<void> _fetchInitialData() async {
-    final data = await _firestoreService.getStudyMaterial(widget.topic);
+    final data = await _firestoreService.getStudyMaterial(widget.topicKey ?? widget.topic);
     if (mounted) {
       setState(() {
         _material = data;
@@ -284,7 +288,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.maybePop(context),
                       ),
                     ],
                   ),
@@ -293,7 +297,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                   // Speed Option Label
                   Text(
                     AppLanguage.getString('voice_speed'),
-                    style: TextStyle(
+                    style: AppTheme.getStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w600,
                       color: isDark ? Colors.white70 : Colors.black54,
@@ -318,10 +322,10 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                           child: ChoiceChip(
                             label: Text(
                               label,
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                                fontWeight: FontWeight.bold,
+                              style: AppTheme.getStyle(
                                 fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
                               ),
                             ),
                             selected: isSelected,
@@ -355,7 +359,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                   // Repeat Option Label
                   Text(
                     AppLanguage.getString('repeat_count'),
-                    style: TextStyle(
+                    style: AppTheme.getStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w600,
                       color: isDark ? Colors.white70 : Colors.black54,
@@ -375,10 +379,10 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                               repeatVal == 1 
                                   ? AppLanguage.getString('no_repeat') 
                                   : AppLanguage.getString('repeat_x_times').replaceAll('{count}', '$repeatVal'),
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                                fontWeight: FontWeight.bold,
+                              style: AppTheme.getStyle(
                                 fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
                               ),
                             ),
                             selected: isSelected,
@@ -434,7 +438,8 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
             Expanded(
               child: Text(
                 AppLanguage.getString('bg_audio_title'),
-                style: TextStyle(
+                style: AppTheme.getStyle(
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
                 ),
@@ -444,9 +449,9 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
         ),
         content: Text(
           AppLanguage.getString('bg_audio_desc'),
-          style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black54,
+          style: AppTheme.getStyle(
             fontSize: 14.5,
+            color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black54,
             height: 1.5,
           ),
         ),
@@ -455,7 +460,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               AppLanguage.getString('no'),
-              style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold),
+              style: AppTheme.getStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.bold),
             ),
           ),
           ElevatedButton(
@@ -518,7 +523,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                   // padding: const EdgeInsets.all(0),
                   child: Icon(Icons.arrow_back_ios_rounded, size: 25, color: isDark ? Colors.white : Colors.black),
                 ),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.maybePop(context),
               ),
               title: Text(widget.topic),
               bottom: TabBar(
@@ -527,7 +532,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                   Tab(text: AppLanguage.getString('study')),
                 ],
                 indicatorColor: AppTheme.primaryColor,
-                labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                labelStyle: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ),
             body: TabBarView(
@@ -535,7 +540,9 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                 // Tab 1: Quiz/Exam
                 QuizScreen(
                   subjectTitle: widget.topic,
+                  topicKey: widget.topicKey,
                   category: widget.category, // Pass the main subject category
+                  categoryKey: widget.categoryKey,
                   allTopics: widget.allTopics,
                   currentIndex: widget.currentIndex,
                   hideAppBar: true,
@@ -573,8 +580,8 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                         if (!mounted) return;
                         setState(() => _isGenerating = true);
                         bool success = await AiService.generateStudyMaterial(
-                          widget.topic,
-                          category: widget.category,
+                          widget.topicKey ?? widget.topic,
+                          category: widget.categoryKey ?? widget.category,
                         );
                         if (success) {
                           await _fetchInitialData();
@@ -601,7 +608,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
             children: [
               Text(
                 AppLanguage.getString('audio_guide'),
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
               const SizedBox(width: 8),
               IconButton(
@@ -628,7 +635,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                     icon: const Icon(Icons.stop_rounded),
                     label: Text(AppLanguage.getString('stop_audio')),
                     style: ElevatedButton.styleFrom(
-                      textStyle: const TextStyle(fontSize: 12.5),
+                      textStyle: AppTheme.getStyle(fontSize: 12.5),
                       padding: const EdgeInsets.only(left: 10, right: 10),
                       backgroundColor: Colors.red.withOpacity(0.1),
                       foregroundColor: Colors.red,
@@ -645,7 +652,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                           icon: const Icon(Icons.play_arrow_rounded),
                           label: Text(AppLanguage.getString('resume_audio')),
                           style: ElevatedButton.styleFrom(
-                            textStyle: const TextStyle(fontSize: 12.5),
+                            textStyle: AppTheme.getStyle(fontSize: 12.5),
                             padding: const EdgeInsets.only(left: 10, right: 10),
                             backgroundColor: AppTheme.secondaryColor.withOpacity(0.1),
                             foregroundColor: AppTheme.secondaryColor,
@@ -668,7 +675,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                             ? AppLanguage.getString('play_from_start') 
                             : AppLanguage.getString('listen_all')),
                         style: ElevatedButton.styleFrom(
-                          textStyle: const TextStyle(fontSize: 12.5),
+                          textStyle: AppTheme.getStyle(fontSize: 12.5),
                           padding: const EdgeInsets.only(left: 10, right: 10),
                           backgroundColor: AppTheme.secondaryColor.withOpacity(0.1),
                           foregroundColor: AppTheme.secondaryColor,
@@ -717,8 +724,8 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                                   if (!mounted) return;
                                   setState(() => _isGenerating = true);
                                   bool success = await AiService.generateStudyMaterial(
-                                    widget.topic,
-                                    category: widget.category,
+                                    widget.topicKey ?? widget.topic,
+                                    category: widget.categoryKey ?? widget.category,
                                   );
                                   if (success) {
                                     await _fetchInitialData();
@@ -772,7 +779,8 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                       ),
                       child: Text(
                         "${index + 1}",
-                        style: TextStyle(
+                        style: AppTheme.getStyle(
+                          fontSize: 14,
                           color: isHighlighted ? Colors.white : AppTheme.secondaryColor,
                           fontWeight: FontWeight.bold,
                         ),
@@ -820,7 +828,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                                       const SizedBox(width: 4),
                                       Text(
                                         "${_currentRepeatCount + 1}/$_repeatCount",
-                                        style: TextStyle(
+                                        style: AppTheme.getStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                           color: AppTheme.secondaryColor,

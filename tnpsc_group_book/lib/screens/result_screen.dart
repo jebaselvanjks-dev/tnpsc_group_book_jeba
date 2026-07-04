@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -214,12 +214,12 @@ class _ResultScreenState extends State<ResultScreen> {
           const SizedBox(height: 30),
           Text(
             AppLanguage.getString('prepare_anywhere'),
-            style: GoogleFonts.outfit(color: Colors.white70, fontStyle: FontStyle.italic),
+            style: AppTheme.getStyle(fontSize: 14, color: Colors.white70).copyWith(fontStyle: FontStyle.italic),
           ),
           const SizedBox(height: 10),
           Text(
             AppLanguage.getString('download_app'),
-            style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
+            style: AppTheme.getStyle(fontSize: 14, color: Colors.amber, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -231,9 +231,9 @@ class _ResultScreenState extends State<ResultScreen> {
       children: [
         Text(
           value,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          style: AppTheme.getStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(label, style: AppTheme.getStyle(fontSize: 12, color: Colors.white70)),
       ],
     );
   }
@@ -261,9 +261,19 @@ class _ResultScreenState extends State<ResultScreen> {
           scoreColor = Colors.redAccent;
         }
 
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: SafeArea(
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const MainWrapper()),
+              (route) => false,
+            );
+          },
+          child: Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            body: SafeArea(
             child: Padding(
               padding: const EdgeInsets.only(top: 10.0),
               child: SingleChildScrollView(
@@ -529,7 +539,7 @@ class _ResultScreenState extends State<ResultScreen> {
               ),
             ),
           ),
-        );
+        ));
       },
     );
   }

@@ -6,7 +6,7 @@ import '../services/hive_service.dart';
 
 class AppTheme {
   static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
-  static final ValueNotifier<double> fontSizeFactorNotifier = ValueNotifier(0.8);
+  static final ValueNotifier<double> fontSizeFactorNotifier = ValueNotifier(1);
 
   /// Dark theme backgrounds (used across app + native splash)
   static const Color darkBgColor = Color(0xFF030611);
@@ -39,7 +39,7 @@ class AppTheme {
   static ThemeData _buildTheme(Brightness brightness) {
     bool isDark = brightness == Brightness.dark;
     bool isTamil = AppLanguage.languageNotifier.value == 'ta';
-    double sizeOffset = isTamil ? -1.5 : 0;
+    double sizeOffset = isTamil ? -1.5 : -1.5;
     
     // Choose font family based on language
     TextTheme baseTextTheme = isTamil 
@@ -140,8 +140,10 @@ class AppTheme {
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: isDark ? Colors.black : Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         centerTitle: true,
         titleTextStyle: (isTamil ? GoogleFonts.notoSansTamil() : GoogleFonts.outfit()).copyWith(
           color: mainTextColor,

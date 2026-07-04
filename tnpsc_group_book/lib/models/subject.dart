@@ -34,6 +34,24 @@ class Subject {
 
   List<String> get topics => AppLanguage.languageNotifier.value == 'ta' ? topicsTa : topicsEn;
 
+  String getTopicKey(int index) {
+    if (index >= 0 && index < topicsTa.length) {
+      return topicsTa[index];
+    }
+    return "";
+  }
+
+  String getSubTopicKey(int topicIndex, int subTopicIndex) {
+    if (topicIndex >= 0 && topicIndex < topicsTa.length) {
+      String tamilTopic = topicsTa[topicIndex];
+      List<String> tamilSubTopics = subTopicsMapTa[tamilTopic] ?? [];
+      if (subTopicIndex >= 0 && subTopicIndex < tamilSubTopics.length) {
+        return tamilSubTopics[subTopicIndex];
+      }
+    }
+    return "";
+  }
+
   List<String> getSubTopics(int index) {
     if (AppLanguage.languageNotifier.value == 'ta') {
       if (index >= 0 && index < topicsTa.length) {
@@ -52,9 +70,9 @@ final List<Subject> tnpscSubjects = [
   Subject(
     id: '1',
     titleTa: 'பொதுத் தமிழ்',
-    titleEn: 'பொதுத் தமிழ்',
+    titleEn: 'General Tamil',
     subtitleTa: 'இலக்கணம், இலக்கியம் & தமிழ் அறிஞர்கள்',
-    subtitleEn: 'இலக்கணம், இலக்கியம் & தமிழ் அறிஞர்கள்',
+    subtitleEn: 'Grammar, Literature & Tamil Scholars',
     icon: Icons.menu_book_rounded,
     color: Colors.orange,
     topicsTa: ['இலக்கணம்', 'இலக்கியம்', 'தமிழ் அறிஞர்களும் தமிழ்த் தொண்டும்'],

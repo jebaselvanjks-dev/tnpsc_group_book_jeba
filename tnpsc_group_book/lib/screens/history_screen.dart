@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:intl/intl.dart';
 import '../services/firestore_service.dart';
 import '../utils/app_theme.dart';
@@ -78,7 +78,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("📊", style: TextStyle(fontSize: 64)),
+            Text("📊", style: AppTheme.getStyle(fontSize: 64)),
             const SizedBox(height: 24),
             Text(
               textAlign: TextAlign.center,

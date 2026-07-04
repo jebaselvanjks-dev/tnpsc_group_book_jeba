@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -341,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text("🧠", style: TextStyle(fontSize: 22)),
+              Text("🧠", style: AppTheme.getStyle(fontSize: 22)),
               const SizedBox(width: 12),
               Flexible(
                 child: Text(
@@ -404,7 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(icon, style: const TextStyle(fontSize: 28)),
+              Text(icon, style: AppTheme.getStyle(fontSize: 28)),
               const SizedBox(height: 8),
               Text(
                 title,

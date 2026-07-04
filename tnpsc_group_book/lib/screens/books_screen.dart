@@ -1,8 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../utils/app_theme.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../utils/app_language.dart';
 
 class BooksScreen extends StatelessWidget {
@@ -23,7 +22,7 @@ class BooksScreen extends StatelessWidget {
             ),
             title: Text(
               AppLanguage.getString('school_books'),
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+              style: AppTheme.getStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ),
           body: AnimationLimiter(
@@ -118,9 +117,9 @@ class _BookCard extends StatelessWidget {
                         ),
                         child: Text(
                           "PDF",
-                          style: GoogleFonts.outfit(
-                            color: isDark ? Colors.black : Colors.white,
+                          style: AppTheme.getStyle(
                             fontSize: 10,
+                            color: isDark ? Colors.black : Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -146,7 +145,7 @@ class _BookCard extends StatelessWidget {
           title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.outfit(
+          style: AppTheme.getStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             color: isDark ? Colors.white : Colors.black,
@@ -155,7 +154,7 @@ class _BookCard extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           subject,
-          style: GoogleFonts.outfit(
+          style: AppTheme.getStyle(
             fontSize: 13,
             color: isDark ? Colors.white60 : Colors.black54,
             fontWeight: FontWeight.w500,
@@ -164,7 +163,7 @@ class _BookCard extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           edition,
-          style: GoogleFonts.outfit(
+          style: AppTheme.getStyle(
             fontSize: 11,
             color: isDark ? Colors.white38 : Colors.black38,
           ),

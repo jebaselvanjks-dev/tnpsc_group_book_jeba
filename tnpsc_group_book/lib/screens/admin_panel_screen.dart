@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -66,7 +65,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     icon: const Icon(Icons.refresh_rounded),
                     label: const Text("Reset AI Usage Limit"),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.withOpacity(0.1),
+                      backgroundColor: Colors.blue.withValues(alpha: 0.1),
                       foregroundColor: Colors.blue,
                       elevation: 0,
                       minimumSize: const Size(double.infinity, 45),
@@ -125,6 +124,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               onTap: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminFeedbackScreen()));
               },
+            ),
+            const SizedBox(height: 12),
+            // Room Predefined Quizzes
+            _buildAdminCard(
+              context,
+              title: "Bulk Generate Room Quizzes",
+              icon: Icons.groups_rounded,
+              color: Colors.pink,
+              onTap: _showRoomQuizGenDialog,
             ),
             if (_isGenerating) ...[
               const SizedBox(height: 24),
@@ -273,110 +281,117 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
+  void _showRoomQuizGenDialog() {
+    String selectedSubject = 'general_tamil';
+    int setsCount = 5;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return AlertDialog(
+            title: const Text("Bulk Generate Room Quizzes"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: selectedSubject,
+                  decoration: const InputDecoration(labelText: "Subject"),
+                  items: const [
+                    DropdownMenuItem(value: 'general_tamil', child: Text("General Tamil")),
+                    DropdownMenuItem(value: 'general_studies', child: Text("General Studies")),
+                    DropdownMenuItem(value: 'aptitude', child: Text("Aptitude")),
+                    DropdownMenuItem(value: 'current_affairs', child: Text("Current Affairs")),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setModalState(() => selectedSubject = val);
+                  },
+                ),
+                const SizedBox(height: 16),
+                Text("Number of sets: $setsCount"),
+                Slider(
+                  value: setsCount.toDouble(),
+                  min: 1,
+                  max: 20,
+                  divisions: 19,
+                  label: setsCount.toString(),
+                  onChanged: (val) {
+                    setModalState(() => setsCount = val.toInt());
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _startRoomQuizGeneration(selectedSubject, 1);
+                },
+                icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                label: const Text("Generate 1 Set"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                  foregroundColor: Colors.blue,
+                  elevation: 0,
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _startRoomQuizGeneration(selectedSubject, setsCount);
+                },
+                child: Text("Bulk Generate ($setsCount)"),
+              ),
+            ],
+          );
+        }
+      ),
+    );
+  }
+
   // ────── Bulk Generation Logic ──────
 
-  Future<void> _startBulkQuizGeneration() async {
+  Future<void> _startRoomQuizGeneration(String subject, int count) async {
     setState(() {
       _isGenerating = true;
-      _currentStatus = "Fetching latest quiz date...";
+      _currentStatus = "Initializing Room Quiz Generation for $subject...";
     });
 
     try {
-      // Get most recent quiz date
-      final latestQuery = await FirebaseFirestore.instance
-          .collection('quizzes')
-          .orderBy('date', descending: true)
-          .limit(1)
-          .get();
+      int successCount = 0;
+      for (int i = 0; i < count; i++) {
+        setState(() {
+          _currentStatus = "Generating Set ${i + 1} of $count for $subject...";
+        });
 
-      DateTime startDate = DateTime.now();
-      if (latestQuery.docs.isNotEmpty) {
-        String latestDateStr = latestQuery.docs.first.get('date');
-        startDate = DateFormat('yyyy-MM-dd').parse(latestDateStr);
-      }
-
-      // Existing dates to avoid duplicates
-      final existingSnap = await FirebaseFirestore.instance
-          .collection('quizzes')
-          .where('date', isGreaterThanOrEqualTo: DateFormat('yyyy-MM-dd').format(startDate))
-          .get();
-      final existingDates = existingSnap.docs.map((d) => d.get('date') as String).toSet();
-
-      // Determine next 7 dates starting from the day after latest quiz
-      List<DateTime> nextDates = [];
-      DateTime checkDate = startDate;
-      while (nextDates.length < 7) {
-        checkDate = checkDate.add(const Duration(days: 1));
-        nextDates.add(checkDate);
-      }
-
-      // Generate quizzes for each date
-      for (int i = 0; i < nextDates.length; i++) {
-        DateTime date = nextDates[i];
-        String dateStr = DateFormat('yyyy-MM-dd').format(date);
-
-        // Tamil Eligibility – 10 per day (20 questions each)
-        for (int t = 0; t < 10; t++) {
-          setState(() {
-            _currentStatus = "Generating Tamil Quiz ${t + 1}/10 for $dateStr (Day ${i + 1}/7)...";
-          });
-          debugPrint("[BulkGen] Starting Tamil quiz ${t + 1}/10 for $dateStr");
-          bool success = await AiService.generateScheduledQuiz(date, 'general_tamil', count: 20, setIndex: t + 1);
-          if (!success) {
-            // Try one retry
-            success = await AiService.generateScheduledQuiz(date, 'general_tamil', count: 20, setIndex: t + 1);
-          }
-          if (!success) {
-            _handleFailure(dateStr, "Tamil Quiz ${t + 1}");
-            return;
-          }
+        bool success = await AiService.generateAndSaveRoomPredefinedQuiz(subject);
+        if (success) {
+          successCount++;
+        } else {
+          // Retry once
+          await Future.delayed(const Duration(seconds: 2));
+          success = await AiService.generateAndSaveRoomPredefinedQuiz(subject);
+          if (success) successCount++;
         }
 
-        // General Studies – 6 per day (20 questions each)
-        for (int g = 0; g < 6; g++) {
-          setState(() {
-            _currentStatus = "Generating GS Quiz ${g + 1}/6 for $dateStr (Day ${i + 1}/7)...";
-          });
-          debugPrint("[BulkGen] Starting GS quiz ${g + 1}/6 for $dateStr");
-          bool success = await AiService.generateScheduledQuiz(date, 'general_studies', count: 20, setIndex: g + 1);
-          if (!success) {
-            success = await AiService.generateScheduledQuiz(date, 'general_studies', count: 20, setIndex: g + 1);
-          }
-          if (!success) {
-            _handleFailure(dateStr, "GS Quiz ${g + 1}");
-            return;
-          }
-        }
-
-        // Aptitude & Mental Ability – 4 per day (20 questions each)
-        for (int a = 0; a < 4; a++) {
-          setState(() {
-            _currentStatus = "Generating Aptitude Quiz ${a + 1}/4 for $dateStr (Day ${i + 1}/7)...";
-          });
-          debugPrint("[BulkGen] Starting Aptitude quiz ${a + 1}/4 for $dateStr");
-          bool success = await AiService.generateScheduledQuiz(date, 'aptitude', count: 20, setIndex: a + 1);
-          if (!success) {
-            success = await AiService.generateScheduledQuiz(date, 'aptitude', count: 20, setIndex: a + 1);
-          }
-          if (!success) {
-            _handleFailure(dateStr, "Aptitude Quiz ${a + 1}");
-            return;
-          }
-        }
+        // Small delay to avoid aggressive rate limiting
+        await Future.delayed(const Duration(seconds: 5));
       }
 
       setState(() {
         _isGenerating = false;
-        _currentStatus = "Successfully generated 7 days of scheduled quizzes!";
+        _currentStatus = "Completed! Successfully generated $successCount sets for $subject.";
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Bulk quiz generation completed successfully!")));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Generated $successCount sets for $subject successfully!")),
+      );
     } catch (e) {
       setState(() {
         _isGenerating = false;
-        _currentStatus = "Error: $e";
+        _currentStatus = "Error during Room Quiz generation: $e";
       });
-      print("AI_DEBUG: Bulk Generation Error: $e");
     }
   }
 

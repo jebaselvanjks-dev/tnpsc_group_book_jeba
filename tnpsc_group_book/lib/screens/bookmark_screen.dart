@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../models/question.dart';
 import '../services/firestore_service.dart';
 import '../utils/app_theme.dart';
@@ -96,7 +96,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
                 icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
                 label: Text(
                   AppLanguage.getString('start_now'),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  style: AppTheme.getStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
@@ -116,7 +116,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("🔖", style: TextStyle(fontSize: 64)),
+            Text("🔖", style: AppTheme.getStyle(fontSize: 64)),
             const SizedBox(height: 24),
             Text(
               textAlign: TextAlign.center,

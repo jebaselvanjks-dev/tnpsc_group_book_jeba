@@ -18,7 +18,9 @@ import 'package:flutter/material.dart';
 
 class QuizScreen extends StatefulWidget {
   final String subjectTitle;
+  final String? topicKey;
   final String? category; // Added category to link sub-topics to main subjects
+  final String? categoryKey;
   final bool isMockTest;
   final List<String>? allTopics;
   final int? currentIndex;
@@ -28,7 +30,9 @@ class QuizScreen extends StatefulWidget {
   const QuizScreen({
     super.key, 
     required this.subjectTitle, 
+    this.topicKey,
     this.category,
+    this.categoryKey,
     this.isMockTest = false,
     this.allTopics,
     this.currentIndex,
@@ -55,6 +59,7 @@ class _QuizScreenState extends State<QuizScreen> {
   bool _isTimeUp = false;
   bool _isAutoTriggering = false;
   bool _showOnlySpinner = true;
+  bool _canPop = false;
 
   // Teaser for loading screen
   List<Question> _teaserQuestions = [];
@@ -159,7 +164,7 @@ class _QuizScreenState extends State<QuizScreen> {
     } else if (widget.subjectTitle == AppLanguage.getString('bookmarks')) {
       questions = await _firestoreService.getBookmarks();
     } else {
-      questions = await _firestoreService.getSubjectQuestions(widget.subjectTitle);
+      questions = await _firestoreService.getSubjectQuestions(widget.topicKey ?? widget.subjectTitle);
     }
 
     if (questions.isNotEmpty) {
@@ -442,8 +447,8 @@ class _QuizScreenState extends State<QuizScreen> {
       success = await AiService.generateAndSaveMockQuiz(DateTime.now());
     } else {
       success = await AiService.generateSubjectQuestions(
-        widget.subjectTitle,
-        category: widget.category,
+        widget.topicKey ?? widget.subjectTitle,
+        category: widget.categoryKey ?? widget.category,
       );
     }
     
@@ -477,7 +482,7 @@ class _QuizScreenState extends State<QuizScreen> {
     if (widget.subjectTitle != AppLanguage.getString('mistake_bank') && 
         widget.subjectTitle != AppLanguage.getString('bookmarks')) {
       
-      String saveTitle = widget.category ?? widget.subjectTitle;
+      String saveTitle = widget.categoryKey ?? widget.category ?? widget.topicKey ?? widget.subjectTitle;
       if (widget.subjectTitle == AppLanguage.getString('daily_quiz') ||
           widget.subjectTitle == "Daily Quiz") {
         saveTitle = "Daily Quiz";
@@ -554,6 +559,48 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
+  Future<bool> _showExitConfirmation() async {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101F42) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          AppLanguage.languageNotifier.value == 'ta' ? 'வெளியேறவா?' : 'Exit Quiz?',
+          style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
+        ),
+        content: Text(
+          AppLanguage.languageNotifier.value == 'ta' 
+            ? 'இந்தத் தேர்விலிருந்து வெளியேற விரும்புகிறீர்களா? உங்கள் முன்னேற்றம் சேமிக்கப்படாது.' 
+            : 'Are you sure you want to exit the quiz? Your progress will not be saved.',
+          style: AppTheme.getStyle(
+              fontSize: 15,
+              color: isDark ? Colors.white70 : AppTheme.textSecondaryColor
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppLanguage.getString('no'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(
+              AppLanguage.languageNotifier.value == 'ta' ? 'வெளியேறு' : 'Exit',
+              style: AppTheme.getStyle(fontSize: 14, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -562,8 +609,10 @@ class _QuizScreenState extends State<QuizScreen> {
       builder: (context, lang, child) {
         bool isDark = Theme.of(context).brightness == Brightness.dark;
 
+        Widget scaffoldBody;
+
         if (_isLoading) {
-          return Scaffold(
+          scaffoldBody = Scaffold(
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             body: Column(
               children: [
@@ -605,7 +654,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                       Text(
                                         lang == 'ta' ? 'காத்திருக்கும் நேரத்தில் சில வினாக்கள்...' : 'Learn while we load...',
                                         textAlign: TextAlign.center,
-                                        style: const TextStyle(color: Colors.grey),
+                                        style: AppTheme.getStyle(fontSize: 14, color: Colors.grey),
                                       ),
                                     ],
                                   ),
@@ -644,9 +693,10 @@ class _QuizScreenState extends State<QuizScreen> {
                                     Expanded(
                                       child: Text(
                                         _localizedOption(q.options[optIndex]),
-                                        style: TextStyle(
-                                          color: isCorrect ? Colors.green.shade700 : null,
-                                          fontWeight: isCorrect ? FontWeight.bold : null,
+                                        style: AppTheme.getStyle(
+                                          fontSize: 15,
+                                          color: isCorrect ? Colors.green.shade700 : (isDark ? Colors.white : AppTheme.textMainColor),
+                                          fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
                                         ),
                                       ),
                                     ),
@@ -663,9 +713,7 @@ class _QuizScreenState extends State<QuizScreen> {
               ],
             ),
           );
-        }
-
-        if (_visibleQuestions.isEmpty) {
+        } else if (_visibleQuestions.isEmpty) {
           String displayTitle = widget.subjectTitle;
           if (displayTitle == "Daily Quiz" || displayTitle == "daily_quiz") {
             displayTitle = AppLanguage.getString('daily_quiz');
@@ -675,8 +723,14 @@ class _QuizScreenState extends State<QuizScreen> {
             displayTitle = AppLanguage.getString(displayTitle);
           }
           
-          return Scaffold(
-            appBar: widget.hideAppBar ? null : AppBar(title: Text(displayTitle)),
+          scaffoldBody = Scaffold(
+            appBar: widget.hideAppBar ? null : AppBar(
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+                onPressed: () => Navigator.maybePop(context),
+              ),
+              title: Text(displayTitle),
+            ),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -684,10 +738,10 @@ class _QuizScreenState extends State<QuizScreen> {
                 children: [
                   const Icon(Icons.quiz_outlined, size: 80, color: Colors.grey),
                   const SizedBox(height: 20),
-                  Text(AppLanguage.getString('no_questions'), textAlign: TextAlign.center,style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(AppLanguage.getString('no_questions'), textAlign: TextAlign.center,style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
                   if (isAdmin) ...[
-                  Text(AppLanguage.getString('generate_questions_desc'), textAlign: TextAlign.center,style: const TextStyle(color: Colors.grey)),
+                  Text(AppLanguage.getString('generate_questions_desc'), textAlign: TextAlign.center,style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)),
                   const SizedBox(height: 30),
                     _isGenerating
                         ? const CircularProgressIndicator()
@@ -698,336 +752,313 @@ class _QuizScreenState extends State<QuizScreen> {
                     const SizedBox(height: 10),
                   ],
                   ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.maybePop(context),
                     child: Text(AppLanguage.getString('go_back')),
                   )
                 ],
               ),
             ),
           );
-        }
-
-        final question = _visibleQuestions[_currentQuestionIndex];
-        double progress = (_currentQuestionIndex + 1) / _loadedQuestions.length;
-
-        String displayTitle = widget.subjectTitle;
-        if (displayTitle == "Daily Quiz" || displayTitle == "daily_quiz") {
-          displayTitle = AppLanguage.getString('daily_quiz');
-        } else if (displayTitle == "Mock Quiz" || displayTitle == "mock_quiz") {
-          displayTitle = AppLanguage.getString('mock_quiz_title');
         } else {
-          displayTitle = AppLanguage.getString(displayTitle);
-        }
+          final question = _visibleQuestions[_currentQuestionIndex];
+          double progress = (_currentQuestionIndex + 1) / _loadedQuestions.length;
 
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: widget.hideAppBar ? null : AppBar(
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(displayTitle, style: const TextStyle(fontSize: 16)),
-                Builder(
-                  builder: (context) {
-                    int mins = _remainingSeconds ~/ 60;
-                    int secs = _remainingSeconds % 60;
-                    String timeStr = "${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}";
-                    return Text(
-                      timeStr,
-                      style: AppTheme.getStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: _remainingSeconds < 60 ? Colors.red : AppTheme.secondaryColorLight,
-                      ),
-                    );
-                  }
-                ),
-              ],
-            ),
-          ),
-          body: SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "${AppLanguage.getString('question')} ${_currentQuestionIndex + 1}",
+          String displayTitle = widget.subjectTitle;
+          if (displayTitle == "Daily Quiz" || displayTitle == "daily_quiz") {
+            displayTitle = AppLanguage.getString('daily_quiz');
+          } else if (displayTitle == "Mock Quiz" || displayTitle == "mock_quiz") {
+            displayTitle = AppLanguage.getString('mock_quiz_title');
+          } else {
+            displayTitle = AppLanguage.getString(displayTitle);
+          }
+
+          scaffoldBody = Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            appBar: widget.hideAppBar ? null : AppBar(
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+                onPressed: () => Navigator.maybePop(context),
+              ),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(displayTitle, style: AppTheme.getStyle(fontSize: 16)),
+                  Builder(
+                    builder: (context) {
+                      int mins = _remainingSeconds ~/ 60;
+                      int secs = _remainingSeconds % 60;
+                      String timeStr = "${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}";
+                      return Text(
+                        timeStr,
                         style: AppTheme.getStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
+                          color: _remainingSeconds < 60 ? Colors.red : AppTheme.secondaryColorLight,
                         ),
-                      ),
-                      Row(
-                        children: [
-                          // Builder(
-                          //   builder: (context) {
-                          //     bool isDailyOrMock = widget.subjectTitle == "Daily Quiz" ||
-                          //                         widget.subjectTitle == AppLanguage.getString('daily_quiz') ||
-                          //                         widget.subjectTitle == "Mock Quiz" ||
-                          //                         widget.subjectTitle == AppLanguage.getString('mock_quiz') ||
-                          //                         widget.isMockTest;
-                          //     bool hasAttempted = _selectedAnswers[_currentQuestionIndex] != null;
-                          //     bool canClickAudio = !isDailyOrMock || hasAttempted;
-                          //
-                          //     return IconButton(
-                          //       icon: Icon(
-                          //         TtsService.isSpeaking(_getQuestionTtsText(_visibleQuestions[_currentQuestionIndex])) ? Icons.volume_up_rounded : Icons.volume_up_outlined,
-                          //         color: canClickAudio ? AppTheme.secondaryColor : Colors.grey.withOpacity(0.5),
-                          //         size: 24,
-                          //       ),
-                          //       onPressed: canClickAudio ? () {
-                          //         final textToSpeak = _getQuestionTtsText(_visibleQuestions[_currentQuestionIndex]);
-                          //         if (TtsService.isSpeaking(textToSpeak)) {
-                          //           TtsService.stop();
-                          //         } else {
-                          //           TtsService.speak(textToSpeak);
-                          //         }
-                          //         setState(() {});
-                          //       } : () {
-                          //         ScaffoldMessenger.of(context).showSnackBar(
-                          //           SnackBar(
-                          //             content: Text(AppLanguage.languageNotifier.value == 'ta'
-                          //               ? "பதிலளித்த பிறகுதான் ஆடியோ கேட்க முடியும்"
-                          //               : "Answer the question first to enable audio"),
-                          //             duration: const Duration(seconds: 1),
-                          //           ),
-                          //         );
-                          //       },
-                          //     );
-                          //   }
-                          // ),
-                          if (isAdmin)
-                            _isGenerating
-                                ? const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    ),
-                                  )
-                                : IconButton(
-                                    padding: const EdgeInsets.only(right: 8, bottom: 0, top: 0),
-                                    constraints: const BoxConstraints(),
-                                    icon: const Icon(Icons.auto_awesome_rounded, color: Colors.amber, size: 24),
-                                    onPressed: _generateMoreQuestions,
-                                  ),
-                          if (widget.subjectTitle != "Daily Quiz" && 
-                              widget.subjectTitle != AppLanguage.getString('daily_quiz'))
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: TextButton(
-                              onPressed: _submitQuiz,
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.red,
-                                textStyle: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                              ),
-                              child: Text(AppLanguage.getString('end')),
-                            ),
-                          ),
-                          Text(
-                            "${_currentQuestionIndex + 1}/${_loadedQuestions.length}",
-                            style: AppTheme.getStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
-                            ),
-                          ),
-                          IconButton(
-                            padding: const EdgeInsets.only(left: 8, bottom: 0, top: 0),
-                            constraints: const BoxConstraints(),
-                            icon: Icon(
-                              _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                              color: _isBookmarked ? Colors.amber : Colors.grey,
-                              size: 25,
-                            ),
-                            onPressed: _toggleBookmark,
-                          ),
-                        ],
-                      ),
-                    ],
+                      );
+                    }
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: AppTheme.secondaryColor.withOpacity(0.1),
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.secondaryColor),
-                    borderRadius: BorderRadius.circular(10),
-                    minHeight: 8,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          transitionBuilder: (Widget child, Animation<double> animation) {
-                            return SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(1.0, 0.0),
-                                end: Offset.zero,
-                              ).animate(animation),
-                              child: FadeTransition(
-                                opacity: animation,
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: SingleChildScrollView(
-                            key: ValueKey<int>(_currentQuestionIndex),
-                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        _formatBilingual(question.question),
-                                        style: AppTheme.getStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark ? Colors.white : AppTheme.textMainColor,
-                                          height: 1.5,
-                                        ),
+                ],
+              ),
+            ),
+            body: SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "${AppLanguage.getString('question')} ${_currentQuestionIndex + 1}",
+                          style: AppTheme.getStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            if (isAdmin)
+                              _isGenerating
+                                  ? const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
                                       ),
+                                    )
+                                  : IconButton(
+                                      padding: const EdgeInsets.only(right: 8, bottom: 0, top: 0),
+                                      constraints: const BoxConstraints(),
+                                      icon: const Icon(Icons.auto_awesome_rounded, color: Colors.amber, size: 24),
+                                      onPressed: _generateMoreQuestions,
                                     ),
-                                  ],
+                            if (widget.subjectTitle != "Daily Quiz" && 
+                                widget.subjectTitle != AppLanguage.getString('daily_quiz'))
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: TextButton(
+                                onPressed: _submitQuiz,
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                  textStyle: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold),
                                 ),
-                                const SizedBox(height: 10),
-                                // Use shuffled order for options
-                                // shuffled order computed inline
-                                ...List.generate(_shuffledIndicesFor(_currentQuestionIndex).length, (i) {
-                                  final index = _shuffledIndicesFor(_currentQuestionIndex)[i];
-                                  final selected = _selectedAnswers[_currentQuestionIndex];
-                                  final correctIndex = _visibleQuestions[_currentQuestionIndex].correctOptionIndex;
-                                  bool isSelected = index == selected;
-                                  bool isCorrect = selected != null && index == correctIndex;
-                                  // Determine colors based on selection and correctness
-                                  Color cardColor;
-                                  Color borderColor;
-                                  if (selected == null) {
-                                    // No answer yet
-                                    cardColor = isDark ? Theme.of(context).cardColor : Colors.white;
-                                    borderColor = isDark ? Colors.grey.withOpacity(0.2) : Colors.grey.withOpacity(0.2);
-                                  } else if (isSelected) {
-                                    // User selected this option
-                                    cardColor = isCorrect ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1);
-                                    borderColor = isCorrect ? Colors.green : Colors.red;
-                                  } else if (index == correctIndex) {
-                                    // Show correct answer if user selected wrong
-                                    cardColor = Colors.green.withOpacity(0.1);
-                                    borderColor = Colors.green;
-                                  } else {
-                                    cardColor = isDark ? Theme.of(context).cardColor : Colors.white;
-                                    borderColor = isDark ? Colors.grey.withOpacity(0.2) : Colors.grey.withOpacity(0.2);
-                                  }
-
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 16.0),
-                                    child: InkWell(
-                                      onTap: selected == null ? () => _handleOptionTap(index) : null,
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: AnimatedContainer(
-                                        duration: const Duration(milliseconds: 300),
-                                        padding: const EdgeInsets.all(15),
-                                        decoration: BoxDecoration(
-                                          color: cardColor,
-                                          borderRadius: BorderRadius.circular(16),
-                                          border: Border.all(color: borderColor, width: 2),
-                                          boxShadow: isSelected ? [
-                                            BoxShadow(
-                                              color: borderColor.withOpacity(0.2),
-                                              blurRadius: 10,
-                                              offset: const Offset(0, 4),
-                                            )
-                                          ] : [],
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            AnimatedContainer(
-                                              duration: const Duration(milliseconds: 300),
-                                              width: 18,
-                                              height: 18,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color: isSelected ? borderColor : Colors.grey,
-                                                  width: 2,
-                                                ),
-                                                color: isSelected ? borderColor : Colors.transparent,
-                                              ),
-                                              child: isSelected
-                                                  ? const Icon(Icons.circle, size: 12, color: Colors.white)
-                                                  : null,
-                                            ),
-                                            const SizedBox(width: 16),
-                                            Expanded(
-                                              child: Text(
-                                                _formatBilingual(question.options[index]),
-                                                style: AppTheme.getStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                                  color: isDark ? Colors.white : AppTheme.textMainColor,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                child: Text(AppLanguage.getString('end')),
+                              ),
+                            ),
+                            Text(
+                              "${_currentQuestionIndex + 1}/${_loadedQuestions.length}",
+                              style: AppTheme.getStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
+                              ),
+                            ),
+                            IconButton(
+                              padding: const EdgeInsets.only(left: 8, bottom: 0, top: 0),
+                              constraints: const BoxConstraints(),
+                              icon: Icon(
+                                _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                                color: _isBookmarked ? Colors.amber : Colors.grey,
+                                size: 25,
+                              ),
+                              onPressed: _toggleBookmark,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: AppTheme.secondaryColor.withOpacity(0.1),
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.secondaryColor),
+                      borderRadius: BorderRadius.circular(10),
+                      minHeight: 8,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            transitionBuilder: (Widget child, Animation<double> animation) {
+                              return SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(1.0, 0.0),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: FadeTransition(
+                                  opacity: animation,
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: SingleChildScrollView(
+                              key: ValueKey<int>(_currentQuestionIndex),
+                              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          _formatBilingual(question.question),
+                                          style: AppTheme.getStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.white : AppTheme.textMainColor,
+                                            height: 1.5,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  );
-                                }),
-                              ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  ...List.generate(_shuffledIndicesFor(_currentQuestionIndex).length, (i) {
+                                    final index = _shuffledIndicesFor(_currentQuestionIndex)[i];
+                                    final selected = _selectedAnswers[_currentQuestionIndex];
+                                    final correctIndex = _visibleQuestions[_currentQuestionIndex].correctOptionIndex;
+                                    bool isSelected = index == selected;
+                                    bool isCorrect = selected != null && index == correctIndex;
+                                    Color cardColor;
+                                    Color borderColor;
+                                    if (selected == null) {
+                                      cardColor = isDark ? Theme.of(context).cardColor : Colors.white;
+                                      borderColor = isDark ? Colors.grey.withOpacity(0.2) : Colors.grey.withOpacity(0.2);
+                                    } else if (isSelected) {
+                                      cardColor = isCorrect ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1);
+                                      borderColor = isCorrect ? Colors.green : Colors.red;
+                                    } else if (index == correctIndex) {
+                                      cardColor = Colors.green.withOpacity(0.1);
+                                      borderColor = Colors.green;
+                                    } else {
+                                      cardColor = isDark ? Theme.of(context).cardColor : Colors.white;
+                                      borderColor = isDark ? Colors.grey.withOpacity(0.2) : Colors.grey.withOpacity(0.2);
+                                    }
+
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 16.0),
+                                      child: InkWell(
+                                        onTap: selected == null ? () => _handleOptionTap(index) : null,
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 300),
+                                          padding: const EdgeInsets.all(15),
+                                          decoration: BoxDecoration(
+                                            color: cardColor,
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(color: borderColor, width: 2),
+                                            boxShadow: isSelected ? [
+                                              BoxShadow(
+                                                color: borderColor.withOpacity(0.2),
+                                                blurRadius: 10,
+                                                offset: const Offset(0, 4),
+                                              )
+                                            ] : [],
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              AnimatedContainer(
+                                                duration: const Duration(milliseconds: 300),
+                                                width: 18,
+                                                height: 18,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: isSelected ? borderColor : Colors.grey,
+                                                    width: 2,
+                                                  ),
+                                                  color: isSelected ? borderColor : Colors.transparent,
+                                                ),
+                                                child: isSelected
+                                                    ? const Icon(Icons.circle, size: 12, color: Colors.white)
+                                                    : null,
+                                              ),
+                                              const SizedBox(width: 16),
+                                              Expanded(
+                                                child: Text(
+                                                  _formatBilingual(question.options[index]),
+                                                  style: AppTheme.getStyle(
+                                                    fontSize: 15,
+                                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                                    color: isDark ? Colors.white : AppTheme.textMainColor,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                // Bottom Action Area
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        offset: const Offset(0, -4),
-                        blurRadius: 10,
-                      )
-                    ],
-                  ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      onPressed: _selectedAnswers[_currentQuestionIndex] != null
-                          ? (_currentQuestionIndex < _loadedQuestions.length - 1 ? _nextQuestion : _submitQuiz)
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.zero, // Use SizedBox for height
-                      ),
-                      child: Text(
-                        _currentQuestionIndex < _loadedQuestions.length - 1 ? AppLanguage.getString('next') : AppLanguage.getString('submit'),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          offset: const Offset(0, -4),
+                          blurRadius: 10,
+                        )
+                      ],
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: _selectedAnswers[_currentQuestionIndex] != null
+                            ? (_currentQuestionIndex < _loadedQuestions.length - 1 ? _nextQuestion : _submitQuiz)
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: Text(
+                          _currentQuestionIndex < _loadedQuestions.length - 1 ? AppLanguage.getString('next') : AppLanguage.getString('submit'),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          );
+        }
+
+        return PopScope(
+          canPop: _canPop,
+          onPopInvokedWithResult: (didPop, result) async {
+            if (didPop) return;
+            final shouldPop = await _showExitConfirmation();
+            if (shouldPop && mounted) {
+              setState(() {
+                _canPop = true;
+              });
+              Future.microtask(() {
+                if (mounted) Navigator.of(context).pop();
+              });
+            }
+          },
+          child: scaffoldBody,
         );
-      }
+      },
     );
   }
 }

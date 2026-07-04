@@ -7,7 +7,7 @@ import '../services/firestore_service.dart';
 import '../models/subject.dart';
 import 'admin_panel_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:tnpsc_group_book/screens/bookmark_screen.dart';
 import 'package:tnpsc_group_book/screens/feedback_screen.dart';
 import 'package:intl/intl.dart';
@@ -88,7 +88,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(AppLanguage.languageNotifier.value == 'ta' ? 'பெயரை மாற்றவும்' : 'Edit Name',
-          style: TextStyle(fontSize: 18,color: isDarkMode ? AppTheme.secondaryColor : Colors.black),),
+          style: AppTheme.getStyle(fontSize: 18, color: isDarkMode ? AppTheme.secondaryColor : Colors.black),),
         content: TextField(
           controller: nameController,
           maxLength: 25,
@@ -121,7 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               backgroundColor: AppTheme.primaryColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: Text(AppLanguage.languageNotifier.value == 'ta' ? 'சேமி' : 'Save', style: const TextStyle(color: Colors.white, fontSize: 14)),
+            child: Text(AppLanguage.languageNotifier.value == 'ta' ? 'சேமி' : 'Save', style: AppTheme.getStyle(fontSize: 14, color: Colors.white)),
           ),
         ],
       ),
@@ -153,11 +153,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(
                   AppLanguage.languageNotifier.value == 'ta' ? 'வணக்கம்,' : 'Hello,',
-                  style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey),
+                  style: AppTheme.getStyle(fontSize: 14, color: Colors.grey),
                 ),
                 Text(
                   _userName.isEmpty ? AppLanguage.getString('user_fallback') : _userName,
-                  style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
+                  style: AppTheme.getStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -192,7 +192,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // padding: const EdgeInsets.all(0),
                 child: Icon(Icons.arrow_back_ios_rounded, size: 25, color: isDarkMode ? Colors.white : Colors.black),
               ),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.maybePop(context),
             ),
             title: Text(AppLanguage.getString('settings')),
           ),
@@ -243,7 +243,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               canWatch 
                                 ? AppLanguage.getString('watch_ad_points')
                                 : (lang == 'ta' ? 'இன்றைய வரம்பு முடிந்தது' : 'Daily Limit Reached'),
-                              style: TextStyle(
+                              style: AppTheme.getStyle(
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold, 
                                 color: canWatch ? AppTheme.textMainColor : Colors.grey
                               ),
@@ -252,7 +253,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               canWatch 
                                 ? (lang == 'ta' ? 'மீதமுள்ளது: ${3 - watchCount}/3' : 'Remaining: ${3 - watchCount}/3')
                                 : (lang == 'ta' ? 'நாளை மீண்டும் முயலவும்' : 'Try again tomorrow'),
-                              style: TextStyle(fontSize: 12, color: AppTheme.textSecondaryColor),
+                              style: AppTheme.getStyle(fontSize: 12, color: AppTheme.textSecondaryColor),
                             ),
                             trailing: Icon(
                               Icons.play_circle_fill_rounded, 
@@ -505,7 +506,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppLanguage.getString('cancel'))),
                                     TextButton(
                                       onPressed: () => Navigator.pop(context, true),
-                                      child: Text(AppLanguage.getString('delete_everything'), style: const TextStyle(color: Colors.red)),
+                                      child: Text(AppLanguage.getString('delete_everything'), style: AppTheme.getStyle(fontSize: 14, color: Colors.red)),
                                     ),
                                   ],
                                 ),
@@ -578,7 +579,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppLanguage.getString('cancel'))),
                                     TextButton(
                                       onPressed: () => Navigator.pop(context, true),
-                                      child: Text(AppLanguage.getString('clear_action'), style: const TextStyle(color: Colors.red)),
+                                      child: Text(AppLanguage.getString('clear_action'), style: AppTheme.getStyle(fontSize: 14, color: Colors.red)),
                                     ),
                                   ],
                                 ),

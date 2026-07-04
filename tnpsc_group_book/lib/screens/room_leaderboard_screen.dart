@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:path_provider/path_provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
@@ -99,15 +99,21 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final ta = AppLanguage.languageNotifier.value == 'ta';
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(
-          ta ? 'குழு தேர்வு முடிவு' : 'Group Test Results',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        automaticallyImplyLeading: false,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        Navigator.popUntil(context, (r) => r.isFirst);
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: Text(
+            ta ? 'குழு தேர்வு முடிவு' : 'Group Test Results',
+            style: AppTheme.getStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          centerTitle: true,
+          automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.share_rounded),
@@ -322,7 +328,8 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
                                       backgroundColor: _getRankColor(index),
                                       child: Text(
                                         '${index + 1}',
-                                        style: const TextStyle(
+                                        style: AppTheme.getStyle(
+                                            fontSize: 14,
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold),
                                       ),
@@ -399,7 +406,7 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
           },
         ),
       ),
-    );
+    ));
   }
 
   Color _getRankColor(int index) {
@@ -421,7 +428,7 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(icon, style: const TextStyle(fontSize: 12)),
+          Text(icon, style: AppTheme.getStyle(fontSize: 12)),
           const SizedBox(width: 4),
           Text(
             label,

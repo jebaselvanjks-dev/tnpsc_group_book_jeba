@@ -33,7 +33,7 @@ class SubTopicScreen extends StatelessWidget {
             elevation: 0,
             leading: IconButton(
               icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.maybePop(context),
             ),
             title: Text(
               parentTopic,
@@ -94,7 +94,9 @@ class SubTopicScreen extends StatelessWidget {
           MaterialPageRoute(
             builder: (context) => TopicDetailScreen(
               topic: topic,
+              topicKey: subject.getSubTopicKey(topicIndex, index),
               category: parentTopic,
+              categoryKey: subject.getTopicKey(topicIndex),
               allTopics: allTopics,
               currentIndex: index,
             ),

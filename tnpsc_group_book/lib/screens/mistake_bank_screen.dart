@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:tnpsc_group_book/services/tts_service.dart';
 import '../models/question.dart';
 import '../services/firestore_service.dart';
@@ -118,7 +118,7 @@ class _MistakeBankScreenState extends State<MistakeBankScreen> {
                 label: Text(
                   AppLanguage.getString('reattempt_all'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  style: AppTheme.getStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange.shade800,
@@ -138,7 +138,7 @@ class _MistakeBankScreenState extends State<MistakeBankScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("🎉", style: TextStyle(fontSize: 64)),
+            Text("🎉", style: AppTheme.getStyle(fontSize: 64)),
             const SizedBox(height: 24),
             Text(
               AppLanguage.getString('no_mistakes_title'),

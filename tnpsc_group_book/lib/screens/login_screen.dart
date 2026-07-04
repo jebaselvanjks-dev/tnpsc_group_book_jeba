@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -78,6 +79,56 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _showExitDialog(BuildContext context) async {
+    final shouldPop = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101F42) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          AppLanguage.getString('exit_app_title'),
+          style: AppTheme.getStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+          ),
+        ),
+        content: Text(
+          AppLanguage.getString('exit_app_desc'),
+          style: AppTheme.getStyle(
+            fontSize: 16,
+            color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black54,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              AppLanguage.getString('no'),
+              style: AppTheme.getStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(AppLanguage.getString('yes')),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldPop ?? false) {
+      SystemNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(
@@ -87,9 +138,15 @@ class _LoginScreenState extends State<LoginScreen> {
         final isDark = theme.brightness == Brightness.dark;
         final ta = lang == 'ta';
 
-        return Scaffold(
-          backgroundColor: theme.scaffoldBackgroundColor,
-          body: SafeArea(
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            _showExitDialog(context);
+          },
+          child: Scaffold(
+            backgroundColor: theme.scaffoldBackgroundColor,
+            body: SafeArea(
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24.0),
@@ -167,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-        );
+        ));
       },
     );
   }
