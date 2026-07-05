@@ -25,13 +25,15 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _navigateToHome() async {
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // Wait for the animation to be visible
+    await Future.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
     
     User? user = FirebaseAuth.instance.currentUser;
     
     if (user != null) {
-      await NotificationService.saveFCMToken();
+      // AI_DEBUG: FCM token saving is already handled in NotificationService.init() 
+      // which runs in background. No need to await it here.
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainWrapper()),

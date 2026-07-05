@@ -352,14 +352,16 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                AppLanguage.getString(_subject),
-                                style: AppTheme.getStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? Colors.white60 : Colors.black87,
+                              Flexible(
+                                child: Text(
+                                  AppLanguage.getString(_subject),
+                                  style: AppTheme.getStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white60 : Colors.black87,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                               Text(
                                 AppLanguage.getString('lobby_max_players').replaceAll('{max}', '${roomData!['maxPlayers']}'),

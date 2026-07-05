@@ -343,52 +343,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
   // Helper to format bilingual text (English / Tamil)
   String _formatBilingual(String raw) {
-    if (raw.isEmpty) return "";
-
-    // Normalize escaped newlines from database
-    raw = raw.replaceAll('\\n', '\n');
-    
-    // 1. Check for newline first (Most common for questions)
-    if (raw.contains('\n')) {
-      List<String> parts = raw.split('\n');
-      String en = parts[0].trim();
-      String ta = parts.sublist(1).join('\n').trim(); // Join rest as Tamil
-      if (en == ta) return en;
-      return "$en\n$ta";
-    }
-
-    // 2. Check for explicit space-slash-space separator (Common for options)
-    if (raw.contains(' / ')) {
-      List<String> parts = raw.split(' / ');
-      String en = parts[0].trim();
-      String ta = parts.sublist(1).join(' / ').trim();
-      if (en == ta) return en;
-      return "$en\n$ta";
-    }
-
-    // 3. Smart detection: Split at the first Tamil character
-    int tamilIndex = -1;
-    for (int i = 0; i < raw.length; i++) {
-      int code = raw.codeUnitAt(i);
-      if (code >= 0x0B80 && code <= 0x0BFF) {
-        tamilIndex = i;
-        break;
-      }
-    }
-
-    if (tamilIndex > 0) {
-      String en = raw.substring(0, tamilIndex).trim();
-      // Clean up any trailing separators AI might have left
-      while (en.endsWith('/') || en.endsWith('|') || en.endsWith(':') || en.endsWith('-')) {
-        en = en.substring(0, en.length - 1).trim();
-      }
-      String ta = raw.substring(tamilIndex).trim();
-      if (en.isNotEmpty && ta.isNotEmpty) {
-        return "$en\n$ta";
-      }
-    }
-
-    return raw.trim();
+    return AppLanguage.formatBilingual(raw);
   }
 
   // Returns the option string localized based on current app language.

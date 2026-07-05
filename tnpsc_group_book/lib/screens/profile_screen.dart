@@ -91,11 +91,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.keyboard_arrow_left,color: Colors.transparent,),
+                    onPressed: () {},
+                  ),
                   Text(
                     AppLanguage.getString('profile'),
                     style: AppTheme.getStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
                       color: isDark ? Colors.white : AppTheme.textMainColor,
                     ),
                   ),

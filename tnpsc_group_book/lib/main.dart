@@ -35,21 +35,20 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
   
-  // 1. Critical initializations (Fast & Local)
+  // 1. Critical local-only initializations (Fast)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
-    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-  );
+  
+  // Initialize Hive immediately as it's needed for UI state
   await HiveService.init();
-  await NotificationService.init();
+  
+  // Load local preferences
   await AppTheme.loadThemePreference();
   await AppTheme.loadFontSizePreference();
-  DeepLinkService().init();
 
-  // 2. Start heavy/network initializations in background
+  // 2. Network/Heavy initializations (In Background)
+  // Move everything else to a non-blocking background initialization
   _initServicesInBackground();
   
   runApp(const TNPSCPrepApp());
@@ -57,10 +56,20 @@ void main() async {
 
 // Background initializations to speed up startup
 Future<void> _initServicesInBackground() async {
-  // These don't need to block the UI from starting
+  // Use a small delay to allow the splash screen to render first
+  await Future.delayed(const Duration(milliseconds: 100));
+
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+
+  // Non-blocking services
+  NotificationService.init();
   MobileAds.instance.initialize();
   TtsService.init();
   RewardService.loadRewardedAd();
+  DeepLinkService().init();
 }
 
 class TNPSCPrepApp extends StatelessWidget {

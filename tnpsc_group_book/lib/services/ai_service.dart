@@ -287,7 +287,7 @@ STRICT QUALITY RULES (MUST FOLLOW)
 5. Never repeat questions, options, explanations, or question patterns.
 6. Every question must test a different concept.
 7. Questions must be suitable for TNPSC SSLC Standard.
-8. Grammar must be 100% correct in BOTH Tamil and English.
+8. EVERY field (question, options, explanation) MUST BE BILINGUAL (English and Tamil).
 9. English must be natural and error-free.
 10. Tamil must use proper literary Tamil without spelling mistakes.
 11. Do NOT mix Tamil and English in the same sentence.
@@ -297,9 +297,10 @@ STRICT QUALITY RULES (MUST FOLLOW)
 15. Verify the correct answer before assigning correctOptionIndex.
 16. correctOptionIndex MUST exactly match the correct option (0-3).
 17. Explanation must clearly justify why the answer is correct.
-18. Explanation must contain:
-    - First: Correct English explanation.
-    - Next: Correct Tamil explanation.
+18. MANDATORY BILINGUAL FORMAT:
+    - Question field: "English Question\\nதமிழ் வினா" (Separated by newline)
+    - Options array: "English Option / தமிழ் விருப்பம்" (Separated by slash)
+    - Explanation field: "English explanation. தமிழ் விளக்கம்." (English first, then Tamil)
 19. Avoid vague or ambiguous questions.
 20. Avoid duplicate option values.
 21. Avoid options like "All of the above" or "None of the above".
@@ -314,6 +315,7 @@ STRICT QUALITY RULES (MUST FOLLOW)
 30. Validate every answer before returning JSON.
 
 Before generating the JSON, internally verify:
+- BILINGUAL REQUIREMENT: Does every field have both English and Tamil?
 - Grammar accuracy (Tamil & English)
 - No duplicate questions or patterns
 - No duplicate options
@@ -504,7 +506,7 @@ STRICT QUALITY RULES (MUST FOLLOW)
 5. Never repeat questions, options, explanations, or question patterns.
 6. Every question must test a different concept.
 7. Questions must be suitable for TNPSC SSLC Standard.
-8. Grammar must be 100% correct in BOTH Tamil and English.
+8. EVERY field (question, options, explanation) MUST BE BILINGUAL (English and Tamil).
 9. English must be natural and error-free.
 10. Tamil must use proper literary Tamil without spelling mistakes.
 11. Do NOT mix Tamil and English in the same sentence.
@@ -514,9 +516,10 @@ STRICT QUALITY RULES (MUST FOLLOW)
 15. Verify the correct answer before assigning correctOptionIndex.
 16. correctOptionIndex MUST exactly match the correct option (0-3).
 17. Explanation must clearly justify why the answer is correct.
-18. Explanation must contain:
-    - First: Correct English explanation.
-    - Next: Correct Tamil explanation.
+18. MANDATORY BILINGUAL FORMAT:
+    - Question field: "English Question\\nதமிழ் வினா" (Separated by newline)
+    - Options array: "English Option / தமிழ் விருப்பம்" (Separated by slash)
+    - Explanation field: "English explanation. தமிழ் விளக்கம்." (English first, then Tamil)
 19. Avoid vague or ambiguous questions.
 20. Avoid duplicate option values.
 21. Avoid options like "All of the above" or "None of the above".
@@ -531,6 +534,7 @@ STRICT QUALITY RULES (MUST FOLLOW)
 30. Validate every answer before returning JSON.
 
 Before generating the JSON, internally verify:
+- BILINGUAL REQUIREMENT: Does every field have both English and Tamil?
 - Grammar accuracy (Tamil & English)
 - No duplicate questions or patterns
 - No duplicate options
@@ -798,29 +802,33 @@ Only return the raw JSON array, no other text or markdown formatting.
 
           final docRef = FirebaseFirestore.instance.collection('room_predefined_quizzes').doc(subject);
 
-          // 1. Add new questions to the pool (using arrayUnion to avoid duplicates)
+          // AI_DEBUG: Sliding Window Logic (Max 1500 questions)
+          // 1. Fetch existing pool to maintain size
+          final snap = await docRef.get();
+          List<dynamic> existingQs = [];
+          if (snap.exists) {
+            existingQs = List.from(snap.get('questions') ?? []);
+          }
+
+          // 2. Prepare new questions
+          List<dynamic> sanitizedNewQs = questions.map((q) => {...q, 'quiz_type': 'room_quiz'}).toList();
+          
+          // 3. Maintenance: Combine and trim to latest 1500
+          const int maxPoolSize = 1500;
+          List<dynamic> combinedQs = [...existingQs, ...sanitizedNewQs];
+          
+          if (combinedQs.length > maxPoolSize) {
+            int removeCount = combinedQs.length - maxPoolSize;
+            combinedQs = combinedQs.sublist(removeCount);
+            print("AI_DEBUG: Pool Size Management for $subject. Current total: ${combinedQs.length} (Removed $removeCount oldest questions)");
+          }
+
+          // 4. Save back to Firestore
           await docRef.set({
             'subject': subject,
-            'questions': FieldValue.arrayUnion(questions.map((q) => {...q, 'quiz_type': 'room_quiz'}).toList()),
+            'questions': combinedQs,
             'lastUpdated': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
-
-          // 2. Size Management: Keep the pool at a reasonable size (e.g., latest 400 questions)
-          // This prevents the document from exceeding the 1MB Firestore limit.
-          try {
-            final snap = await docRef.get();
-            if (snap.exists) {
-              List allQs = snap.get('questions') ?? [];
-              if (allQs.length > 400) {
-                await docRef.update({
-                  'questions': allQs.sublist(allQs.length - 400),
-                });
-                print("AI_DEBUG: Trimmed room quiz pool for $subject to 400 questions");
-              }
-            }
-          } catch (e) {
-            print("AI_DEBUG: Pool maintenance error: $e");
-          }
 
           return true;
         }

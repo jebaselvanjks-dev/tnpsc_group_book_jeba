@@ -158,6 +158,13 @@ class RoomService {
       List<Question> allQuestions = [];
       try {
         debugPrint("RoomService: Checking for pre-generated room quiz pool for $subject...");
+        
+        // AI_DEBUG: If it's aptitude or current_affairs, proactively try to generate if empty/not found
+        if (subject == 'aptitude' || subject == 'current_affairs') {
+           debugPrint("RoomService: High priority subject ($subject) detected. Forcing AI check...");
+           await AiService.generateAndSaveRoomPredefinedQuiz(subject);
+        }
+
         final roomQuizDoc = await _db
             .collection('room_predefined_quizzes')
             .doc(subject)
@@ -189,11 +196,33 @@ class RoomService {
 
       // 2. Force AI Generation if pre-generated is not found or empty
       if (allQuestions.isEmpty) {
-        debugPrint("RoomService: No pre-generated quiz. Forcing AI generation for subject: $subject...");
+        debugPrint("RoomService: No pre-generated quiz found. Trying AI generation for subject: $subject...");
         try {
-          bool generated = await AiService.generateSubjectQuestions(subject);
+          // AI_DEBUG: Use the room-specific generation method for consistency
+          bool generated = await AiService.generateAndSaveRoomPredefinedQuiz(subject);
           if (generated) {
-            allQuestions = await _firestoreService.getSubjectQuestions(subject);
+             final freshDoc = await _db.collection('room_predefined_quizzes').doc(subject).get();
+             if (freshDoc.exists) {
+                final freshData = freshDoc.data() as Map<String, dynamic>;
+                List? freshQs = freshData['questions'];
+                if (freshQs != null && freshQs.isNotEmpty) {
+                  for (var q in freshQs.take(roomQuestionCount)) {
+                    allQuestions.add(Question(
+                      question: q['question'] ?? '',
+                      options: List<String>.from(q['options'] ?? []),
+                      correctOptionIndex: q['correctOptionIndex'] ?? 0,
+                      explanation: q['explanation'] ?? '',
+                      subject: subject,
+                    ));
+                  }
+                }
+             }
+          } else {
+            // Fallback to general subject questions if specific room generation fails
+            bool subGenerated = await AiService.generateSubjectQuestions(subject);
+            if (subGenerated) {
+              allQuestions = await _firestoreService.getSubjectQuestions(subject);
+            }
           }
         } catch (e) {
           debugPrint("RoomService: AI generation failed: $e");
