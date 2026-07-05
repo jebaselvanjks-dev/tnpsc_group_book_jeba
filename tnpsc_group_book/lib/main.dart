@@ -40,6 +40,9 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
+  // Initialize DeepLinkService immediately to catch early links
+  DeepLinkService().init();
+
   // Initialize Hive immediately as it's needed for UI state
   await HiveService.init();
   
@@ -69,7 +72,6 @@ Future<void> _initServicesInBackground() async {
   MobileAds.instance.initialize();
   TtsService.init();
   RewardService.loadRewardedAd();
-  DeepLinkService().init();
 }
 
 class TNPSCPrepApp extends StatelessWidget {

@@ -391,7 +391,7 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
                                       style: AppTheme.getStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color: AppTheme.primaryColor,
+                                        color: AppTheme.secondaryColorLight,
                                       ),
                                     ),
                                   ),

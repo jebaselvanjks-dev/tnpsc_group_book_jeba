@@ -8,10 +8,14 @@ class AiService {
   static List<String>? _cachedApiKeys;
   static List<String>? _cachedPreferredModels;
 
+  static bool _isFetchingConfig = false;
+
   // -----------------------------------------------------------------
   // Remote Config fetcher for API key and Model Priority
   // -----------------------------------------------------------------
   static Future<void> _fetchRemoteConfig() async {
+    if (_isFetchingConfig) return;
+    _isFetchingConfig = true;
     try {
       final remoteConfig = FirebaseRemoteConfig.instance;
       await remoteConfig.setConfigSettings(
@@ -39,6 +43,8 @@ class AiService {
       }
     } catch (e) {
       print("AI_DEBUG: Remote Config Error: $e");
+    } finally {
+      _isFetchingConfig = false;
     }
   }
 
@@ -56,7 +62,6 @@ class AiService {
     
     // AI_DEBUG: Whitelist of stable models that are known to work
     const whitelist = [
-      'gemini-2.5-flash',
       'gemini-2.0-flash',
       'gemini-1.5-flash',
       'gemini-1.5-pro',
@@ -74,7 +79,6 @@ class AiService {
 
     // Default stable list if Remote Config is empty or invalid
     return [
-      'gemini-2.5-flash',
       'gemini-2.0-flash',
       'gemini-1.5-flash',
       'gemini-1.5-pro',
@@ -200,13 +204,18 @@ class AiService {
               String? text = candidate['content']['parts'][0]['text'];
               if (text != null) {
                 text = text.trim();
-                if (text.startsWith("```")) {
-                  text = text.replaceAll("```json", "").replaceAll("```", "").trim();
+                // Improved JSON extraction using regex to handle potential markdown or extra text
+                final jsonRegex = RegExp(r'\[.*\]|\{.*\}', dotAll: true);
+                final match = jsonRegex.stringMatch(text);
+                if (match != null) {
+                  text = match.trim();
                 }
+
                 try {
                   jsonDecode(text);
                   return text;
                 } catch (e) {
+                  print("AI_DEBUG: JSON Decode failed for: ${text.substring(0, text.length > 50 ? 50 : text.length)}...");
                   continue;
                 }
               }
@@ -811,16 +820,21 @@ Only return the raw JSON array, no other text or markdown formatting.
           }
 
           // 2. Prepare new questions
-          List<dynamic> sanitizedNewQs = questions.map((q) => {...q, 'quiz_type': 'room_quiz'}).toList();
+          List<dynamic> sanitizedNewQs = questions.map((q) => {
+            ...q, 
+            'quiz_type': subject,
+            'subject': subject,
+            'createdAt': FieldValue.serverTimestamp(),
+          }).toList();
           
-          // 3. Maintenance: Combine and trim to latest 1500
-          const int maxPoolSize = 1500;
-          List<dynamic> combinedQs = [...existingQs, ...sanitizedNewQs];
+          // 3. Maintenance: Combine (Prepend new) and trim to latest 500
+          // AI_DEBUG: Reduced pool size to 500 to stay under 1MB Firestore limit
+          const int maxPoolSize = 500;
+          List<dynamic> combinedQs = [...sanitizedNewQs, ...existingQs];
           
           if (combinedQs.length > maxPoolSize) {
-            int removeCount = combinedQs.length - maxPoolSize;
-            combinedQs = combinedQs.sublist(removeCount);
-            print("AI_DEBUG: Pool Size Management for $subject. Current total: ${combinedQs.length} (Removed $removeCount oldest questions)");
+            combinedQs = combinedQs.sublist(0, maxPoolSize);
+            print("AI_DEBUG: Pool Size Management for $subject. Kept latest 500 questions.");
           }
 
           // 4. Save back to Firestore
@@ -828,6 +842,7 @@ Only return the raw JSON array, no other text or markdown formatting.
             'subject': subject,
             'questions': combinedQs,
             'lastUpdated': FieldValue.serverTimestamp(),
+            'createdAt': FieldValue.serverTimestamp(), // Added for avoidance context fetch
           }, SetOptions(merge: true));
 
           return true;

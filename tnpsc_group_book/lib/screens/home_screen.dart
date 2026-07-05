@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:tnpsc_group_book/services/deep_link_service.dart';
 import '../models/subject.dart';
 import '../utils/app_theme.dart';
 import 'package:tnpsc_group_book/utils/app_language.dart';
@@ -42,6 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _checkInitialSync();
+    // AI_DEBUG: Check clipboard on home screen entry for room codes
+    DeepLinkService().checkClipboard();
   }
 
   Future<void> _checkInitialSync() async {

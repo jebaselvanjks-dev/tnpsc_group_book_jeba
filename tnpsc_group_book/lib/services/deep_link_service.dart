@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:tnpsc_group_book/utils/app_language.dart';
+import 'dart:ui';
+import '../main.dart';
 
 class DeepLinkService with WidgetsBindingObserver {
   static final DeepLinkService _instance = DeepLinkService._internal();
@@ -9,6 +13,34 @@ class DeepLinkService with WidgetsBindingObserver {
 
   void init() {
     WidgetsBinding.instance.addObserver(this);
+    
+    // AI_DEBUG: Check for initial link on startup
+    _checkInitialLink();
+
+    // AI_DEBUG: Check clipboard as a fallback for new users
+    checkClipboard();
+  }
+
+  Future<void> checkClipboard() async {
+    try {
+      ClipboardData? data = await Clipboard.getData(Clipboard.kTextPlain);
+      if (data?.text != null) {
+        debugPrint("DeepLinkService: Checking clipboard for room code...");
+        _handleLink(data!.text!);
+      }
+    } catch (e) {
+      debugPrint("DeepLinkService: Error checking clipboard: $e");
+    }
+  }
+
+  void _checkInitialLink() {
+    // In Flutter, the initial deep link is often passed as the default route name
+    String? initialRoute = PlatformDispatcher.instance.defaultRouteName;
+    debugPrint("DeepLinkService: Checking initial route: $initialRoute");
+    
+    if (initialRoute != "/" && initialRoute != "index.html") {
+      _handleLink(initialRoute);
+    }
   }
 
   @override
@@ -31,29 +63,64 @@ class DeepLinkService with WidgetsBindingObserver {
   }
 
   void _handleLink(String link) {
-    debugPrint("DeepLinkService: Received link: $link");
-    // Format: tnpscmaster://join?code=ABCDEF or /join?code=ABCDEF or https://.../join?code=ABCDEF
+    debugPrint("DeepLinkService: Received raw input: '$link'");
+    if (link.isEmpty || link == "/" || link == "index.html") return;
+
+    // AI_DEBUG: Support various formats (Full text messages, deep links, or just the code)
     try {
-      Uri uri = Uri.parse(link);
+      String input = link.trim();
       
-      // AI_DEBUG: Support various host/path patterns for robustness
-      bool isJoinLink = uri.host == 'join' || 
-                        uri.path.contains('join') || 
-                        uri.queryParameters.containsKey('code');
+      // 1. Try to find 6-digit uppercase code using Regex (Matches OKAXBI, ABCDEF etc)
+      // This is powerful because it works even if they copy the WHOLE message
+      final RegExp codeRegex = RegExp(r'\b[A-Z0-9]{6}\b');
+      final Iterable<RegExpMatch> matches = codeRegex.allMatches(input);
       
-      if (isJoinLink) {
-        String? code = uri.queryParameters['code'];
-        if (code != null && (code.length == 6 || code.length == 5)) {
-          pendingRoomCode.value = code.toUpperCase();
-          debugPrint("DeepLinkService: SUCCESS! Extracted Code: ${pendingRoomCode.value}");
-        } else {
-          debugPrint("DeepLinkService: Link received but code was invalid length: $code");
+      String? foundCode;
+      
+      // If there's a specific 'code=' parameter, prioritize it
+      if (input.contains('code=')) {
+        Uri? uri = Uri.tryParse(input.replaceAll(' ', ''));
+        if (uri != null) {
+          foundCode = uri.queryParameters['code'] ?? 
+                      uri.queryParameters['roomCode'] ?? 
+                      uri.queryParameters['room'];
         }
-      } else {
-        debugPrint("DeepLinkService: Link received but didn't match 'join' pattern.");
       }
+      
+      // If no code parameter, use the first 6-digit match that isn't part of a URL
+      if (foundCode == null && matches.isNotEmpty) {
+        for (var match in matches) {
+           String potential = match.group(0)!;
+           // Avoid matching parts of the URL or app ID
+           if (!input.contains('details?id=') || !input.substring(input.indexOf('id=')).contains(potential)) {
+             foundCode = potential;
+             break;
+           }
+        }
+      }
+
+      if (foundCode != null) {
+        String code = foundCode.toUpperCase();
+        if (code.length >= 5 && code.length <= 8) {
+          pendingRoomCode.value = code;
+          debugPrint("DeepLinkService: SUCCESS! Extracted Code: ${pendingRoomCode.value}");
+          
+          scaffoldMessengerKey.currentState?.showSnackBar(
+            SnackBar(
+              content: Text(AppLanguage.languageNotifier.value == 'ta' 
+                ? "கோட் கண்டறியப்பட்டது! கோட்: $code"
+                : "Code Detected! Code: $code"),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          return; // Stop here if code is found
+        }
+      }
+      
+      debugPrint("DeepLinkService: No valid room code found in input.");
     } catch (e) {
-      debugPrint("DeepLinkService: Error parsing link: $e");
+      debugPrint("DeepLinkService: Error processing input '$link': $e");
     }
   }
 

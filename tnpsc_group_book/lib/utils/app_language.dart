@@ -807,6 +807,8 @@ class AppLanguage {
         return ta ? 'குழு குறியீடு : A3ET55' : 'Room Code : A3ET55';
       case 'loading_quiz':
         return ta ? 'குழுவிற்கான வினாக்கள் தயாராகின்றன...' : 'Questions for the group are being prepared...';
+      case 'joining_room_msg':
+        return ta ? 'குழுவில் இணைகிறது...' : 'Joining room...';
       case 'join_room_btn':
         return ta ? 'சேர்ந்து கொள்ளவும்' : 'Join Room';
       case 'room_history':

@@ -29,6 +29,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   final RoomService _roomService = RoomService();
   final TextEditingController _codeController = TextEditingController();
   bool _isLoading = false;
+  bool _isCreatingProcess = false;
   bool _showOnlySpinner = false;
   bool _isExiting = false;
   String _selectedSubject = 'general_tamil';
@@ -64,9 +65,11 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
   void _handleDeepLinkCode() {
     final code = DeepLinkService().pendingRoomCode.value;
+    debugPrint("AI_DEBUG: RoomSetupScreen - Received pending code from service: $code");
     if (code != null && mounted) {
       setState(() {
         _codeController.text = code;
+        debugPrint("AI_DEBUG: RoomSetupScreen - Set _codeController.text to: $code");
       });
       DeepLinkService().clearPendingCode();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -140,7 +143,10 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     }
 
     // 3. Check for Existing Room (Server sync)
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _isCreatingProcess = true;
+    });
     _startSpinnerTimer();
     final activeData = await _roomService.getActiveHostRoom();
     setState(() => _isLoading = false);
@@ -221,7 +227,10 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _isCreatingProcess = false;
+    });
     _startSpinnerTimer();
     String? result = await _roomService.joinRoom(code);
     setState(() => _isLoading = false);
@@ -232,12 +241,13 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         context,
         MaterialPageRoute(builder: (context) => WaitingRoomScreen(roomCode: code, isHost: false)),
       );
-    } else if (result == 'limit_reached') {
-      if (mounted) _showRoomLimitDialog(context);
     } else if (result == 'already_started') {
       _showError(AppLanguage.getString('room_already_started'));
     } else if (result == 'room_full') {
       _showError(AppLanguage.getString('room_full'));
+    } else if (result == 'not_found') {
+      final isTamil = AppLanguage.languageNotifier.value == 'ta';
+      _showError(isTamil ? "இந்த குரூப் இல்லை" : "This group does not exist");
     } else {
       _showError(AppLanguage.getString('room_not_found'));
     }
@@ -799,7 +809,9 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                     const CircularProgressIndicator(),
                                     const SizedBox(height: 24),
                                     Text(
-                                      AppLanguage.getString('loading_quiz'),
+                                      _isCreatingProcess 
+                                        ? AppLanguage.getString('loading_quiz')
+                                        : AppLanguage.getString('joining_room_msg'),
                                       textAlign: TextAlign.center,
                                       style: AppTheme.getStyle(
                                         fontSize: 15,
@@ -809,7 +821,9 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      lang == 'ta' ? 'காத்திருக்கும் நேரத்தில் சில வினாக்கள்...' : 'Learn while we load...',
+                                      lang == 'ta' 
+                                        ? (_isCreatingProcess ? 'காத்திருக்கும் நேரத்தில் சில வினாக்கள்...' : 'தயவுசெய்து காத்திருக்கவும்...')
+                                        : (_isCreatingProcess ? 'Learn while we load...' : 'Please wait...'),
                                       textAlign: TextAlign.center,
                                       style: AppTheme.getStyle(fontSize: 14, color: Colors.grey),
                                     ),
@@ -874,282 +888,239 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_activeRoomData != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      margin: const EdgeInsets.only(bottom: 25),
-                      decoration: BoxDecoration(
-                        color: AppTheme.secondaryColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.secondaryColor.withValues(alpha: 0.4), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 5))
-                        ]
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+            // 1. Priority: Active Host Room (Show if user is currently hosting an active room)
+            if (_activeRoomData != null)
+              Container(
+                padding: const EdgeInsets.all(20),
+                margin: const EdgeInsets.only(bottom: 25),
+                decoration: BoxDecoration(
+                    color: AppTheme.secondaryColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppTheme.secondaryColor.withValues(alpha: 0.4), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 5))
+                    ]
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.star_rounded, color: AppTheme.secondaryColor, size: 28),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.star_rounded, color: AppTheme.secondaryColor, size: 28),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      AppLanguage.getString('active_room_available'),
-                                      style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "${AppLanguage.getString('subject_name_label')}: ${AppLanguage.getString(_activeRoomData!['subject'] ?? 'general_tamil')}",
-                                      style: AppTheme.getStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54, fontWeight: FontWeight.w500),
-                                    ),
-                                  ],
-                                ),
+                              Text(
+                                AppLanguage.getString('active_room_available'),
+                                style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "${AppLanguage.getString('subject_name_label')}: ${AppLanguage.getString(_activeRoomData!['subject'] ?? 'general_tamil')}",
+                                style: AppTheme.getStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54, fontWeight: FontWeight.w500),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 14),
-                          Center(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isDark ? Colors.black38 : Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300, width: 1),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.black38 : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300, width: 1),
+                        ),
+                        child: Text(
+                          _activeRoomData!['roomCode'] ?? '',
+                          style: AppTheme.getStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.secondaryColor,
+                          ).copyWith(letterSpacing: 3),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          if (await VersionService.isUpdateRequired()) {
+                            if (mounted) VersionService.showUpdateDialogIfNeeded(context);
+                            return;
+                          }
+                          if (mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => WaitingRoomScreen(roomCode: _activeRoomData!['roomCode'], isHost: true),
                               ),
-                              child: Text(
-                                _activeRoomData!['roomCode'] ?? '',
-                                style: AppTheme.getStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.secondaryColor,
-                                ).copyWith(letterSpacing: 3),
-                              ),
-                            ),
+                            );
+                          }
+                        },
+                        label: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            AppLanguage.getString('enter_waiting_room'),
+                            style: AppTheme.getStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 14),
                           ),
-                          const SizedBox(height: 18),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                if (await VersionService.isUpdateRequired()) {
-                                  if (mounted) VersionService.showUpdateDialogIfNeeded(context);
-                                  return;
-                                }
-                                if (mounted) {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => WaitingRoomScreen(roomCode: _activeRoomData!['roomCode'], isHost: true),
-                                    ),
-                                  );
-                                }
-                              },
-                              label: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  AppLanguage.getString('enter_waiting_room'),
-                                  style: AppTheme.getStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.secondaryColor,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                elevation: 0,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.secondaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
                       ),
                     ),
                   ],
-                  // Create Room Section – only show if no active host room
+                ),
+              ),
+
+            // 2. Persistent Join Section (Always available)
+            Container(
+              padding: const EdgeInsets.all(20),
+              margin: const EdgeInsets.only(bottom: 25),
+              decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade900 : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))
+                  ]
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(AppLanguage.getString('join_room_section'), style: AppTheme.getStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  Text(AppLanguage.getString('join_room_desc'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _codeController,
+                    maxLength: 6,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: InputDecoration(
+                      hintText: AppLanguage.getString('room_code_hint'),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      counterText: "",
+                    ),
+                    textAlign: TextAlign.center,
+                    style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold).copyWith(letterSpacing: 2),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _joinRoom,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(AppLanguage.getString('join_room_btn'), style: AppTheme.getStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  )
+                ],
+              ),
+            ),
+
+            // 3. Create Room Section (Show only if not hosting)
+            if (_activeRoomData == null)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade900 : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(AppLanguage.getString('create_room_section'), style: AppTheme.getStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Text(AppLanguage.getString('create_room_desc'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)),
+                    const SizedBox(height: 20),
+                    Text(AppLanguage.getString('select_subject'), style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.grey.shade900 : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))
-                        ],
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(AppLanguage.getString('create_room_section'), style: AppTheme.getStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 10),
-                          Text(AppLanguage.getString('create_room_desc'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)),
-                          const SizedBox(height: 20),
-                          Text(AppLanguage.getString('select_subject'), style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 10),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _selectedSubject,
-                                isExpanded: true,
-                                style: AppTheme.getStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16, fontWeight: FontWeight.w400),
-                                items: [
-                                  'general_tamil',
-                                  'general_studies',
-                                  'aptitude',
-                                  'current_affairs'
-                                ].map((key) => DropdownMenuItem(
-                                  value: key,
-                                  child: Text(AppLanguage.getString(key), style: AppTheme.getStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16, fontWeight: FontWeight.w400)),
-                                )).toList(),
-                                onChanged: (val) {
-                                  if (val != null) setState(() => _selectedSubject = val);
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(AppLanguage.getString('max_players_label'), style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                              Text(
-                                "$_selectedMaxPlayers users",
-                                style: AppTheme.getStyle(fontSize: 14, color: AppTheme.secondaryColor, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          Slider(
-                            min: RoomService.baseMaxPlayers.toDouble(),
-                            max: RoomService.maxRoomPlayers.toDouble(),
-                            divisions: 9,
-                            value: _selectedMaxPlayers.toDouble(),
-                            label: "$_selectedMaxPlayers",
-                            onChanged: _isFirstAttempt ? (value) {
-                              setState(() {
-                                _selectedMaxPlayers = value.round();
-                              });
-                            } : null,
-                          ),
-                          Text(
-                            _selectedMaxPlayers > RoomService.baseMaxPlayers
-                                ? AppLanguage.getString('extra_player_cost').replaceAll('{points}', '${RoomService.extraPlayersCostPoints}').replaceAll('{total}', '${_requiredRoomPoints()}')
-                                : AppLanguage.getString('base_room_cost').replaceAll('{points}', '${RoomService.roomCreateCostPoints}'),
-                            style: AppTheme.getStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                          _buildPointCalculator(isDark),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: _createRoom,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColor,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: Text(AppLanguage.getString('create_room_btn'), style: AppTheme.getStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-
-                  const SizedBox(height: 30),
-                  
-                  // if (_isAdmin) ...[
-                  //   Container(
-                  //     padding: const EdgeInsets.all(20),
-                  //     margin: const EdgeInsets.only(bottom: 25),
-                  //     decoration: BoxDecoration(
-                  //       color: Colors.blueGrey.withOpacity(0.12),
-                  //       borderRadius: BorderRadius.circular(20),
-                  //       border: Border.all(color: Colors.blueGrey.withOpacity(0.4), width: 1.5),
-                  //     ),
-                  //     child: Column(
-                  //       crossAxisAlignment: CrossAxisAlignment.start,
-                  //       children: [
-                  //         Row(
-                  //           children: [
-                  //             const Icon(Icons.admin_panel_settings_rounded, color: Colors.blueGrey, size: 28),
-                  //             const SizedBox(width: 8),
-                  //             Text(
-                  //               "Admin Controls",
-                  //               style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  //             ),
-                  //           ],
-                  //         ),
-                  //         const SizedBox(height: 14),
-                  //         SizedBox(
-                  //           width: double.infinity,
-                  //           child: ElevatedButton.icon(
-                  //             onPressed: () {
-                  //               Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminQuizManageScreen()));
-                  //             },
-                  //             icon: const Icon(Icons.auto_awesome_rounded),
-                  //             label: const Text("Manage Pre-defined Quizzes"),
-                  //             style: ElevatedButton.styleFrom(
-                  //               backgroundColor: Colors.blueGrey,
-                  //               foregroundColor: Colors.white,
-                  //               padding: const EdgeInsets.symmetric(vertical: 14),
-                  //               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  //             ),
-                  //           ),
-                  //         ),
-                  //       ],
-                  //     ),
-                  //   ),
-                  // ],
-
-                  // Join Room Section
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.grey.shade900 : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))
-                      ]
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(AppLanguage.getString('join_room_section'), style: AppTheme.getStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 10),
-                        Text(AppLanguage.getString('join_room_desc'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)),
-                        const SizedBox(height: 20),
-                        TextField(
-                          controller: _codeController,
-                          maxLength: 6,
-                          textCapitalization: TextCapitalization.characters,
-                          decoration: InputDecoration(
-                            hintText: AppLanguage.getString('room_code_hint'),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                            counterText: "",
-                          ),
-                          textAlign: TextAlign.center,
-                          style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold).copyWith(letterSpacing: 2),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedSubject,
+                          isExpanded: true,
+                          style: AppTheme.getStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16, fontWeight: FontWeight.w400),
+                          items: [
+                            'general_tamil',
+                            'general_studies',
+                            'aptitude',
+                            'current_affairs'
+                          ].map((key) => DropdownMenuItem(
+                            value: key,
+                            child: Text(AppLanguage.getString(key), style: AppTheme.getStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16, fontWeight: FontWeight.w400)),
+                          )).toList(),
+                          onChanged: (val) {
+                            if (val != null) setState(() => _selectedSubject = val);
+                          },
                         ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _joinRoom,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: Text(AppLanguage.getString('join_room_btn'), style: AppTheme.getStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                          ),
-                        )
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(AppLanguage.getString('max_players_label'), style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                        Text(
+                          "$_selectedMaxPlayers users",
+                          style: AppTheme.getStyle(fontSize: 14, color: AppTheme.secondaryColor, fontWeight: FontWeight.bold),
+                        ),
                       ],
                     ),
-                  ),
+                    Slider(
+                      min: RoomService.baseMaxPlayers.toDouble(),
+                      max: RoomService.maxRoomPlayers.toDouble(),
+                      divisions: 9,
+                      value: _selectedMaxPlayers.toDouble(),
+                      label: "$_selectedMaxPlayers",
+                      onChanged: _isFirstAttempt ? (value) {
+                        setState(() {
+                          _selectedMaxPlayers = value.round();
+                        });
+                      } : null,
+                    ),
+                    Text(
+                      _selectedMaxPlayers > RoomService.baseMaxPlayers
+                          ? AppLanguage.getString('extra_player_cost').replaceAll('{points}', '${RoomService.extraPlayersCostPoints}').replaceAll('{total}', '${_requiredRoomPoints()}')
+                          : AppLanguage.getString('base_room_cost').replaceAll('{points}', '${RoomService.roomCreateCostPoints}'),
+                      style: AppTheme.getStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    _buildPointCalculator(isDark),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _createRoom,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Text(AppLanguage.getString('create_room_btn'), style: AppTheme.getStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    )
+                  ],
+                ),
+              ),
 
                   const SizedBox(height: 30),
 

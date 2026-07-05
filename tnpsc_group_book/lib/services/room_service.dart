@@ -159,12 +159,6 @@ class RoomService {
       try {
         debugPrint("RoomService: Checking for pre-generated room quiz pool for $subject...");
         
-        // AI_DEBUG: If it's aptitude or current_affairs, proactively try to generate if empty/not found
-        if (subject == 'aptitude' || subject == 'current_affairs') {
-           debugPrint("RoomService: High priority subject ($subject) detected. Forcing AI check...");
-           await AiService.generateAndSaveRoomPredefinedQuiz(subject);
-        }
-
         final roomQuizDoc = await _db
             .collection('room_predefined_quizzes')
             .doc(subject)
@@ -230,13 +224,14 @@ class RoomService {
       }
 
       // 3. Fallback: Retrieve questions from historical quizzes in the 'quizzes' collection
-      if (allQuestions.isEmpty) {
-        debugPrint("RoomService: Subject questions empty. Trying fallback: fetching old quizzes...");
+      if (allQuestions.length < roomQuestionCount) {
+        debugPrint("RoomService: Not enough questions. Trying fallback: fetching old quizzes for $subject...");
         try {
           String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
           QuerySnapshot quizSnap = await _db.collection('quizzes')
               .where('date', isNotEqualTo: today)
-              .limit(5)
+              .orderBy('date', descending: true)
+              .limit(10)
               .get();
           
           for (var doc in quizSnap.docs) {
@@ -244,53 +239,68 @@ class RoomService {
             List? qs = data['questions'];
             if (qs != null) {
               for (var q in qs) {
-                allQuestions.add(Question(
-                  question: q['question'] ?? '',
-                  options: List<String>.from(q['options'] ?? []),
-                  correctOptionIndex: q['correctOptionIndex'] ?? 0,
-                  explanation: q['explanation'] ?? '',
-                  subject: subject,
-                ));
+                // IMPORTANT: Filter by subject or quiz_type to avoid mixing
+                String? qType = q['quiz_type'] ?? q['subject'];
+                if (qType == subject) {
+                  allQuestions.add(Question(
+                    question: q['question'] ?? '',
+                    options: List<String>.from(q['options'] ?? []),
+                    correctOptionIndex: q['correctOptionIndex'] ?? 0,
+                    explanation: q['explanation'] ?? '',
+                    subject: subject,
+                  ));
+                }
               }
             }
+            if (allQuestions.length >= 100) break; // Optimization: Don't over-fetch
           }
+          debugPrint("RoomService: After fallback 3 (Old Quizzes), pool size: ${allQuestions.length}");
         } catch (e) {
           debugPrint("RoomService: Error fetching fallback old quizzes: $e");
         }
       }
 
       // 4. Fallback: Retrieve questions from 'mock_tests' collection
-      if (allQuestions.isEmpty) {
-        debugPrint("RoomService: Still empty. Trying fallback: fetching mock tests...");
+      if (allQuestions.length < roomQuestionCount) {
+        debugPrint("RoomService: Still not enough. Trying fallback: fetching mock tests for $subject...");
         try {
-          QuerySnapshot mockSnap = await _db.collection('mock_tests').limit(3).get();
+          QuerySnapshot mockSnap = await _db.collection('mock_tests').limit(5).get();
           for (var doc in mockSnap.docs) {
             var data = doc.data() as Map<String, dynamic>;
             List? qs = data['questions'];
             if (qs != null) {
               for (var q in qs) {
-                allQuestions.add(Question(
-                  question: q['question'] ?? '',
-                  options: List<String>.from(q['options'] ?? []),
-                  correctOptionIndex: q['correctOptionIndex'] ?? 0,
-                  explanation: q['explanation'] ?? '',
-                  subject: subject,
-                ));
+                // IMPORTANT: Filter by subject or quiz_type
+                String? qType = q['quiz_type'] ?? q['subject'];
+                if (qType == subject) {
+                  allQuestions.add(Question(
+                    question: q['question'] ?? '',
+                    options: List<String>.from(q['options'] ?? []),
+                    correctOptionIndex: q['correctOptionIndex'] ?? 0,
+                    explanation: q['explanation'] ?? '',
+                    subject: subject,
+                  ));
+                }
               }
             }
+            if (allQuestions.length >= 100) break;
           }
+          debugPrint("RoomService: After fallback 4 (Mock Tests), pool size: ${allQuestions.length}");
         } catch (e) {
           debugPrint("RoomService: Error fetching fallback mock tests: $e");
         }
       }
 
       // 5. Fallback: Retrieve questions from other subjects in 'subject_questions'
-      if (allQuestions.isEmpty) {
-        debugPrint("RoomService: Still empty. Trying fallback: fetching other subject questions...");
+      if (allQuestions.length < roomQuestionCount) {
+        debugPrint("RoomService: Still not enough. Trying fallback: fetching subject_questions for $subject...");
         try {
-          QuerySnapshot subSnap = await _db.collection('subject_questions').limit(5).get();
-          for (var doc in subSnap.docs) {
-            var data = doc.data() as Map<String, dynamic>;
+          // Try specific subject document first
+          String safeId = subject.replaceAll('/', '-');
+          DocumentSnapshot specificSubDoc = await _db.collection('subject_questions').doc(safeId).get();
+          
+          if (specificSubDoc.exists) {
+            var data = specificSubDoc.data() as Map<String, dynamic>;
             List? qs = data['questions'];
             if (qs != null) {
               for (var q in qs) {
@@ -304,8 +314,33 @@ class RoomService {
               }
             }
           }
+
+          // If still low, try other documents but filter by subject field
+          if (allQuestions.length < roomQuestionCount) {
+            QuerySnapshot subSnap = await _db.collection('subject_questions').limit(5).get();
+            for (var doc in subSnap.docs) {
+              if (doc.id == safeId) continue; // Already checked
+              
+              var data = doc.data() as Map<String, dynamic>;
+              if (data['subject'] == subject) {
+                List? qs = data['questions'];
+                if (qs != null) {
+                  for (var q in qs) {
+                    allQuestions.add(Question(
+                      question: q['question'] ?? '',
+                      options: List<String>.from(q['options'] ?? []),
+                      correctOptionIndex: q['correctOptionIndex'] ?? 0,
+                      explanation: q['explanation'] ?? '',
+                      subject: subject,
+                    ));
+                  }
+                }
+              }
+            }
+          }
+          debugPrint("RoomService: After fallback 5 (Subject Questions), pool size: ${allQuestions.length}");
         } catch (e) {
-          debugPrint("RoomService: Error fetching fallback other subject questions: $e");
+          debugPrint("RoomService: Error fetching fallback subject questions: $e");
         }
       }
 
@@ -474,8 +509,9 @@ class RoomService {
     if (uid == null) return 'auth_error';
 
     try {
-      bool canPlay = await canPlayToday();
-      if (!canPlay) return 'limit_reached';
+      // AI_DEBUG: Unlimited joining allowed via code - removing daily attempt check
+      // bool canPlay = await canPlayToday();
+      // if (!canPlay) return 'limit_reached';
 
       String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
       currentRoomDate = today;

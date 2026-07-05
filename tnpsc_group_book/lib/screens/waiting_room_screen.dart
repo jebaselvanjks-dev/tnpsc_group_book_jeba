@@ -311,7 +311,12 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                     children: [
                       const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppTheme.secondaryColor)),
                       const SizedBox(height: 20),
-                      Text("Creating your room...", style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)),
+                      Text(
+                        widget.isHost 
+                          ? (AppLanguage.languageNotifier.value == 'ta' ? "குழு உருவாக்கப்படுகிறது..." : "Creating your room...")
+                          : AppLanguage.getString('joining_room_msg'), 
+                        style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)
+                      ),
                     ],
                   ),
                 ),
