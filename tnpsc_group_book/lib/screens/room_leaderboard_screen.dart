@@ -110,7 +110,11 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
         appBar: AppBar(
           title: Text(
             ta ? 'குழு தேர்வு முடிவு' : 'Group Test Results',
-            style: AppTheme.getStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: AppTheme.getStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+            color: isDark ? Colors.white : AppTheme.textMainColor,
+          ),
           ),
           centerTitle: true,
           leading: IconButton(

@@ -325,15 +325,15 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                   controller: _screenshotController,
                   child: Container(
                     color: Theme.of(context).scaffoldBackgroundColor,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     child: Column(
                       children: [
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           child: Text(
                             AppLanguage.getString('welcome_group_quiz'),
                             style: AppTheme.getStyle(
-                              fontSize: 18,
+                              fontSize: 15,
                               fontWeight: FontWeight.w500,
                               color: isDark ? Colors.white70 : Colors.black54,
                             ),
@@ -341,7 +341,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                           child: Text(
                             AppLanguage.getString('room_setup_note'),
                             style: AppTheme.getStyle(
@@ -361,7 +361,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                                 child: Text(
                                   AppLanguage.getString(_subject),
                                   style: AppTheme.getStyle(
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: isDark ? Colors.white60 : Colors.black87,
                                   ),
@@ -370,7 +370,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                               ),
                               Text(
                                 AppLanguage.getString('lobby_max_players').replaceAll('{max}', '${roomData!['maxPlayers']}'),
-                                style: AppTheme.getStyle(fontSize: 14,
+                                style: AppTheme.getStyle(fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: isDark ? Colors.white60 : Colors.black87),
                               ),
@@ -379,7 +379,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                         ),
                         const SizedBox(height: 10),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                           decoration: BoxDecoration(
                               color: isDark ? Colors.grey.shade900 : Colors.white,
                               borderRadius: BorderRadius.circular(20),
@@ -387,7 +387,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                           ),
                           child: Text(
                             widget.roomCode,
-                            style: AppTheme.getStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.secondaryColor).copyWith(letterSpacing: 8),
+                            style: AppTheme.getStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppTheme.secondaryColor).copyWith(letterSpacing: 8),
                           ),
                         ),
 
@@ -395,8 +395,8 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                     ),
                   ),
                 ),
-                const LinearProgressIndicator(minHeight: 2, backgroundColor: Colors.transparent, valueColor: AlwaysStoppedAnimation(AppTheme.secondaryColor)),
-                const SizedBox(height: 10),
+                // const LinearProgressIndicator(minHeight: 2, backgroundColor: Colors.transparent, valueColor: AlwaysStoppedAnimation(AppTheme.secondaryColor)),
+                // const SizedBox(height: 10),
                 Expanded(
                   child: Container(
                     width: double.infinity,
@@ -415,109 +415,171 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                             // Moved to screenshot area
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        Center(
-                          child: ElevatedButton.icon(
-                            onPressed: _shareRoomCode,
-                            icon: const Icon(Icons.share_rounded, size: 18),
-                            label: Text(
-                              AppLanguage.languageNotifier.value == 'ta' ? "நண்பர்களை அழைக்கவும்" : "Invite Friends",
-                              style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue.shade700,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            ),
-                          ),
-                        ),
+                        // const SizedBox(height: 16),
+                        // Center(
+                        //   child: ElevatedButton.icon(
+                        //     onPressed: _shareRoomCode,
+                        //     icon: const Icon(Icons.share_rounded, size: 18),
+                        //     label: Text(
+                        //       AppLanguage.languageNotifier.value == 'ta' ? "நண்பர்களை அழைக்கவும்" : "Invite Friends",
+                        //       style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        //     ),
+                        //     style: ElevatedButton.styleFrom(
+                        //       backgroundColor: Colors.blue.shade700,
+                        //       foregroundColor: Colors.white,
+                        //       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        //     ),
+                        //   ),
+                        // ),
                         const SizedBox(height: 16),
                         Expanded(
                           child: StreamBuilder<QuerySnapshot>(
-                            stream: _roomService.playersStream(widget.roomCode),
-                            builder: (context, playersSnapshot) {
-                              var players = playersSnapshot.data?.docs ?? [];
-                              if (players.isEmpty) {
-                                return Center(child: Text(AppLanguage.getString('no_history_title'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)));
-                              }
-                              return ListView.builder(
-                                itemCount: players.length,
-                                itemBuilder: (context, index) {
-                                  var pData = players[index].data() as Map<String, dynamic>;
-                                  bool isRoomHost = players[index].id == roomData?['hostId'];
-                                  return ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: CircleAvatar(
-                                      backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
-                                      child: const Icon(Icons.person, color: Colors.white70),
-                                    ),
-                                    title: Text(pData['name'] ?? 'Player', style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                    trailing: isRoomHost ? const Icon(Icons.star, color: Colors.amber) : null,
-                                  );
-                                },
-                              );
-                            },
-                          ),
+                              stream: _roomService.playersStream(widget.roomCode),
+                              builder: (context, playersSnapshot) {
+                                var players = playersSnapshot.data?.docs ?? [];
+                                if (players.isEmpty) {
+                                  return Center(child: Text(AppLanguage.getString('no_history_title'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)));
+                                }
+                                return ListView.separated(
+                                  padding: const EdgeInsets.only(top: 6, bottom: 6),
+                                  itemCount: players.length,
+                                  separatorBuilder: (context, index) => Divider(height: 1, color: Colors.transparent),
+                                  itemBuilder: (context, index) {
+                                    var pData = players[index].data() as Map<String, dynamic>;
+                                    bool isRoomHost = players[index].id == roomData?['hostId'];
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 8.0),
+                                      child: Container(
+                                          decoration: BoxDecoration(
+                                            color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+                                          ),
+                                          child: ListTile(
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        leading: CircleAvatar(
+                                          radius: 18,
+                                          backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
+                                          child: const Icon(Icons.person, color: Colors.white70, size: 20),
+                                        ),
+                                        title: Text(
+                                          pData['name'] ?? 'Player',
+                                          style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold)
+                                        ),
+                                        trailing: isRoomHost
+                                            ? Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.amber.withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(Icons.star, color: Colors.amber, size: 14),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      AppLanguage.languageNotifier.value == 'ta' ? "நிர்வாகி" : "Host",
+                                                      style: AppTheme.getStyle(fontSize: 11, color: Colors.amber.shade800, fontWeight: FontWeight.bold),
+                                                    ),
+                                                  ],
+                                                ),
+                                              )
+                                            : null,
+                                      )),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
                         ),
                         const SizedBox(height: 20),
-                        if (isCurrentUserHost)
-                          StreamBuilder<QuerySnapshot>(
-                            stream: _roomService.playersStream(widget.roomCode),
-                            builder: (context, ps) {
-                              final count = ps.data?.docs.length ?? 0;
-                              final canStart = count >= 2;
-                              return Column(
-                                children: [
-                                  Text(
-                                    canStart
-                                        ? 'All $count players will attempt the same quiz.'
-                                        : 'Need at least 2 players to start ($count joined)',
-                                    textAlign: TextAlign.center,
-                                    style: AppTheme.getStyle(
-                                      fontSize: 13,
-                                      color: canStart ? AppTheme.secondaryColor : Colors.orange,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: canStart ? _startExam : null,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.secondaryColor,
-                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12)),
-                                      ),
-                                      child: Text(
-                                        AppLanguage.getString('start_group_test'),
-                                        style: AppTheme.getStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          )
-                        else
-                          Center(
-                            child: Text(AppLanguage.getString('waiting_for_host'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey).copyWith(fontStyle: FontStyle.italic)),
-                          ),
                       ],
                     ),
                   ),
                 ),
               ],
-              // பட்டனுக்குக் கீழே இதனைச் சேர்க்கவும்
-              const SizedBox(height: 60),
             ],
           ),
-        ));
+          bottomNavigationBar: roomExists 
+            ? Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade900 : Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    topRight: Radius.circular(30),
+                  ),
+                ),
+                child: SafeArea(
+                  child: isCurrentUserHost
+                      ? StreamBuilder<QuerySnapshot>(
+                          stream: _roomService.playersStream(widget.roomCode),
+                          builder: (context, ps) {
+                            final count = ps.data?.docs.length ?? 0;
+                            final canStart = count >= 2;
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  canStart
+                                      ? 'All $count players will attempt the same quiz.'
+                                      : 'Need at least 2 players to start ($count joined)',
+                                  textAlign: TextAlign.center,
+                                  style: AppTheme.getStyle(
+                                    fontSize: 13,
+                                    color: canStart ? AppTheme.secondaryColor : Colors.orange,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: canStart ? _startExam : null,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.secondaryColor,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                    child: Text(
+                                      AppLanguage.getString('start_group_test'),
+                                      style: AppTheme.getStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Text(
+                            AppLanguage.getString('waiting_for_host'),
+                            textAlign: TextAlign.center,
+                            style: AppTheme.getStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ).copyWith(fontStyle: FontStyle.italic),
+                          ),
+                        ),
+                ),
+              )
+            : null,
+        )
+        );
       },
     );
   }

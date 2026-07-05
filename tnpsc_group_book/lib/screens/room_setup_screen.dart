@@ -72,14 +72,19 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         debugPrint("AI_DEBUG: RoomSetupScreen - Set _codeController.text to: $code");
       });
       DeepLinkService().clearPendingCode();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLanguage.languageNotifier.value == 'ta' 
-              ? "ரூம் கோட் தானாகப் பயன்படுத்தப்பட்டது: $code" 
-              : "Room code applied automatically: $code"),
-          backgroundColor: Colors.blue,
-        ),
-      );
+      
+      // Use post frame callback to avoid exception when called from initState
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLanguage.languageNotifier.value == 'ta' 
+                ? "ரூம் கோட் தானாகப் பயன்படுத்தப்பட்டது: $code" 
+                : "Room code applied automatically: $code"),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      });
     }
   }
 

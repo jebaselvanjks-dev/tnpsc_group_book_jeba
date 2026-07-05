@@ -283,33 +283,33 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
                   Row(
                     children: [
                       Text("${AppLanguage.getString('question')} ${_currentQuestionIndex + 1}", style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.secondaryColor)),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        icon: Icon(
-                          TtsService.isSpeaking(_getQuestionTtsText(_questions[_currentQuestionIndex])) ? Icons.volume_up_rounded : Icons.volume_up_outlined,
-                          color: _selectedAnswers[_currentQuestionIndex] != null ? AppTheme.secondaryColor : Colors.grey.withOpacity(0.5),
-                          size: 20,
-                        ),
-                        onPressed: _selectedAnswers[_currentQuestionIndex] != null ? () {
-                          final textToSpeak = _getQuestionTtsText(_questions[_currentQuestionIndex]);
-                          if (TtsService.isSpeaking(textToSpeak)) {
-                            TtsService.stop();
-                          } else {
-                            TtsService.speak(textToSpeak);
-                          }
-                          setState(() {});
-                        } : () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(AppLanguage.languageNotifier.value == 'ta' 
-                                ? "பதிலளித்த பிறகுதான் ஆடியோ கேட்க முடியும்" 
-                                : "Answer the question first to enable audio"),
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        },
-                      ),
+                      // const SizedBox(width: 8),
+                      // IconButton(
+                      //   visualDensity: VisualDensity.compact,
+                      //   icon: Icon(
+                      //     TtsService.isSpeaking(_getQuestionTtsText(_questions[_currentQuestionIndex])) ? Icons.volume_up_rounded : Icons.volume_up_outlined,
+                      //     color: _selectedAnswers[_currentQuestionIndex] != null ? AppTheme.secondaryColor : Colors.grey.withOpacity(0.5),
+                      //     size: 20,
+                      //   ),
+                      //   onPressed: _selectedAnswers[_currentQuestionIndex] != null ? () {
+                      //     final textToSpeak = _getQuestionTtsText(_questions[_currentQuestionIndex]);
+                      //     if (TtsService.isSpeaking(textToSpeak)) {
+                      //       TtsService.stop();
+                      //     } else {
+                      //       TtsService.speak(textToSpeak);
+                      //     }
+                      //     setState(() {});
+                      //   } : () {
+                      //     ScaffoldMessenger.of(context).showSnackBar(
+                      //       SnackBar(
+                      //         content: Text(AppLanguage.languageNotifier.value == 'ta'
+                      //           ? "பதிலளித்த பிறகுதான் ஆடியோ கேட்க முடியும்"
+                      //           : "Answer the question first to enable audio"),
+                      //         duration: const Duration(seconds: 1),
+                      //       ),
+                      //     );
+                      //   },
+                      // ),
                     ],
                   ),
                   Text("${_currentQuestionIndex + 1}/${_questions.length}", style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
