@@ -30,7 +30,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   final TextEditingController _codeController = TextEditingController();
   bool _isLoading = false;
   bool _showOnlySpinner = false;
-  bool _canPop = false;
+  bool _isExiting = false;
   String _selectedSubject = 'general_tamil';
   int _selectedMaxPlayers = RoomService.baseMaxPlayers;
   bool _isFirstAttempt = true;
@@ -584,6 +584,17 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red));
   }
 
+  Future<void> _handleBack(BuildContext context) async {
+    if (_isExiting) return;
+    final shouldPop = await _showExitConfirmation();
+    if (shouldPop && mounted) {
+      setState(() {
+        _isExiting = true;
+      });
+      Navigator.of(context).pop();
+    }
+  }
+
   Future<bool> _showExitConfirmation() async {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -740,26 +751,17 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     String lang = AppLanguage.languageNotifier.value;
     return PopScope(
-      canPop: _canPop,
-      onPopInvokedWithResult: (didPop, result) async {
+      canPop: _isExiting,
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        final shouldPop = await _showExitConfirmation();
-        if (shouldPop && mounted) {
-          setState(() {
-            _canPop = true;
-          });
-          // Small delay to ensure the framework sees canPop: true before the next pop attempt
-          Future.microtask(() {
-            if (mounted) Navigator.of(context).pop();
-          });
-        }
+        _handleBack(context);
       },
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           leading: IconButton(
             icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
-            onPressed: () => Navigator.maybePop(context),
+            onPressed: () => _handleBack(context),
           ),
           title: Text(AppLanguage.getString('room_screen_title'), style: AppTheme.getStyle(
               fontSize: 15, fontWeight: FontWeight.bold)),

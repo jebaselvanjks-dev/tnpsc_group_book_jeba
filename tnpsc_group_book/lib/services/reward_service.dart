@@ -11,13 +11,19 @@ class RewardService {
 
   /// Change Ad Id
 
-  /// Test Rewarded Ad ID (replace with real ID in production)
-  // static const String adUnitId = 'ca-app-pub-3940256099942544/5224354917';
+  /// Test Rewarded Ad ID
+  static const String testAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
 
   /// REAL Rewarded Ad ID
-  static const String adUnitId = 'ca-app-pub-9952621231526514/2142313722';
+  static const String realAdUnitId = 'ca-app-pub-9952621231526514/2142313722';
+
+  // Toggle this for testing
+  static bool useTestAds = false;
+
+  static String get adUnitId => useTestAds ? testAdUnitId : realAdUnitId;
 
   static void loadRewardedAd() {
+    debugPrint('AI_DEBUG: Loading Rewarded Ad (ID: $adUnitId)');
     RewardedAd.load(
       adUnitId: adUnitId,
       request: const AdRequest(),
@@ -25,11 +31,14 @@ class RewardService {
         onAdLoaded: (ad) {
           _rewardedAd = ad;
           _isAdLoaded = true;
-          debugPrint('AI_DEBUG: Rewarded Ad Loaded');
+          debugPrint('AI_DEBUG: Rewarded Ad Loaded Successfully');
         },
         onAdFailedToLoad: (err) {
           _isAdLoaded = false;
           debugPrint('AI_DEBUG: Rewarded Ad failed to load: $err');
+          if (err.message.contains('403')) {
+             debugPrint('AI_DEBUG: ERROR 403: This usually means the AdMob account is not approved or the Ad Unit ID/Package Name mismatch.');
+          }
         },
       ),
     );

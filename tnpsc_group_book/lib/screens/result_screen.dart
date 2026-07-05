@@ -264,6 +264,7 @@ class _ResultScreenState extends State<ResultScreen> {
         return PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, result) {
+            debugPrint("AI_DEBUG: [ResultScreen] PopScope triggered. didPop: $didPop");
             if (didPop) return;
             Navigator.pushAndRemoveUntil(
               context,

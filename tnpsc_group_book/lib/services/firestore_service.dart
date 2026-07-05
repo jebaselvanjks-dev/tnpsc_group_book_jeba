@@ -13,6 +13,23 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  /// Helper to retry Firestore operations
+  Future<T> _retry<T>(Future<T> Function() operation, {int maxAttempts = 3}) async {
+    int attempt = 0;
+    while (true) {
+      attempt++;
+      try {
+        return await operation();
+      } catch (e) {
+        if (attempt >= maxAttempts || e.toString().contains('permission-denied')) {
+          rethrow;
+        }
+        debugPrint("AI_DEBUG: Firestore Operation failed (Attempt $attempt/$maxAttempts). Retrying in ${attempt * 2}s...");
+        await Future.delayed(Duration(seconds: attempt * 2));
+      }
+    }
+  }
+
   /// Updates user profile name in Firestore
   Future<void> updateProfileName(String name) async {
     String? uid = _auth.currentUser?.uid;
@@ -96,75 +113,73 @@ class FirestoreService {
     }
   }
 
+  /// Recursively sanitizes data for Hive (Converts Timestamps to ISO Strings)
+  dynamic _sanitizeForHive(dynamic data) {
+    if (data is Timestamp) {
+      return data.toDate().toIso8601String();
+    } else if (data is Map) {
+      return data.map((key, value) => MapEntry(key, _sanitizeForHive(value)));
+    } else if (data is List) {
+      return data.map((e) => _sanitizeForHive(e)).toList();
+    }
+    return data;
+  }
+
   // Get user data with Offline Cache support (Cache-first optimization)
   Future<DocumentSnapshot?> getUserData({bool forceRefresh = true}) async {
     String? uid = _auth.currentUser?.uid;
     if (uid == null) return null;
 
-    try {
-      // AI_DEBUG: Always try to get fresh data from server for users API as requested
-      if (!forceRefresh) {
-        try {
-          DocumentSnapshot cachedDoc = await _db.collection('users').doc(uid).get(const GetOptions(source: Source.cache));
-          if (cachedDoc.exists) {
-            debugPrint("AI_DEBUG: User data fetched from FIRESTORE CACHE");
-            var data = cachedDoc.data() as Map<String, dynamic>;
-            await _syncCompletedQuizzesToHive(data);
-            return cachedDoc;
-          }
-        } catch (_) {}
-      }
+    // 1. First, always try to get from Cache for immediate UI response if not forcing refresh
+    if (!forceRefresh) {
+      try {
+        DocumentSnapshot cachedDoc = await _db.collection('users').doc(uid).get(const GetOptions(source: Source.cache));
+        if (cachedDoc.exists) {
+          debugPrint("AI_DEBUG: User data fetched from FIRESTORE CACHE (Initial)");
+          var data = cachedDoc.data() as Map<String, dynamic>;
+          await _syncCompletedQuizzesToHive(data);
+          return cachedDoc;
+        }
+      } catch (_) {}
+    }
 
-      // Try server fetch
-      debugPrint("AI_DEBUG: Fetching user data from SERVER (Every Open)");
-      DocumentSnapshot doc = await _db.collection('users').doc(uid).get();
+    try {
+      // 2. Try server fetch with retry logic
+      debugPrint("AI_DEBUG: Fetching user data from SERVER...");
+      DocumentSnapshot doc = await _retry(() => _db.collection('users').doc(uid).get(const GetOptions(source: Source.serverAndCache)));
+      
       if (doc.exists) {
         var data = doc.data() as Map<String, dynamic>;
+        
+        // AI_DEBUG: Sanitize data for Hive (Recursive Timestamp conversion)
+        Map<String, dynamic> sanitizedData = _sanitizeForHive(data) as Map<String, dynamic>;
+        
         // Cache to Hive for offline
-        await HiveService.cacheUserData(data);
+        await HiveService.cacheUserData(sanitizedData);
         await _syncCompletedQuizzesToHive(data);
         
-        // Sync totalScore, quizzesCompleted and streak to Hive
-        if (data.containsKey('totalScore')) {
-          await Hive.box(HiveService.userBoxName).put('totalScore', data['totalScore']);
-        }
-        if (data.containsKey('quizzesCompleted')) {
-          await Hive.box(HiveService.userBoxName).put('quizzesCompleted', data['quizzesCompleted']);
-        }
-        if (data.containsKey('streak')) {
-          await Hive.box(HiveService.userBoxName).put('streak', data['streak']);
-        }
-        if (data.containsKey('lastActiveDate')) {
-          await Hive.box(HiveService.userBoxName).put('lastActiveDate', data['lastActiveDate']);
-        }
+        // Sync stats to Hive
+        final userBox = Hive.box(HiveService.userBoxName);
+        if (data.containsKey('totalScore')) await userBox.put('totalScore', data['totalScore']);
+        if (data.containsKey('quizzesCompleted')) await userBox.put('quizzesCompleted', data['quizzesCompleted']);
+        if (data.containsKey('streak')) await userBox.put('streak', data['streak']);
+        if (data.containsKey('lastActiveDate')) await userBox.put('lastActiveDate', data['lastActiveDate']);
+        
         return doc;
       }
       return doc;
     } catch (e) {
-      debugPrint("AI_DEBUG: Server fetch failed, check Firestore cache fallback");
+      debugPrint("AI_DEBUG: Server fetch failed after retries, falling back to cache: $e");
       try {
         DocumentSnapshot doc = await _db.collection('users').doc(uid).get(const GetOptions(source: Source.cache));
         if (doc.exists) {
           var data = doc.data() as Map<String, dynamic>;
           await _syncCompletedQuizzesToHive(data);
-          
-          if (data.containsKey('totalScore')) {
-            await Hive.box(HiveService.userBoxName).put('totalScore', data['totalScore']);
-          }
-          if (data.containsKey('quizzesCompleted')) {
-            await Hive.box(HiveService.userBoxName).put('quizzesCompleted', data['quizzesCompleted']);
-          }
-          if (data.containsKey('streak')) {
-            await Hive.box(HiveService.userBoxName).put('streak', data['streak']);
-          }
-          if (data.containsKey('lastActiveDate')) {
-            await Hive.box(HiveService.userBoxName).put('lastActiveDate', data['lastActiveDate']);
-          }
         }
         return doc;
       } catch (ce) {
-        debugPrint("AI_DEBUG: Firestore cache failed, using Hive");
-        return null; // UI will use HiveService.getCachedUserData()
+        debugPrint("AI_DEBUG: Firestore cache failed, app will use HiveService fallback");
+        return null;
       }
     }
   }
@@ -448,10 +463,10 @@ class FirestoreService {
       debugPrint("AI_DEBUG: Fetching from Firestore Path: $fullPath");
 
       // Server fetch
-      QuerySnapshot snapshot = await query
+      QuerySnapshot snapshot = await _retry(() => query
           .orderBy('score', descending: true)
           .limit(20)
-          .get();
+          .get());
       
       debugPrint("AI_DEBUG: Fetch successful. Document count: ${snapshot.docs.length}");
       

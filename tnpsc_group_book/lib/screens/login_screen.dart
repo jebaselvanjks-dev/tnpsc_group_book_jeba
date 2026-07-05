@@ -21,6 +21,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
+  bool _isExiting = false;
 
   void _showError(String msg) {
     if (!mounted) return;
@@ -80,6 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _showExitDialog(BuildContext context) async {
+    if (_isExiting) return;
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -125,6 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (shouldPop ?? false) {
+      _isExiting = true;
       SystemNavigator.pop();
     }
   }
@@ -139,8 +142,9 @@ class _LoginScreenState extends State<LoginScreen> {
         final ta = lang == 'ta';
 
         return PopScope(
-          canPop: false,
+          canPop: _isExiting,
           onPopInvokedWithResult: (didPop, result) {
+            debugPrint("AI_DEBUG: [LoginScreen] PopScope triggered. didPop: $didPop");
             if (didPop) return;
             _showExitDialog(context);
           },

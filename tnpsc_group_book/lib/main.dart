@@ -104,6 +104,7 @@ class MainWrapper extends StatefulWidget {
 
 class _MainWrapperState extends State<MainWrapper> {
   int _selectedIndex = 0;
+  bool _isExiting = false;
 
   @override
   void initState() {
@@ -122,6 +123,93 @@ class _MainWrapperState extends State<MainWrapper> {
     const ProfileScreen(),
   ];
 
+  Future<void> _handleBackNavigation() async {
+    debugPrint("AI_DEBUG: [MainWrapper] _handleBackNavigation called. Current index: $_selectedIndex, isExiting: $_isExiting");
+    if (_isExiting) {
+      debugPrint("AI_DEBUG: [MainWrapper] Already in exiting state, ignoring.");
+      return;
+    }
+
+    // 1. If not on Home tab, switch to Home tab
+    if (_selectedIndex != 0) {
+      debugPrint("AI_DEBUG: [MainWrapper] Not on Home tab (index $_selectedIndex). Switching to Home (index 0).");
+      setState(() {
+        _selectedIndex = 0;
+      });
+      return;
+    }
+
+    // 2. If on Home tab, show exit confirmation
+    debugPrint("AI_DEBUG: [MainWrapper] On Home tab. Showing exit confirmation dialog.");
+    _isExiting = true;
+    final shouldPop = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF101F42)
+            : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          AppLanguage.getString('exit_app_title'),
+          style: AppTheme.getStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black87,
+          ),
+        ),
+        content: Text(
+          AppLanguage.getString('exit_app_desc'),
+          style: AppTheme.getStyle(
+            fontSize: 16,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white70
+                : Colors.black54,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              debugPrint("AI_DEBUG: [MainWrapper] User chose NOT to exit.");
+              _isExiting = false;
+              Navigator.pop(context, false);
+            },
+            child: Text(
+              AppLanguage.getString('no'),
+              style: AppTheme.getStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              debugPrint("AI_DEBUG: [MainWrapper] User chose YES to exit.");
+              Navigator.pop(context, true);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(AppLanguage.getString('yes')),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldPop ?? false) {
+      debugPrint("AI_DEBUG: [MainWrapper] Executing SystemNavigator.pop()");
+      SystemNavigator.pop();
+    } else {
+      debugPrint("AI_DEBUG: [MainWrapper] Resetting isExiting to false.");
+      _isExiting = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(
@@ -129,109 +217,16 @@ class _MainWrapperState extends State<MainWrapper> {
       builder: (context, lang, child) {
         return PopScope(
           canPop: false,
-          onPopInvokedWithResult: (didPop, result) async {
+          onPopInvokedWithResult: (didPop, result) {
+            debugPrint("AI_DEBUG: [MainWrapper] Global PopScope triggered. didPop: $didPop");
             if (didPop) return;
-            
-            // 1. If not on Home tab, switch to Home tab
-            if (_selectedIndex != 0) {
-              setState(() {
-                _selectedIndex = 0;
-              });
-              return;
-            }
-            
-            // 2. If on Home tab, show exit confirmation
-            final shouldPop = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101F42) : Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                title: Text(
-                  AppLanguage.getString('exit_app_title'),
-                  style: AppTheme.getStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
-                  ),
-                ),
-                content: Text(
-                  AppLanguage.getString('exit_app_desc'),
-                  style: AppTheme.getStyle(
-                    fontSize: 16,
-                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black54,
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(
-                      AppLanguage.getString('no'),
-                      style: AppTheme.getStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: Text(AppLanguage.getString('yes')),
-                  ),
-                ],
-              ),
-            );
-
-            if (shouldPop ?? false) {
-              SystemNavigator.pop();
-            }
+            _handleBackNavigation();
           },
           child: Scaffold(
             body: IndexedStack(
               index: _selectedIndex,
               children: _screens,
             ),
-            // floatingActionButton: FloatingActionButton(
-            //   backgroundColor: AppTheme.secondaryColor,
-            //   child: const Icon(Icons.format_size_rounded),
-            //   onPressed: () {
-            //     showModalBottomSheet(
-            //       context: context,
-            //       builder: (context) {
-            //         return ValueListenableBuilder<double>(
-            //           valueListenable: AppTheme.fontSizeFactorNotifier,
-            //           builder: (context, factor, _) {
-            //             return Padding(
-            //               padding: const EdgeInsets.all(16),
-            //               child: Row(
-            //                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            //                 children: [
-            //                   const Text('Font Size', style: TextStyle(fontWeight: FontWeight.bold)),
-            //                   Row(
-            //                     children: [
-            //                       IconButton(
-            //                         icon: const Icon(Icons.remove),
-            //                         onPressed: factor > 0.81 ? () => AppTheme.setFontSizeFactor(factor - 0.1) : null,
-            //                       ),
-            //                       Text('${(factor * 100).round()}%'),
-            //                       IconButton(
-            //                         icon: const Icon(Icons.add),
-            //                         onPressed: factor < 1.39 ? () => AppTheme.setFontSizeFactor(factor + 0.1) : null,
-            //                       ),
-            //                     ],
-            //                   ),
-            //                 ],
-            //               ),
-            //             );
-            //           },
-            //         );
-            //       },
-            //     );
-            //   },
-            // ),
             bottomNavigationBar: Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).brightness == Brightness.dark ? AppTheme.darkBgColor : Colors.white,
@@ -260,6 +255,7 @@ class _MainWrapperState extends State<MainWrapper> {
                     ],
                     selectedIndex: _selectedIndex,
                     onTabChange: (index) {
+                      debugPrint("AI_DEBUG: [MainWrapper] Tab changed to index $index");
                       setState(() {
                         _selectedIndex = index;
                       });

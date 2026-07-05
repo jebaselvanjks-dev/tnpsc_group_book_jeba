@@ -59,7 +59,7 @@ class _QuizScreenState extends State<QuizScreen> {
   bool _isTimeUp = false;
   bool _isAutoTriggering = false;
   bool _showOnlySpinner = true;
-  bool _canPop = false;
+  bool _isExiting = false;
 
   // Teaser for loading screen
   List<Question> _teaserQuestions = [];
@@ -602,6 +602,23 @@ class _QuizScreenState extends State<QuizScreen> {
     return result ?? false;
   }
 
+  Future<void> _handleBack() async {
+    debugPrint("AI_DEBUG: [QuizScreen] _handleBack called. isExiting: $_isExiting");
+    if (_isExiting) return;
+    final confirmed = await _showExitConfirmation();
+    debugPrint("AI_DEBUG: [QuizScreen] Exit confirmed: $confirmed");
+    if (confirmed && mounted) {
+      setState(() {
+        _isExiting = true;
+      });
+      debugPrint("AI_DEBUG: [QuizScreen] Popping screen now.");
+      // Small delay to ensure build completes with canPop: true
+      Future.delayed(Duration.zero, () {
+        if (mounted) Navigator.of(context).pop();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(
@@ -727,7 +744,7 @@ class _QuizScreenState extends State<QuizScreen> {
             appBar: widget.hideAppBar ? null : AppBar(
               leading: IconButton(
                 icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
-                onPressed: () => Navigator.maybePop(context),
+                onPressed: _handleBack,
               ),
               title: Text(displayTitle),
             ),
@@ -777,7 +794,7 @@ class _QuizScreenState extends State<QuizScreen> {
             appBar: widget.hideAppBar ? null : AppBar(
               leading: IconButton(
                 icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
-                onPressed: () => Navigator.maybePop(context),
+                onPressed: _handleBack,
               ),
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1043,18 +1060,11 @@ class _QuizScreenState extends State<QuizScreen> {
         }
 
         return PopScope(
-          canPop: _canPop,
-          onPopInvokedWithResult: (didPop, result) async {
+          canPop: _isExiting,
+          onPopInvokedWithResult: (didPop, result) {
+            debugPrint("AI_DEBUG: [QuizScreen] PopScope onPopInvokedWithResult. didPop: $didPop, isExiting: $_isExiting");
             if (didPop) return;
-            final shouldPop = await _showExitConfirmation();
-            if (shouldPop && mounted) {
-              setState(() {
-                _canPop = true;
-              });
-              Future.microtask(() {
-                if (mounted) Navigator.of(context).pop();
-              });
-            }
+            _handleBack();
           },
           child: scaffoldBody,
         );

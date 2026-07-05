@@ -59,10 +59,8 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, lang, child) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: SafeArea(
-            child: FutureBuilder<DocumentSnapshot?>(
+        return SafeArea(
+          child: FutureBuilder<DocumentSnapshot?>(
               future: _firestoreService.getUserData(),
               builder: (context, snapshot) {
                 String userName = AppLanguage.getString('user_fallback');
@@ -234,7 +232,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
-          ),
         );
       },
     );

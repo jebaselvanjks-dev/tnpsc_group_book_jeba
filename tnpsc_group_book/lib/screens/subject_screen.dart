@@ -78,145 +78,143 @@ class _SubjectScreenState extends State<SubjectScreen> {
                   }
                 }
 
-                return Scaffold(
-                  body: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Stats Row
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20.0, right: 20),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "${AppLanguage.getString('greeting')}, $userName!  👋",
-                                style: AppTheme.getStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : AppTheme.textMainColor,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Stats Row
+                      Padding(
+                        padding: const EdgeInsets.only(left: 20.0, right: 20),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "${AppLanguage.getString('greeting')}, $userName!  👋",
+                              style: AppTheme.getStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : AppTheme.textMainColor,
                               ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 5),
-                                child: Text(
-                                  AppLanguage.getString('ready_to_crack'),
-                                  style: AppTheme.getStyle(
-                                    fontSize: 16,
-                                    color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Reward points display
-                        // Padding(
-                        //   padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
-                        //   child: ValueListenableBuilder(
-                        //     valueListenable: Hive.box(HiveService.userBoxName).listenable(),
-                        //     builder: (context, box, child) {
-                        //       int points = box.get('totalScore', defaultValue: 0) as int;
-                        //       return Row(
-                        //         children: [
-                        //           Icon(Icons.star, color: Colors.amber),
-                        //           const SizedBox(width: 6),
-                        //           Text('${AppLanguage.getString('points')}: $points',
-                        //             style: AppTheme.getStyle(
-                        //               fontSize: 16,
-                        //               fontWeight: FontWeight.bold,
-                        //               color: isDark ? Colors.white : AppTheme.textMainColor,
-                        //             ),
-                        //           ),
-                        //         ],
-                        //       );
-                        //     },
-                        //   ),
-                        // ),
-                        const SizedBox(height: 2),
-                        Divider(endIndent: 20, indent: 20, color: isDark ? Colors.white : AppTheme.textMainColor, thickness: 0.25),
-
-                        const SizedBox(height: 20),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20.0,right: 20),
-                          child: ValueListenableBuilder(
-                            valueListenable: Hive.box(HiveService.userBoxName).listenable(),
-                            builder: (context, box, child) {
-                              return _buildMockCard(context);
-                            },
-                          ),
-                        ),
-                        // // Horizontal Scroll Highlight (Exam Categories)
-                        // Padding(
-                        //   padding: const EdgeInsets.symmetric(horizontal: 20),
-                        //   child: Text(
-                        //     AppLanguage.getString('old_test_papers'),
-                        //     style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
-                        //   ),
-                        // ),
-                        // const SizedBox(height: 16),
-                        //
-                        // SizedBox(
-                        //   height: 110,
-                        //   child: ListView(
-                        //     scrollDirection: Axis.horizontal,
-                        //     padding: const EdgeInsets.symmetric(horizontal: 20),
-                        //     physics: const BouncingScrollPhysics(),
-                        //     children: [
-                        //       _buildHorizontalExamCard(context, "tnpsc", "📜", Colors.indigo),
-                        //       _buildHorizontalExamCard(context, "trb", "🎓", Colors.teal),
-                        //       _buildHorizontalExamCard(context, "tet", "📝", Colors.orange),
-                        //       _buildHorizontalExamCard(context, "net", "🌐", Colors.blue),
-                        //       _buildHorizontalExamCard(context, "set", "🏛️", Colors.purple),
-                        //       _buildHorizontalExamCard(context, "vao", "💼", Colors.brown),
-                        //     ],
-                        //   ),
-                        // ),
-
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
-                          child: Text(
-                            AppLanguage.getString('subjects'),
-                            style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? AppTheme.secondaryColor : AppTheme.textMainColor),
-                          ),
-                        ),
-
-                        // Subjects Grid
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 1.0,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            itemCount: tnpscSubjects.length,
-                            itemBuilder: (context, index) {
-                              final subject = tnpscSubjects[index];
-                              return AnimationConfiguration.staggeredGrid(
-                                position: index,
-                                duration: const Duration(milliseconds: 375),
-                                columnCount: 2,
-                                child: ScaleAnimation(
-                                  child: FadeInAnimation(
-                                    child: _SubjectCard(subject: subject),
-                                  ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 5),
+                              child: Text(
+                                AppLanguage.getString('ready_to_crack'),
+                                style: AppTheme.getStyle(
+                                  fontSize: 16,
+                                  color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
                                 ),
-                              );
-                            },
-                          ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 50),
-                      ],
-                    ),
+                      ),
+                      // Reward points display
+                      // Padding(
+                      //   padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
+                      //   child: ValueListenableBuilder(
+                      //     valueListenable: Hive.box(HiveService.userBoxName).listenable(),
+                      //     builder: (context, box, child) {
+                      //       int points = box.get('totalScore', defaultValue: 0) as int;
+                      //       return Row(
+                      //         children: [
+                      //           Icon(Icons.star, color: Colors.amber),
+                      //           const SizedBox(width: 6),
+                      //           Text('${AppLanguage.getString('points')}: $points',
+                      //             style: AppTheme.getStyle(
+                      //               fontSize: 16,
+                      //               fontWeight: FontWeight.bold,
+                      //               color: isDark ? Colors.white : AppTheme.textMainColor,
+                      //             ),
+                      //           ),
+                      //         ],
+                      //       );
+                      //     },
+                      //   ),
+                      // ),
+                      const SizedBox(height: 2),
+                      Divider(endIndent: 20, indent: 20, color: isDark ? Colors.white : AppTheme.textMainColor, thickness: 0.25),
+
+                      const SizedBox(height: 20),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 20.0,right: 20),
+                        child: ValueListenableBuilder(
+                          valueListenable: Hive.box(HiveService.userBoxName).listenable(),
+                          builder: (context, box, child) {
+                            return _buildMockCard(context);
+                          },
+                        ),
+                      ),
+                      // // Horizontal Scroll Highlight (Exam Categories)
+                      // Padding(
+                      //   padding: const EdgeInsets.symmetric(horizontal: 20),
+                      //   child: Text(
+                      //     AppLanguage.getString('old_test_papers'),
+                      //     style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
+                      //   ),
+                      // ),
+                      // const SizedBox(height: 16),
+                      //
+                      // SizedBox(
+                      //   height: 110,
+                      //   child: ListView(
+                      //     scrollDirection: Axis.horizontal,
+                      //     padding: const EdgeInsets.symmetric(horizontal: 20),
+                      //     physics: const BouncingScrollPhysics(),
+                      //     children: [
+                      //       _buildHorizontalExamCard(context, "tnpsc", "📜", Colors.indigo),
+                      //       _buildHorizontalExamCard(context, "trb", "🎓", Colors.teal),
+                      //       _buildHorizontalExamCard(context, "tet", "📝", Colors.orange),
+                      //       _buildHorizontalExamCard(context, "net", "🌐", Colors.blue),
+                      //       _buildHorizontalExamCard(context, "set", "🏛️", Colors.purple),
+                      //       _buildHorizontalExamCard(context, "vao", "💼", Colors.brown),
+                      //     ],
+                      //   ),
+                      // ),
+
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
+                        child: Text(
+                          AppLanguage.getString('subjects'),
+                          style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? AppTheme.secondaryColor : AppTheme.textMainColor),
+                        ),
+                      ),
+
+                      // Subjects Grid
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 1.0,
+                          ),
+                          itemCount: tnpscSubjects.length,
+                          itemBuilder: (context, index) {
+                            final subject = tnpscSubjects[index];
+                            return AnimationConfiguration.staggeredGrid(
+                              position: index,
+                              duration: const Duration(milliseconds: 375),
+                              columnCount: 2,
+                              child: ScaleAnimation(
+                                child: FadeInAnimation(
+                                  child: _SubjectCard(subject: subject),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 50),
+                    ],
                   ),
                 );
               },

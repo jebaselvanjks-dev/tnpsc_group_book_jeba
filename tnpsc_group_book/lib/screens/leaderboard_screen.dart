@@ -41,70 +41,73 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
     return ValueListenableBuilder<String>(
       valueListenable: AppLanguage.languageNotifier,
       builder: (context, lang, child) {
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: AppBar(
-            backgroundColor: isDark ? Colors.black : Colors.white,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            surfaceTintColor: Colors.transparent,
-            title: Text(
-              AppLanguage.getString('leaderboard'),
-              style: AppTheme.getStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 18,
-                color: isDark ? Colors.white : AppTheme.textMainColor,
-              ),
-            ),
-            centerTitle: true,
-            bottom: TabBar(
-              controller: _tabController,
-              labelColor: AppTheme.secondaryColor,
-              unselectedLabelColor: isDark ? Colors.white : Colors.grey,
-              indicatorColor: AppTheme.secondaryColor,
-              indicatorWeight: 3,
-              dividerHeight: 0.1,
-              dividerColor: isDark ? Colors.white : Colors.grey,
-              tabs: [
-                Tab(
-                  child: Text(
-                    AppLanguage.getString('daily'),
-                    textAlign: TextAlign.center,
+        return Column(
+          children: [
+            // Custom AppBar for Tab inside MainWrapper
+            Container(
+              color: isDark ? Colors.black : Colors.white,
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  Text(
+                    AppLanguage.getString('leaderboard'),
                     style: AppTheme.getStyle(
-                      fontSize: 13
+                      fontWeight: FontWeight.w500,
+                      fontSize: 18,
+                      color: isDark ? Colors.white : AppTheme.textMainColor,
                     ),
-                    maxLines: 2,
                   ),
-                ),
-                Tab(
-                  child: Text(
-                    AppLanguage.getString('mock'),
-                    textAlign: TextAlign.center,
-                    style: AppTheme.getStyle(
-                        fontSize: 13
-                    ),
-                    maxLines: 2,
+                  const SizedBox(height: 10),
+                  TabBar(
+                    controller: _tabController,
+                    labelColor: AppTheme.secondaryColor,
+                    unselectedLabelColor: isDark ? Colors.white : Colors.grey,
+                    indicatorColor: AppTheme.secondaryColor,
+                    indicatorWeight: 3,
+                    dividerHeight: 0.1,
+                    dividerColor: isDark ? Colors.white : Colors.grey,
+                    tabs: [
+                      Tab(
+                        child: Text(
+                          AppLanguage.getString('daily'),
+                          textAlign: TextAlign.center,
+                          style: AppTheme.getStyle(fontSize: 13),
+                          maxLines: 2,
+                        ),
+                      ),
+                      Tab(
+                        child: Text(
+                          AppLanguage.getString('mock'),
+                          textAlign: TextAlign.center,
+                          style: AppTheme.getStyle(fontSize: 13),
+                          maxLines: 2,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          ),
-          body: Stack(
-            children: [
-              TabBarView(
-                controller: _tabController,
-                children: const [
-                  _LeaderboardList(isDaily: true),
-                  _LeaderboardList(isDaily: false),
                 ],
               ),
-              // User's own rank at the bottom
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: _MyRankStickyCard(isDaily: _isDaily),
+            ),
+            Expanded(
+              child: Stack(
+                children: [
+                  TabBarView(
+                    controller: _tabController,
+                    children: const [
+                      _LeaderboardList(isDaily: true),
+                      _LeaderboardList(isDaily: false),
+                    ],
+                  ),
+                  // User's own rank at the bottom
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: _MyRankStickyCard(isDaily: _isDaily),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         );
       }
     );

@@ -288,7 +288,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.maybePop(context),
+                        onPressed: () => Navigator.pop(context),
                       ),
                     ],
                   ),
@@ -523,7 +523,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                   // padding: const EdgeInsets.all(0),
                   child: Icon(Icons.arrow_back_ios_rounded, size: 25, color: isDark ? Colors.white : Colors.black),
                 ),
-                onPressed: () => Navigator.maybePop(context),
+                onPressed: () => Navigator.pop(context),
               ),
               title: Text(widget.topic),
               bottom: TabBar(

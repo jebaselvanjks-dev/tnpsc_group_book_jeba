@@ -19,10 +19,16 @@ class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
+  static bool _isInitialized = false;
 
   static Future<void> init() async {
+    if (_isInitialized) {
+      debugPrint("AI_DEBUG: NotificationService already initialized. Skipping.");
+      return;
+    }
     try {
       debugPrint("AI_DEBUG: Initializing NotificationService...");
+      _isInitialized = true;
       tz.initializeTimeZones();
       
       // 1. Request Permission (for iOS and Android 13+)

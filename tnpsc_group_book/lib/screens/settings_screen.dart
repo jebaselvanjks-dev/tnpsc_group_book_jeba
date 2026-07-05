@@ -192,7 +192,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // padding: const EdgeInsets.all(0),
                 child: Icon(Icons.arrow_back_ios_rounded, size: 25, color: isDarkMode ? Colors.white : Colors.black),
               ),
-              onPressed: () => Navigator.maybePop(context),
+              onPressed: () => Navigator.pop(context),
             ),
             title: Text(AppLanguage.getString('settings')),
           ),

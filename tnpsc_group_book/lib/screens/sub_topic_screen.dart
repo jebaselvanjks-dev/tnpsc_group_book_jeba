@@ -33,7 +33,7 @@ class SubTopicScreen extends StatelessWidget {
             elevation: 0,
             leading: IconButton(
               icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
-              onPressed: () => Navigator.maybePop(context),
+              onPressed: () => Navigator.pop(context),
             ),
             title: Text(
               parentTopic,

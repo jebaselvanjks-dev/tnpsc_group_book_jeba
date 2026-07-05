@@ -26,7 +26,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   final RoomService _roomService = RoomService();
   final ScreenshotController _screenshotController = ScreenshotController();
   String _subject = 'General';
-  bool _canPop = false;
+  bool _isExiting = false;
 
   void _shareRoomCode() async {
     final isTamil = AppLanguage.languageNotifier.value == 'ta';
@@ -236,6 +236,17 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
     return result ?? false;
   }
 
+  Future<void> _handleBack() async {
+    if (_isExiting) return;
+    final confirmed = await _showExitConfirmation();
+    if (confirmed && mounted) {
+      setState(() {
+        _isExiting = true;
+      });
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -265,38 +276,30 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
         bool isCurrentUserHost = widget.isHost || (roomData?['hostId'] == FirebaseAuth.instance.currentUser?.uid);
 
         return PopScope(
-      canPop: _canPop,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        final shouldPop = await _showExitConfirmation();
-        if (shouldPop && mounted) {
-          setState(() {
-            _canPop = true;
-          });
-          Future.microtask(() {
-            if (mounted) Navigator.of(context).pop();
-          });
-        }
-      },
-      child: Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: AppBar(
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
-              onPressed: () => Navigator.maybePop(context),
+          canPop: _isExiting,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            _handleBack();
+          },
+          child: Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            appBar: AppBar(
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+                onPressed: _handleBack,
+              ),
+              title: Text(AppLanguage.getString('group_test_lobby'), style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+              actions: [
+                if (roomExists)
+                  IconButton(
+                    icon: const Icon(Icons.share_rounded),
+                    onPressed: _shareRoomCode,
+                  )
+              ],
             ),
-            title: Text(AppLanguage.getString('group_test_lobby'), style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
-            actions: [
-              if (roomExists)
-                IconButton(
-                  icon: const Icon(Icons.share_rounded),
-                  onPressed: _shareRoomCode,
-                )
-            ],
-          ),
           body: Column(
             children: [
               if (!roomExists) ...[

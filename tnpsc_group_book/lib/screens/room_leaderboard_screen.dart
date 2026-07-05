@@ -113,7 +113,10 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
             style: AppTheme.getStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
-          automaticallyImplyLeading: false,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+            onPressed: () => Navigator.maybePop(context),
+          ),
         actions: [
           IconButton(
             icon: const Icon(Icons.share_rounded),

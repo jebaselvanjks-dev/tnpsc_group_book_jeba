@@ -26,7 +26,7 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
   List<int?> _selectedAnswers = [];
   List<Question> _questions = [];
   bool _submitted = false;
-  bool _canPop = false;
+  bool _isExiting = false;
   
   final Stopwatch _stopwatch = Stopwatch();
   Timer? _timer;
@@ -221,6 +221,18 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
     return result ?? false;
   }
 
+  Future<void> _handleBack() async {
+    if (_isExiting) return;
+    final confirmed = await _showExitConfirmation();
+    if (confirmed && mounted) {
+      setState(() {
+        _isExiting = true;
+      });
+      await _abandonQuiz();
+      if (mounted) Navigator.of(context).pop();
+    }
+  }
+
   Future<void> _submitQuiz() async {
     if (_submitted) return;
     _submitted = true;
@@ -266,26 +278,17 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
     double progress = (_currentQuestionIndex + 1) / _questions.length;
 
     return PopScope(
-      canPop: _canPop,
-      onPopInvokedWithResult: (didPop, result) async {
+      canPop: _isExiting,
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        final shouldPop = await _showExitConfirmation();
-        if (shouldPop && mounted) {
-          await _abandonQuiz();
-          setState(() {
-            _canPop = true;
-          });
-          Future.microtask(() {
-            if (mounted) Navigator.of(context).pop();
-          });
-        }
+        _handleBack();
       },
       child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
-          onPressed: () => Navigator.maybePop(context),
+          onPressed: _handleBack,
         ),
         title: Text(AppLanguage.getString('battle_title') + ': ${widget.roomCode}', style: AppTheme.getStyle(fontSize: 16)),
         actions: [
