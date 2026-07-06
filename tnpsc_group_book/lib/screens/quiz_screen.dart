@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/question.dart';
@@ -14,7 +15,7 @@ import '../services/ai_service.dart';
 import '../services/tts_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/reward_service.dart';
-import 'package:flutter/material.dart';
+import '../widgets/bilingual_text.dart';
 
 class QuizScreen extends StatefulWidget {
   final String subjectTitle;
@@ -363,11 +364,7 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   String _getQuestionTtsText(Question q) {
-    String text = _formatBilingual(q.question);
-    for (var i = 0; i < q.options.length; i++) {
-      text += ". ${AppLanguage.getString('option')} ${i + 1}: " + _formatBilingual(q.options[i]);
-    }
-    return text;
+    return q.ttsText;
   }
 
 
@@ -882,14 +879,12 @@ class _QuizScreenState extends State<QuizScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Expanded(
-                                        child: Text(
-                                          _formatBilingual(question.question),
-                                          style: AppTheme.getStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                            color: isDark ? Colors.white : AppTheme.textMainColor,
-                                            height: 1.5,
-                                          ),
+                                        child: BilingualText(
+                                          en: question.questionEn,
+                                          ta: question.questionTa,
+                                          legacy: question.question,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                     ],
@@ -901,6 +896,14 @@ class _QuizScreenState extends State<QuizScreen> {
                                     final correctIndex = _visibleQuestions[_currentQuestionIndex].correctOptionIndex;
                                     bool isSelected = index == selected;
                                     bool isCorrect = selected != null && index == correctIndex;
+                                    
+                                    String? optEn;
+                                    String? optTa;
+                                    if (question.optionsEn != null && index < question.optionsEn!.length) {
+                                      optEn = question.optionsEn![index];
+                                      optTa = question.optionsTa![index];
+                                    }
+
                                     Color cardColor;
                                     Color borderColor;
                                     if (selected == null) {
@@ -957,13 +960,13 @@ class _QuizScreenState extends State<QuizScreen> {
                                               ),
                                               const SizedBox(width: 16),
                                               Expanded(
-                                                child: Text(
-                                                  _formatBilingual(question.options[index]),
-                                                  style: AppTheme.getStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                                    color: isDark ? Colors.white : AppTheme.textMainColor,
-                                                  ),
+                                                child: BilingualText(
+                                                  en: optEn,
+                                                  ta: optTa,
+                                                  legacy: question.options[index],
+                                                  fontSize: 15,
+                                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                                  color: isDark ? Colors.white : AppTheme.textMainColor,
                                                 ),
                                               ),
                                             ],

@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/question.dart';
 import '../services/ai_service.dart';
 import '../utils/app_theme.dart';
-import '../utils/app_language.dart';
+import '../widgets/bilingual_text.dart';
 
 class AdminQuizManageScreen extends StatefulWidget {
   const AdminQuizManageScreen({super.key});
@@ -129,10 +129,22 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
 
   void _editQuestion(int index) {
     final q = _questions[index];
-    final qController = TextEditingController(text: q.question);
-    final optControllers = List.generate(4, (i) => TextEditingController(text: q.options[i]));
-    final expController = TextEditingController(text: q.explanation);
+    
+    // Controllers for new structure
+    final qEnController = TextEditingController(text: q.questionEn ?? "");
+    final qTaController = TextEditingController(text: q.questionTa ?? "");
+    final optEnControllers = List.generate(4, (i) => TextEditingController(text: (q.optionsEn != null && i < q.optionsEn!.length) ? q.optionsEn![i] : ""));
+    final optTaControllers = List.generate(4, (i) => TextEditingController(text: (q.optionsTa != null && i < q.optionsTa!.length) ? q.optionsTa![i] : ""));
+    final expEnController = TextEditingController(text: q.explanationEn ?? "");
+    final expTaController = TextEditingController(text: q.explanationTa ?? "");
+    
+    // Legacy controllers (for editing existing old format)
+    final qLegacyController = TextEditingController(text: q.question);
+    final optLegacyControllers = List.generate(4, (i) => TextEditingController(text: q.options[i]));
+    final expLegacyController = TextEditingController(text: q.explanation);
+    
     int correctIdx = q.correctOptionIndex;
+    bool isNewFormat = q.questionEn != null || q.questionTa != null;
 
     showDialog(
       context: context,
@@ -143,11 +155,12 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                  controller: qController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: "Question (English\\nTamil)"),
-                ),
+                if (isNewFormat) ...[
+                  TextField(controller: qEnController, decoration: const InputDecoration(labelText: "Question (English)")),
+                  TextField(controller: qTaController, decoration: const InputDecoration(labelText: "Question (Tamil)")),
+                ] else ...[
+                  TextField(controller: qLegacyController, maxLines: 2, decoration: const InputDecoration(labelText: "Question (Combined)")),
+                ],
                 const SizedBox(height: 16),
                 ...List.generate(4, (i) => Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),
@@ -159,20 +172,27 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                         onChanged: (val) => setDialogState(() => correctIdx = val!),
                       ),
                       Expanded(
-                        child: TextField(
-                          controller: optControllers[i],
-                          decoration: InputDecoration(labelText: "Option ${i + 1} (English / Tamil)"),
+                        child: Column(
+                          children: [
+                            if (isNewFormat) ...[
+                              TextField(controller: optEnControllers[i], decoration: InputDecoration(labelText: "Option ${i + 1} (English)")),
+                              TextField(controller: optTaControllers[i], decoration: InputDecoration(labelText: "Option ${i + 1} (Tamil)")),
+                            ] else ...[
+                              TextField(controller: optLegacyControllers[i], decoration: InputDecoration(labelText: "Option ${i + 1} (Combined)")),
+                            ],
+                          ],
                         ),
                       ),
                     ],
                   ),
                 )),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: expController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: "Explanation (English. Tamil.)"),
-                ),
+                if (isNewFormat) ...[
+                  TextField(controller: expEnController, decoration: const InputDecoration(labelText: "Explanation (English)")),
+                  TextField(controller: expTaController, decoration: const InputDecoration(labelText: "Explanation (Tamil)")),
+                ] else ...[
+                  TextField(controller: expLegacyController, maxLines: 2, decoration: const InputDecoration(labelText: "Explanation (Combined)")),
+                ],
               ],
             ),
           ),
@@ -181,14 +201,32 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
             ElevatedButton(
               onPressed: () {
                 setState(() {
-                  _questions[index] = Question(
-                    question: qController.text,
-                    options: optControllers.map((c) => c.text).toList(),
-                    correctOptionIndex: correctIdx,
-                    explanation: expController.text,
-                    quizType: q.quizType,
-                    subject: q.subject,
-                  );
+                  if (isNewFormat) {
+                    _questions[index] = Question(
+                      questionEn: qEnController.text,
+                      questionTa: qTaController.text,
+                      optionsEn: optEnControllers.map((c) => c.text).toList(),
+                      optionsTa: optTaControllers.map((c) => c.text).toList(),
+                      explanationEn: expEnController.text,
+                      explanationTa: expTaController.text,
+                      correctOptionIndex: correctIdx,
+                      // Derived legacy fields
+                      question: "${qEnController.text}\n${qTaController.text}",
+                      options: List.generate(4, (i) => "${optEnControllers[i].text} / ${optTaControllers[i].text}"),
+                      explanation: "${expEnController.text} ${expTaController.text}",
+                      quizType: q.quizType,
+                      subject: q.subject,
+                    );
+                  } else {
+                    _questions[index] = Question(
+                      question: qLegacyController.text,
+                      options: optLegacyControllers.map((c) => c.text).toList(),
+                      correctOptionIndex: correctIdx,
+                      explanation: expLegacyController.text,
+                      quizType: q.quizType,
+                      subject: q.subject,
+                    );
+                  }
                 });
                 Navigator.pop(context);
               },
@@ -335,10 +373,24 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  Text(q.question, style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                                  BilingualText(
+                                    en: q.questionEn,
+                                    ta: q.questionTa,
+                                    legacy: q.question,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                   const Divider(height: 24),
                                   ...List.generate(q.options.length, (optIdx) {
                                     bool isCorrect = optIdx == q.correctOptionIndex;
+                                    
+                                    String? optEn;
+                                    String? optTa;
+                                    if (q.optionsEn != null && optIdx < q.optionsEn!.length) {
+                                      optEn = q.optionsEn![optIdx];
+                                      optTa = q.optionsTa![optIdx];
+                                    }
+
                                     return Padding(
                                       padding: const EdgeInsets.only(bottom: 4),
                                       child: Row(
@@ -350,13 +402,13 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                                           ),
                                           const SizedBox(width: 8),
                                           Expanded(
-                                            child: Text(
-                                              q.options[optIdx],
-                                              style: AppTheme.getStyle(
-                                                fontSize: 14,
-                                                color: isCorrect ? Colors.green : null,
-                                                fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
-                                              ),
+                                            child: BilingualText(
+                                              en: optEn,
+                                              ta: optTa,
+                                              legacy: q.options[optIdx],
+                                              fontSize: 14,
+                                              color: isCorrect ? Colors.green : null,
+                                              fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
                                             ),
                                           ),
                                         ],
@@ -366,9 +418,12 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                                   const Divider(height: 24),
                                   Text("Explanation:", style: AppTheme.getStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    q.explanation,
-                                    style: AppTheme.getStyle(fontSize: 13, color: Colors.grey),
+                                  BilingualText(
+                                    en: q.explanationEn,
+                                    ta: q.explanationTa,
+                                    legacy: q.explanation,
+                                    fontSize: 13,
+                                    color: Colors.grey,
                                   ),
                                 ],
                               ),

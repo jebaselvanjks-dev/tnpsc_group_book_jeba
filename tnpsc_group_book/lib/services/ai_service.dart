@@ -62,6 +62,8 @@ class AiService {
     
     // AI_DEBUG: Whitelist of stable models that are known to work
     const whitelist = [
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
       'gemini-2.0-flash',
       'gemini-1.5-flash',
       'gemini-1.5-pro',
@@ -79,9 +81,12 @@ class AiService {
 
     // Default stable list if Remote Config is empty or invalid
     return [
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
       'gemini-2.0-flash',
       'gemini-1.5-flash',
       'gemini-1.5-pro',
+      'gemini-pro',
     ];
   }
 
@@ -144,91 +149,112 @@ class AiService {
 
       print("AI_DEBUG: Trying restricted stable models: $finalModelsToTry");
 
-      // 3. Try each model (v1 then v1beta)
+      // 3. Try each model (v1beta then v1)
       bool keyFailed = false;
-      for (String version in ['v1', 'v1beta']) {
+      for (String version in ['v1beta', 'v1']) { // Try v1beta first for newer models
         if (keyFailed) break;
         for (String modelName in finalModelsToTry) {
-          try {
-            print("AI_DEBUG: REST Call - Trying $modelName on $version...");
-            final url = Uri.parse(
-              'https://generativelanguage.googleapis.com/$version/models/$modelName:generateContent?key=$apiKey',
-            );
+          int retries = 0;
+          const int maxRetries = 2;
 
-            final response = await http
-                .post(
-                  url,
-                  headers: {'Content-Type': 'application/json'},
-                  body: jsonEncode({
-                    'contents': [
-                      {
-                        'parts': [
-                          {'text': prompt},
-                        ],
-                      },
-                    ],
-                    'safetySettings': [
-                      {
-                        'category': 'HARM_CATEGORY_HARASSMENT',
-                        'threshold': 'BLOCK_NONE',
-                      },
-                      {
-                        'category': 'HARM_CATEGORY_HATE_SPEECH',
-                        'threshold': 'BLOCK_NONE',
-                      },
-                      {
-                        'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                        'threshold': 'BLOCK_NONE',
-                      },
-                      {
-                        'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                        'threshold': 'BLOCK_NONE',
-                      },
-                    ],
-                    'generationConfig': {
-                      'responseMimeType': 'application/json',
-                      'temperature': 0.9,
-                      'topP': 0.95,
-                      'topK': 40,
-                      'maxOutputTokens': 8192,
-                    },
-                  }),
-                )
-                .timeout(const Duration(seconds: 90));
+          while (retries <= maxRetries) {
+            try {
+              print("AI_DEBUG: REST Call - Trying $modelName on $version (Attempt ${retries + 1})...");
+              final url = Uri.parse(
+                'https://generativelanguage.googleapis.com/$version/models/$modelName:generateContent?key=$apiKey',
+              );
 
-            if (response.statusCode == 200) {
-              final data = jsonDecode(response.body);
-              final candidate = data['candidates'][0];
-              if (candidate['finishReason'] != 'STOP') continue;
+              final response = await http
+                  .post(
+                    url,
+                    headers: {'Content-Type': 'application/json'},
+                    body: jsonEncode({
+                      'contents': [
+                        {
+                          'parts': [
+                            {'text': prompt},
+                          ],
+                        },
+                      ],
+                      'safetySettings': [
+                        {
+                          'category': 'HARM_CATEGORY_HARASSMENT',
+                          'threshold': 'BLOCK_NONE',
+                        },
+                        {
+                          'category': 'HARM_CATEGORY_HATE_SPEECH',
+                          'threshold': 'BLOCK_NONE',
+                        },
+                        {
+                          'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                          'threshold': 'BLOCK_NONE',
+                        },
+                        {
+                          'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                          'threshold': 'BLOCK_NONE',
+                        },
+                      ],
+                      'generationConfig': {
+                        'responseMimeType': 'application/json',
+                        'temperature': 0.9,
+                        'topP': 0.95,
+                        'topK': 40,
+                        'maxOutputTokens': 8192,
+                      },
+                    }),
+                  )
+                  .timeout(const Duration(seconds: 90));
 
-              String? text = candidate['content']['parts'][0]['text'];
-              if (text != null) {
-                text = text.trim();
-                // Improved JSON extraction using regex to handle potential markdown or extra text
-                final jsonRegex = RegExp(r'\[.*\]|\{.*\}', dotAll: true);
-                final match = jsonRegex.stringMatch(text);
-                if (match != null) {
-                  text = match.trim();
+              if (response.statusCode == 200) {
+                final data = jsonDecode(response.body);
+                final candidate = data['candidates'][0];
+                if (candidate['finishReason'] != 'STOP') {
+                   print("AI_DEBUG: Model finished with reason: ${candidate['finishReason']}");
+                   break; // Try next model
                 }
 
-                try {
-                  jsonDecode(text);
-                  return text;
-                } catch (e) {
-                  print("AI_DEBUG: JSON Decode failed for: ${text.substring(0, text.length > 50 ? 50 : text.length)}...");
-                  continue;
+                String? text = candidate['content']['parts'][0]['text'];
+                if (text != null) {
+                  text = text.trim();
+                  // Improved JSON extraction using regex to handle potential markdown or extra text
+                  final jsonRegex = RegExp(r'\[.*\]|\{.*\}', dotAll: true);
+                  final match = jsonRegex.stringMatch(text);
+                  if (match != null) {
+                    text = match.trim();
+                  }
+
+                  try {
+                    jsonDecode(text);
+                    return text;
+                  } catch (e) {
+                    print("AI_DEBUG: JSON Decode failed for: ${text.substring(0, text.length > 50 ? 50 : text.length)}...");
+                    break; // Try next model
+                  }
                 }
+              } else if (response.statusCode == 429) {
+                print("AI_DEBUG: Rate limit reached (429). Retrying after backoff...");
+                await Future.delayed(Duration(seconds: 2 * (retries + 1)));
+                retries++;
+                continue; 
+              } else if (response.statusCode == 403) {
+                print("AI_DEBUG: Key invalid or permission denied (403). Switching key...");
+                keyFailed = true;
+                break;
+              } else if (response.statusCode == 503 || response.statusCode == 500) {
+                print("AI_DEBUG: Server error (${response.statusCode}). Retrying...");
+                await Future.delayed(Duration(seconds: 1 * (retries + 1)));
+                retries++;
+                continue;
+              } else {
+                print("AI_DEBUG: REST FAIL - Status: ${response.statusCode}");
+                break; // Try next model
               }
-            } else if (response.statusCode == 429 || response.statusCode == 403) {
-              print("AI_DEBUG: Key limit reached or invalid (Status: ${response.statusCode}). Switching key...");
-              keyFailed = true;
-              break;
-            } else {
-              print("AI_DEBUG: REST FAIL - Status: ${response.statusCode}");
+            } catch (e) {
+              print("AI_DEBUG: REST Error: $e");
+              break; // Try next model
             }
-          } catch (e) {
-            print("AI_DEBUG: REST Error: $e");
           }
+          if (keyFailed) break;
         }
       }
       // If we reach here and keyFailed is true, the outer loop continues to next API key
@@ -296,7 +322,7 @@ STRICT QUALITY RULES (MUST FOLLOW)
 5. Never repeat questions, options, explanations, or question patterns.
 6. Every question must test a different concept.
 7. Questions must be suitable for TNPSC SSLC Standard.
-8. EVERY field (question, options, explanation) MUST BE BILINGUAL (English and Tamil).
+8. EVERY field MUST BE BILINGUAL (Separate English and Tamil keys).
 9. English must be natural and error-free.
 10. Tamil must use proper literary Tamil without spelling mistakes.
 11. Do NOT mix Tamil and English in the same sentence.
@@ -306,10 +332,12 @@ STRICT QUALITY RULES (MUST FOLLOW)
 15. Verify the correct answer before assigning correctOptionIndex.
 16. correctOptionIndex MUST exactly match the correct option (0-3).
 17. Explanation must clearly justify why the answer is correct.
-18. MANDATORY BILINGUAL FORMAT:
-    - Question field: "English Question\\nதமிழ் வினா" (Separated by newline)
-    - Options array: "English Option / தமிழ் விருப்பம்" (Separated by slash)
-    - Explanation field: "English explanation. தமிழ் விளக்கம்." (English first, then Tamil)
+18. MANDATORY BILINGUAL FORMAT (STRICT):
+    - "question_en": "English question text"
+    - "question_ta": "தமிழ் வினா உரை"
+    - "options": [{"en": "English Option", "ta": "தமிழ் விருப்பம்"}, ...] (List of 4 objects)
+    - "explanation_en": "English explanation text"
+    - "explanation_ta": "தமிழ் விளக்க உரை"
 19. Avoid vague or ambiguous questions.
 20. Avoid duplicate option values.
 21. Avoid options like "All of the above" or "None of the above".
@@ -332,30 +360,21 @@ Before generating the JSON, internally verify:
 - Step-by-step math accuracy (for Aptitude)
 - Explanation clarity and accuracy
 
-Question format:
-English Question
-தமிழ் வினா
-
-Option format:
-English Option / தமிழ் விருப்பம்
-
-Explanation format:
-English explanation.
-தமிழ் விளக்கம்.
-
 Output Format:
 
 [
   {
-    "question":"...",
+    "question_en":"...",
+    "question_ta":"...",
     "options":[
-      "...",
-      "...",
-      "...",
-      "..."
+      {"en": "...", "ta": "..."},
+      {"en": "...", "ta": "..."},
+      {"en": "...", "ta": "..."},
+      {"en": "...", "ta": "..."}
     ],
     "correctOptionIndex":0,
-    "explanation":"..."
+    "explanation_en":"...",
+    "explanation_ta":"..."
   }
 ]
 
@@ -515,7 +534,7 @@ STRICT QUALITY RULES (MUST FOLLOW)
 5. Never repeat questions, options, explanations, or question patterns.
 6. Every question must test a different concept.
 7. Questions must be suitable for TNPSC SSLC Standard.
-8. EVERY field (question, options, explanation) MUST BE BILINGUAL (English and Tamil).
+8. EVERY field MUST BE BILINGUAL (Separate English and Tamil keys).
 9. English must be natural and error-free.
 10. Tamil must use proper literary Tamil without spelling mistakes.
 11. Do NOT mix Tamil and English in the same sentence.
@@ -525,10 +544,12 @@ STRICT QUALITY RULES (MUST FOLLOW)
 15. Verify the correct answer before assigning correctOptionIndex.
 16. correctOptionIndex MUST exactly match the correct option (0-3).
 17. Explanation must clearly justify why the answer is correct.
-18. MANDATORY BILINGUAL FORMAT:
-    - Question field: "English Question\\nதமிழ் வினா" (Separated by newline)
-    - Options array: "English Option / தமிழ் விருப்பம்" (Separated by slash)
-    - Explanation field: "English explanation. தமிழ் விளக்கம்." (English first, then Tamil)
+18. MANDATORY BILINGUAL FORMAT (STRICT):
+    - "question_en": "English question text"
+    - "question_ta": "தமிழ் வினா உரை"
+    - "options": [{"en": "English Option", "ta": "தமிழ் விருப்பம்"}, ...] (List of 4 objects)
+    - "explanation_en": "English explanation text"
+    - "explanation_ta": "தமிழ் விளக்க உரை"
 19. Avoid vague or ambiguous questions.
 20. Avoid duplicate option values.
 21. Avoid options like "All of the above" or "None of the above".
@@ -551,30 +572,21 @@ Before generating the JSON, internally verify:
 - Step-by-step math accuracy (for Aptitude)
 - Explanation clarity and accuracy
 
-Question format:
-English Question
-தமிழ் வினா
-
-Option format:
-English Option / தமிழ் விருப்பம்
-
-Explanation format:
-English explanation.
-தமிழ் விளக்கம்.
-
 Output Format:
 
 [
   {
-    "question":"...",
+    "question_en":"...",
+    "question_ta":"...",
     "options":[
-      "...",
-      "...",
-      "...",
-      "..."
+      {"en": "...", "ta": "..."},
+      {"en": "...", "ta": "..."},
+      {"en": "...", "ta": "..."},
+      {"en": "...", "ta": "..."}
     ],
     "correctOptionIndex":0,
-    "explanation":"..."
+    "explanation_en":"...",
+    "explanation_ta":"..."
   }
 ]
 
@@ -749,7 +761,6 @@ STRICT LANGUAGE REQUIREMENTS:
 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE.
 2. NO OTHER LANGUAGES (No Hindi, etc.).
 3. Ensure there are NO spelling mistakes.
-Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
 ''';
     } else if (subject == 'general_studies') {
       specializedPrompt = '''
@@ -759,7 +770,6 @@ STRICT LANGUAGE REQUIREMENTS:
 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE.
 2. NO OTHER LANGUAGES (No Hindi, etc.).
 3. Ensure there are NO spelling mistakes.
-Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
 ''';
     } else if (subject == 'aptitude') {
       specializedPrompt = '''
@@ -768,7 +778,6 @@ Cover Simplification, Percentage, HCF/LCM, Ratio, Interest, Area, Volume, Time a
 CRITICAL INSTRUCTIONS:
 1. Double-check the 'correctOptionIndex' (0, 1, 2, or 3).
 2. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. NO OTHER LANGUAGES (Hindi, etc.).
-Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
 ''';
     } else if (subject == 'current_affairs') {
       specializedPrompt = '''
@@ -778,22 +787,23 @@ STRICT LANGUAGE REQUIREMENTS:
 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE.
 2. NO OTHER LANGUAGES (No Hindi, etc.).
 3. Ensure there are NO spelling mistakes.
-Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
 ''';
     } else {
       specializedPrompt =
-          "Create 20 UNIQUE TNPSC MCQs for '$subject' (Bilingual). STRICT LANGUAGE REQUIREMENTS: 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. 2. NO OTHER LANGUAGES (Hindi, etc.). 3. NO spelling mistakes. Format: Question: 'English\\nதமிழ்'. Options: 'English / தமிழ்'. Explanation: 'English. தமிழ்.'";
+          "Create 20 UNIQUE TNPSC MCQs for '$subject' (Bilingual). STRICT LANGUAGE REQUIREMENTS: 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. 2. NO OTHER LANGUAGES (Hindi, etc.). 3. NO spelling mistakes.";
     }
 
     final prompt =
         '''
 $specializedPrompt
 $avoidPrompt
-Strictly use this JSON format: 
-[{"question": "English\\nதமிழ்", 
-"options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
+Strictly use this BILINGUAL JSON format: 
+[{"question_en": "English question text", 
+"question_ta": "தமிழ் வினா உரை",
+"options": [{"en": "English Option", "ta": "தமிழ் விருப்பம்"}, ...], 
 "correctOptionIndex": 0, 
-"explanation": "English explanation. தமிழ் விளக்கம்."}]. 
+"explanation_en": "English explanation text",
+"explanation_ta": "தமிழ் விளக்க உரை"}]. 
 Only return the raw JSON array, no other text or markdown formatting.
 ''';
 
@@ -824,7 +834,7 @@ Only return the raw JSON array, no other text or markdown formatting.
             ...q, 
             'quiz_type': subject,
             'subject': subject,
-            'createdAt': FieldValue.serverTimestamp(),
+            'createdAt': DateTime.now().toIso8601String(), // Changed from serverTimestamp to fix Array error
           }).toList();
           
           // 3. Maintenance: Combine (Prepend new) and trim to latest 500
@@ -891,14 +901,14 @@ STRICT LANGUAGE REQUIREMENTS:
 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE.
 2. NO OTHER LANGUAGES: Strictly DO NOT include Hindi, Malayalam, or others.
 3. Ensure there are NO spelling mistakes.
-4. Each question MUST be bilingual. Format: "English question text\\nதமிழ் வினா". 
-5. Each option MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
-6. Each explanation MUST be bilingual. Format: "English explanation. தமிழ் விளக்கம்."
-Strictly use this JSON format: 
-[{"question": "English question text\\nதமிழ் வினா", 
-"options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
+4. Each question MUST be bilingual using separate keys for English and Tamil.
+Strictly use this BILINGUAL JSON format: 
+[{"question_en": "English question text", 
+"question_ta": "தமிழ் வினா உரை",
+"options": [{"en": "English Option", "ta": "தமிழ் விருப்பம்"}, ...], 
 "correctOptionIndex": 0, 
-"explanation": "English explanation. தமிழ் விளக்கம்."}]. 
+"explanation_en": "English explanation text",
+"explanation_ta": "தமிழ் விளக்க உரை"}]. 
 Return only the raw JSON array of EXACTLY $count items.
 ''';
 
@@ -995,7 +1005,6 @@ STRICT LANGUAGE REQUIREMENTS:
 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE.
 2. NO OTHER LANGUAGES (No Hindi, etc.).
 3. Ensure there are NO spelling mistakes.
-Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
 ''';
     } else if (subject == 'general_studies') {
       specializedPrompt = '''
@@ -1005,7 +1014,6 @@ STRICT LANGUAGE REQUIREMENTS:
 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE.
 2. NO OTHER LANGUAGES (No Hindi, etc.).
 3. Ensure there are NO spelling mistakes.
-Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
 ''';
     } else if (subject == 'aptitude') {
       specializedPrompt = '''
@@ -1014,7 +1022,6 @@ Cover Simplification, Percentage, HCF/LCM, Ratio, Interest, Area, Volume, Time a
 CRITICAL INSTRUCTIONS:
 1. Double-check the 'correctOptionIndex' (0, 1, 2, or 3).
 2. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. NO OTHER LANGUAGES (Hindi, etc.).
-Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
 ''';
     } else if (subject == 'current_affairs') {
       specializedPrompt = '''
@@ -1024,22 +1031,23 @@ STRICT LANGUAGE REQUIREMENTS:
 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE.
 2. NO OTHER LANGUAGES (No Hindi, etc.).
 3. Ensure there are NO spelling mistakes.
-Format: Question: "English\\nதமிழ்". Options: "English / தமிழ்". Explanation: "English. தமிழ்."
 ''';
     } else {
       specializedPrompt =
-          "Create 25 UNIQUE TNPSC MCQs for '$subject' (Bilingual). STRICT LANGUAGE REQUIREMENTS: 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. 2. NO OTHER LANGUAGES (Hindi, etc.). 3. NO spelling mistakes. Format: Question: 'English\\nதமிழ்'. Options: 'English / தமிழ்'. Explanation: 'English. தமிழ்.'";
+          "Create 25 UNIQUE TNPSC MCQs for '$subject' (Bilingual). STRICT LANGUAGE REQUIREMENTS: 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. 2. NO OTHER LANGUAGES (Hindi, etc.). 3. NO spelling mistakes.";
     }
 
     final prompt =
         '''
 $specializedPrompt
 $avoidPrompt
-Strictly use this JSON format: 
-[{"question": "English\\nதமிழ்", 
-"options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
+Strictly use this BILINGUAL JSON format: 
+[{"question_en": "English question text", 
+"question_ta": "தமிழ் வினா உரை",
+"options": [{"en": "English Option", "ta": "தமிழ் விருப்பம்"}, ...], 
 "correctOptionIndex": 0, 
-"explanation": "English explanation. தமிழ் விளக்கம்."}]. 
+"explanation_en": "English explanation text",
+"explanation_ta": "தமிழ் விளக்க உரை"}].
 Only return the raw JSON array, no other text or markdown formatting.
 ''';
 
@@ -1068,10 +1076,10 @@ Only return the raw JSON array, no other text or markdown formatting.
           }
 
           Set<String> existingTexts = existingQuestions
-              .map((e) => (e['question'] ?? "").toString().trim())
+              .map((e) => (e['question_ta'] ?? "").toString().trim())
               .toSet();
           List<dynamic> uniqueNew = newQuestions.where((item) {
-            String text = (item['question'] ?? "").toString().trim();
+            String text = (item['question_ta'] ?? "").toString().trim();
             return text.isNotEmpty && !existingTexts.contains(text);
           }).toList();
 
@@ -1098,7 +1106,7 @@ Only return the raw JSON array, no other text or markdown formatting.
     String? category,
   }) async {
     final prompt =
-        "Create 25 structured TNPSC study points for '$subject'. STRICT LANGUAGE REQUIREMENTS: 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. 2. NO OTHER LANGUAGES (Hindi, etc.). 3. NO spelling mistakes. Use this JSON format: [{\"id\": 1, \"tamil\": \"...\", \"english\": \"...\"}]. Only return the JSON array.";
+        "Create 25 structured TNPSC study points for '$subject'. STRICT LANGUAGE REQUIREMENTS: 1. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. 2. NO OTHER LANGUAGES (Hindi, etc.). 3. NO spelling mistakes. Use this BILINGUAL JSON format: [{\"id\": 1, \"ta\": \"...\", \"en\": \"...\"}]. Only return the JSON array.";
     final res = await _generateWithFallback(prompt);
     if (res != null) {
       try {
@@ -1118,10 +1126,10 @@ Only return the raw JSON array, no other text or markdown formatting.
           }
 
           Set<String> existingTexts = existingMaterial
-              .map((e) => (e['tamil'] ?? "").toString().trim())
+              .map((e) => (e['ta'] ?? "").toString().trim())
               .toSet();
           List<dynamic> uniqueNew = newMaterial.where((item) {
-            String text = (item['tamil'] ?? "").toString().trim();
+            String text = (item['ta'] ?? "").toString().trim();
             return text.isNotEmpty && !existingTexts.contains(text);
           }).toList();
 
@@ -1187,14 +1195,14 @@ CRITICAL INSTRUCTIONS:
 1. Ensure the 'correctOptionIndex' (0-3) EXACTLY points to the correct answer in the 'options' list. 
 2. For Math/Aptitude, double-check your calculations.
 3. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. NO OTHER LANGUAGES (Hindi, etc.).
-4. Each question MUST be bilingual. Format: "English question\\nதமிழ் வினா". 
-5. Each option MUST contain both English and Tamil text separated by a slash ( / ). Format: "English Option / தமிழ் விருப்பம்". 
-6. Each explanation MUST be bilingual. Format: "English explanation. தமிழ் விளக்கம்."
-Strictly use this JSON format: 
-[{"question": "English question\\nதமிழ் வினா", 
-"options": ["English Option 1 / தமிழ் விருப்பம் 1", "English Option 2 / தமிழ் விருப்பம் 2", "English Option 3 / தமிழ் விருப்பம் 3", "English Option 4 / தமிழ் விருப்பம் 4"], 
+4. Each question MUST be bilingual using separate keys for English and Tamil.
+Strictly use this BILINGUAL JSON format: 
+[{"question_en": "English question text", 
+"question_ta": "தமிழ் வினா உரை",
+"options": [{"en": "English Option", "ta": "தமிழ் விருப்பம்"}, ...], 
 "correctOptionIndex": 0, 
-"explanation": "English explanation. தமிழ் விளக்கம்."}].
+"explanation_en": "English explanation text",
+"explanation_ta": "தமிழ் விளக்க உரை"}].
 Only return the raw JSON array, no other text or markdown formatting.
 ''';
     final res = await _generateWithFallback(prompt);

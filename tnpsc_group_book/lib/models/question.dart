@@ -1,11 +1,21 @@
+import 'package:tnpsc_group_book/utils/app_language.dart';
+
 class Question {
   final String? id; // Unique ID for bookmarks
-  final String question;
-  final List<String> options;
+  final String question; // Legacy combined format
+  final List<String> options; // Legacy combined format
   final int correctOptionIndex;
-  final String explanation;
+  final String explanation; // Legacy combined format
   final String? subject; // To categorize bookmarks
   final String? quizType; // To categorize bookmarks
+
+  // New Bilingual Fields
+  final String? questionEn;
+  final String? questionTa;
+  final List<String>? optionsEn;
+  final List<String>? optionsTa;
+  final String? explanationEn;
+  final String? explanationTa;
 
   Question({
     this.id,
@@ -15,6 +25,12 @@ class Question {
     required this.explanation,
     this.subject,
     this.quizType,
+    this.questionEn,
+    this.questionTa,
+    this.optionsEn,
+    this.optionsTa,
+    this.explanationEn,
+    this.explanationTa,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,19 +42,148 @@ class Question {
       'explanation': explanation,
       'subject': subject,
       'quiz_type': quizType,
+      'question_en': questionEn,
+      'question_ta': questionTa,
+      'options_en': optionsEn,
+      'options_ta': optionsTa,
+      'explanation_en': explanationEn,
+      'explanation_ta': explanationTa,
     };
   }
 
   factory Question.fromMap(Map<String, dynamic> map) {
+    // 1. Detect if it's the new structured format
+    String? qEn = map['question_en']?.toString();
+    String? qTa = map['question_ta']?.toString();
+    String? eEn = map['explanation_en']?.toString();
+    String? eTa = map['explanation_ta']?.toString();
+
+    List<String>? optsEn;
+    List<String>? optsTa;
+
+    // Handle new options format: List of objects [{"en": "...", "ta": "..."}]
+    if (map['options'] is List &&
+        map['options'].isNotEmpty &&
+        map['options'][0] is Map) {
+      final optsList = List<Map<String, dynamic>>.from(map['options']);
+      optsEn = optsList.map((o) => (o['en'] ?? "").toString()).toList();
+      optsTa = optsList.map((o) => (o['ta'] ?? "").toString()).toList();
+    }
+
+    // 2. Compute structured fields if they are missing (Parsing Legacy Strings)
+    String rawQ = map['question']?.toString() ?? "";
+    if (qEn == null && qTa == null && rawQ.isNotEmpty) {
+      var parsed = AppLanguage.parseBilingual(rawQ);
+      qEn = parsed['en'];
+      qTa = parsed['ta'];
+    }
+
+    String rawE = map['explanation']?.toString() ?? "";
+    if (eEn == null && eTa == null && rawE.isNotEmpty) {
+      var parsed = AppLanguage.parseBilingual(rawE);
+      eEn = parsed['en'];
+      eTa = parsed['ta'];
+    }
+
+    if (optsEn == null && optsTa == null && map['options'] is List) {
+      optsEn = [];
+      optsTa = [];
+      for (var opt in map['options']) {
+        if (opt is String) {
+          var parsed = AppLanguage.parseBilingual(opt);
+          optsEn.add(parsed['en']!);
+          optsTa.add(parsed['ta']!);
+        }
+      }
+    }
+
+    // 3. Compute legacy fields for backward compatibility
+    String finalQ = rawQ.isNotEmpty ? rawQ : "$qEn\n$qTa";
+    
+    List<String> finalOpts = [];
+    if (map['options'] is List && map['options'].isNotEmpty && map['options'][0] is String) {
+      finalOpts = List<String>.from(map['options']);
+    } else if (optsEn != null && optsTa != null) {
+      for (int i = 0; i < optsEn.length; i++) {
+        finalOpts.add("${optsEn[i]} / ${optsTa[i]}");
+      }
+    }
+
+    String finalEx = rawE.isNotEmpty ? rawE : "$eEn $eTa";
+
     return Question(
       id: map['id'],
-      question: map['question'],
-      options: List<String>.from(map['options']),
-      correctOptionIndex: map['correctOptionIndex'],
-      explanation: map['explanation'],
+      question: finalQ,
+      options: finalOpts,
+      correctOptionIndex: map['correctOptionIndex'] ?? 0,
+      explanation: finalEx,
       subject: map['subject'],
       quizType: map['quiz_type'],
+      questionEn: qEn,
+      questionTa: qTa,
+      optionsEn: optsEn,
+      optionsTa: optsTa,
+      explanationEn: eEn,
+      explanationTa: eTa,
     );
+  }
+
+  // Getters to simplify UI usage with language selection
+  String get displayQuestion {
+    final lang = AppLanguage.languageNotifier.value;
+    if (lang == 'ta') {
+      return questionTa ?? question;
+    } else if (lang == 'en') {
+      return questionEn ?? question;
+    }
+    return question; // Default to combined
+  }
+
+  List<String> get displayOptions {
+    final lang = AppLanguage.languageNotifier.value;
+    if (lang == 'ta') {
+      return optionsTa ?? options;
+    } else if (lang == 'en') {
+      return optionsEn ?? options;
+    }
+    return options; // Default to combined
+  }
+
+  String get displayExplanation {
+    final lang = AppLanguage.languageNotifier.value;
+    if (lang == 'ta') {
+      return explanationTa ?? explanation;
+    } else if (lang == 'en') {
+      return explanationEn ?? explanation;
+    }
+    return explanation; // Default to combined
+  }
+
+  // Legacy format for places that still need both (like Review)
+  String get bilingualQuestion => (questionEn != null && questionTa != null) 
+      ? "$questionEn\n$questionTa" 
+      : question;
+
+  List<String> get bilingualOptions {
+    if (optionsEn != null && optionsTa != null) {
+      return List.generate(optionsEn!.length, (i) => "${optionsEn![i]} / ${optionsTa![i]}");
+    }
+    return options;
+  }
+
+  String get bilingualExplanation => (explanationEn != null && explanationTa != null)
+      ? "$explanationEn $explanationTa"
+      : explanation;
+
+  // TTS Helper
+  String get ttsText {
+    final lang = AppLanguage.languageNotifier.value;
+    String q = displayQuestion;
+    String opts = "";
+    for (int i = 0; i < displayOptions.length; i++) {
+      opts += ". ${lang == 'ta' ? 'விருப்பம்' : 'Option'} ${i + 1}: ${displayOptions[i]}";
+    }
+    return "$q $opts";
   }
 }
 

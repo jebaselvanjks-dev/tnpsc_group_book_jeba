@@ -84,6 +84,12 @@ class HiveService {
       'options': q.options,
       'correctOptionIndex': q.correctOptionIndex,
       'explanation': q.explanation,
+      'question_en': q.questionEn,
+      'question_ta': q.questionTa,
+      'options_en': q.optionsEn,
+      'options_ta': q.optionsTa,
+      'explanation_en': q.explanationEn,
+      'explanation_ta': q.explanationTa,
     }).toList();
     
     // Save the questions
@@ -117,12 +123,7 @@ class HiveService {
     
     if (data != null) {
       List<dynamic> decoded = jsonDecode(data);
-      return decoded.map((q) => Question(
-        question: q['question'],
-        options: List<String>.from(q['options']),
-        correctOptionIndex: q['correctOptionIndex'],
-        explanation: q['explanation'],
-      )).toList();
+      return decoded.map((q) => Question.fromMap(Map<String, dynamic>.from(q))).toList();
     }
     return [];
   }

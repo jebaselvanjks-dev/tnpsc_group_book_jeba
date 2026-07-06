@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../models/question.dart';
 import '../services/hive_service.dart';
 import '../services/room_service.dart';
@@ -10,6 +9,8 @@ import '../utils/app_language.dart';
 import '../services/reward_service.dart';
 import '../services/tts_service.dart';
 import 'room_leaderboard_screen.dart';
+import '../widgets/bilingual_text.dart';
+
 class MultiplayerQuizScreen extends StatefulWidget {
   final String roomCode;
   final Map<String, dynamic> roomData;
@@ -32,11 +33,6 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
   Timer? _timer;
   int _remainingSeconds = 600; // 10 mins total for 20 questions
 
-  // Helper to format bilingual text (English / Tamil)
-  String _formatBilingual(String raw) {
-    return AppLanguage.formatBilingual(raw);
-  }
-
   @override
   void initState() {
     super.initState();
@@ -50,12 +46,7 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
     HiveService.clearHostRoom();
 
     var rawQuestions = widget.roomData['questions'] as List<dynamic>;
-    _questions = rawQuestions.map((q) => Question(
-      question: q['question'],
-      options: List<String>.from(q['options']),
-      correctOptionIndex: q['correctOptionIndex'],
-      explanation: q['explanation'],
-    )).toList();
+    _questions = rawQuestions.map((q) => Question.fromMap(q as Map<String, dynamic>)).toList();
     
     _selectedAnswers = List.filled(_questions.length, null);
     _stopwatch.start();
@@ -108,11 +99,7 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
   }
 
   String _getQuestionTtsText(Question q) {
-    String text = _formatBilingual(q.question);
-    for (var i = 0; i < q.options.length; i++) {
-      text += ". Option ${i + 1}: " + _formatBilingual(q.options[i]);
-    }
-    return text;
+    return q.ttsText;
   }
 
   int _calculateScore() {
@@ -283,33 +270,6 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
                   Row(
                     children: [
                       Text("${AppLanguage.getString('question')} ${_currentQuestionIndex + 1}", style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.secondaryColor)),
-                      // const SizedBox(width: 8),
-                      // IconButton(
-                      //   visualDensity: VisualDensity.compact,
-                      //   icon: Icon(
-                      //     TtsService.isSpeaking(_getQuestionTtsText(_questions[_currentQuestionIndex])) ? Icons.volume_up_rounded : Icons.volume_up_outlined,
-                      //     color: _selectedAnswers[_currentQuestionIndex] != null ? AppTheme.secondaryColor : Colors.grey.withOpacity(0.5),
-                      //     size: 20,
-                      //   ),
-                      //   onPressed: _selectedAnswers[_currentQuestionIndex] != null ? () {
-                      //     final textToSpeak = _getQuestionTtsText(_questions[_currentQuestionIndex]);
-                      //     if (TtsService.isSpeaking(textToSpeak)) {
-                      //       TtsService.stop();
-                      //     } else {
-                      //       TtsService.speak(textToSpeak);
-                      //     }
-                      //     setState(() {});
-                      //   } : () {
-                      //     ScaffoldMessenger.of(context).showSnackBar(
-                      //       SnackBar(
-                      //         content: Text(AppLanguage.languageNotifier.value == 'ta'
-                      //           ? "பதிலளித்த பிறகுதான் ஆடியோ கேட்க முடியும்"
-                      //           : "Answer the question first to enable audio"),
-                      //         duration: const Duration(seconds: 1),
-                      //       ),
-                      //     );
-                      //   },
-                      // ),
                     ],
                   ),
                   Text("${_currentQuestionIndex + 1}/${_questions.length}", style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
@@ -333,13 +293,26 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _formatBilingual(question.question),
-                      style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.5),
+                    // Question Section
+                    BilingualText(
+                      en: question.questionEn,
+                      ta: question.questionTa,
+                      legacy: question.question,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     ...List.generate(question.options.length, (index) {
                       bool isSelected = index == _selectedAnswers[_currentQuestionIndex];
+                      
+                      String? optEn;
+                      String? optTa;
+                      
+                      if (question.optionsEn != null && index < question.optionsEn!.length) {
+                        optEn = question.optionsEn![index];
+                        optTa = question.optionsTa![index];
+                      }
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
                         child: InkWell(
@@ -364,7 +337,16 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 16),
-                                Expanded(child: Text(_formatBilingual(question.options[index]), style: AppTheme.getStyle(fontSize: 15, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal))),
+                                Expanded(
+                                  child: BilingualText(
+                                    en: optEn,
+                                    ta: optTa,
+                                    legacy: question.options[index],
+                                    fontSize: 15,
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                    color: isDark ? Colors.white : AppTheme.textMainColor,
+                                  ),
+                                ),
                               ],
                             ),
                           ),

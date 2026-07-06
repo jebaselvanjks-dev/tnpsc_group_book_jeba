@@ -815,12 +815,7 @@ class FirestoreService {
           if (doc.exists) {
             debugPrint("AI_DEBUG: Subject questions $subject fetched from FIRESTORE CACHE");
             List<dynamic> questionsData = doc.get('questions');
-            List<Question> questions = questionsData.map((q) => Question(
-              question: q['question'],
-              options: List<String>.from(q['options']),
-              correctOptionIndex: q['correctOptionIndex'],
-              explanation: q['explanation'],
-            )).toList();
+            List<Question> questions = questionsData.map((q) => Question.fromMap(Map<String, dynamic>.from(q))).toList();
             
             // Save to Hive
             await HiveService.saveQuestions(subject, questions);
@@ -834,12 +829,7 @@ class FirestoreService {
       if (doc.exists) {
         debugPrint("AI_DEBUG: Subject questions $subject fetched from SERVER");
         List<dynamic> questionsData = doc.get('questions');
-        List<Question> questions = questionsData.map((q) => Question(
-          question: q['question'],
-          options: List<String>.from(q['options']),
-          correctOptionIndex: q['correctOptionIndex'],
-          explanation: q['explanation'],
-        )).toList();
+        List<Question> questions = questionsData.map((q) => Question.fromMap(Map<String, dynamic>.from(q))).toList();
         
         // Save to Hive
         await HiveService.saveQuestions(subject, questions);
@@ -864,12 +854,7 @@ class FirestoreService {
 
       if (snapshot.docs.isNotEmpty) {
         List<dynamic> questionsData = snapshot.docs.first.get('questions');
-        return questionsData.map((q) => Question(
-          question: q['question'],
-          options: List<String>.from(q['options']),
-          correctOptionIndex: q['correctOptionIndex'],
-          explanation: q['explanation'],
-        )).toList();
+        return questionsData.map((q) => Question.fromMap(Map<String, dynamic>.from(q))).toList();
       }
     } catch (e) {
       print("Error fetching mock test: $e");

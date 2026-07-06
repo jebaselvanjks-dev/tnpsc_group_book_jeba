@@ -173,13 +173,7 @@ class RoomService {
             pool.shuffle();
             
             for (var q in pool.take(roomQuestionCount)) {
-              allQuestions.add(Question(
-                question: q['question'] ?? '',
-                options: List<String>.from(q['options'] ?? []),
-                correctOptionIndex: q['correctOptionIndex'] ?? 0,
-                explanation: q['explanation'] ?? '',
-                subject: subject,
-              ));
+              allQuestions.add(Question.fromMap(Map<String, dynamic>.from(q)));
             }
             debugPrint("RoomService: Shuffled pool and selected ${allQuestions.length} unique questions.");
           }
@@ -201,13 +195,7 @@ class RoomService {
                 List? freshQs = freshData['questions'];
                 if (freshQs != null && freshQs.isNotEmpty) {
                   for (var q in freshQs.take(roomQuestionCount)) {
-                    allQuestions.add(Question(
-                      question: q['question'] ?? '',
-                      options: List<String>.from(q['options'] ?? []),
-                      correctOptionIndex: q['correctOptionIndex'] ?? 0,
-                      explanation: q['explanation'] ?? '',
-                      subject: subject,
-                    ));
+                    allQuestions.add(Question.fromMap(Map<String, dynamic>.from(q)));
                   }
                 }
              }
@@ -242,13 +230,7 @@ class RoomService {
                 // IMPORTANT: Filter by subject or quiz_type to avoid mixing
                 String? qType = q['quiz_type'] ?? q['subject'];
                 if (qType == subject) {
-                  allQuestions.add(Question(
-                    question: q['question'] ?? '',
-                    options: List<String>.from(q['options'] ?? []),
-                    correctOptionIndex: q['correctOptionIndex'] ?? 0,
-                    explanation: q['explanation'] ?? '',
-                    subject: subject,
-                  ));
+                  allQuestions.add(Question.fromMap(Map<String, dynamic>.from(q)));
                 }
               }
             }
@@ -273,13 +255,7 @@ class RoomService {
                 // IMPORTANT: Filter by subject or quiz_type
                 String? qType = q['quiz_type'] ?? q['subject'];
                 if (qType == subject) {
-                  allQuestions.add(Question(
-                    question: q['question'] ?? '',
-                    options: List<String>.from(q['options'] ?? []),
-                    correctOptionIndex: q['correctOptionIndex'] ?? 0,
-                    explanation: q['explanation'] ?? '',
-                    subject: subject,
-                  ));
+                  allQuestions.add(Question.fromMap(Map<String, dynamic>.from(q)));
                 }
               }
             }
@@ -304,13 +280,7 @@ class RoomService {
             List? qs = data['questions'];
             if (qs != null) {
               for (var q in qs) {
-                allQuestions.add(Question(
-                  question: q['question'] ?? '',
-                  options: List<String>.from(q['options'] ?? []),
-                  correctOptionIndex: q['correctOptionIndex'] ?? 0,
-                  explanation: q['explanation'] ?? '',
-                  subject: subject,
-                ));
+                allQuestions.add(Question.fromMap(Map<String, dynamic>.from(q)));
               }
             }
           }
@@ -326,13 +296,7 @@ class RoomService {
                 List? qs = data['questions'];
                 if (qs != null) {
                   for (var q in qs) {
-                    allQuestions.add(Question(
-                      question: q['question'] ?? '',
-                      options: List<String>.from(q['options'] ?? []),
-                      correctOptionIndex: q['correctOptionIndex'] ?? 0,
-                      explanation: q['explanation'] ?? '',
-                      subject: subject,
-                    ));
+                    allQuestions.add(Question.fromMap(Map<String, dynamic>.from(q)));
                   }
                 }
               }

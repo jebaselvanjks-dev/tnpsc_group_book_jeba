@@ -136,9 +136,15 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
           Map<String, dynamic> data = doc.data();
           List questions = data['questions'] ?? [];
           for (var q in questions) {
-            String qText = (q['question'] ?? "").toString().toLowerCase();
-            if (qText.contains(lowerQuery)) {
-              results += "❓ *Question:*\n${q['question']}\n\n✅ *Explanation:*\n${q['explanation']}\n\n";
+            String qTextEn = (q['question_en'] ?? "").toString().toLowerCase();
+            String qTextTa = (q['question_ta'] ?? "").toString().toLowerCase();
+            String qTextLegacy = (q['question'] ?? "").toString().toLowerCase();
+
+            if (qTextEn.contains(lowerQuery) || qTextTa.contains(lowerQuery) || qTextLegacy.contains(lowerQuery)) {
+              String displayQ = q['question_en'] != null ? "${q['question_en']}\n${q['question_ta']}" : (q['question'] ?? "");
+              String displayE = q['explanation_en'] != null ? "${q['explanation_en']} ${q['explanation_ta']}" : (q['explanation'] ?? "");
+              
+              results += "❓ *Question:*\n$displayQ\n\n✅ *Explanation:*\n$displayE\n\n";
               questionsFound++;
               if (questionsFound >= 3) break;
             }

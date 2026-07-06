@@ -4,6 +4,7 @@ import '../models/question.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
 import '../services/ai_service.dart';
+import '../widgets/bilingual_text.dart';
 
 class ReviewScreen extends StatelessWidget {
   final List<Question> questions;
@@ -84,13 +85,13 @@ class ReviewScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Text(
-                            "Q${index + 1}: ${_formatBilingual(q.question)}",
-                            style: AppTheme.getStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white : AppTheme.textMainColor,
-                            ),
+                          child: BilingualText(
+                            en: q.questionEn,
+                            ta: q.questionTa,
+                            legacy: q.question,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : AppTheme.textMainColor,
                           ),
                         ),
                       ],
@@ -102,7 +103,8 @@ class ReviewScreen extends StatelessWidget {
                       _buildAnswerRow(
                         context, 
                         AppLanguage.getString('your_answer'), 
-                        q.options[selectedIdx!], 
+                        selectedIdx!,
+                        q,
                         Colors.red, 
                         Icons.cancel_rounded
                       ),
@@ -113,7 +115,8 @@ class ReviewScreen extends StatelessWidget {
                     _buildAnswerRow(
                       context, 
                       isCorrect ? AppLanguage.getString('your_answer_correct') : AppLanguage.getString('correct_answer_label'), 
-                      q.options[q.correctOptionIndex], 
+                      q.correctOptionIndex,
+                      q,
                       Colors.green, 
                       Icons.check_circle_rounded
                     ),
@@ -141,12 +144,12 @@ class ReviewScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                _formatBilingual(q.explanation),
-                                style: AppTheme.getStyle(
-                                  fontSize: 14,
-                                  color: isDark ? Colors.white60 : Colors.black54,
-                                ),
+                              BilingualText(
+                                en: q.explanationEn,
+                                ta: q.explanationTa,
+                                legacy: q.explanation,
+                                fontSize: 14,
+                                color: isDark ? Colors.white60 : Colors.black54,
                               ),
                               // const SizedBox(height: 12),
                               // TextButton.icon(
@@ -247,8 +250,16 @@ class ReviewScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAnswerRow(BuildContext context, String label, String answer, Color color, IconData icon) {
+  Widget _buildAnswerRow(BuildContext context, String label, int optionIndex, Question q, Color color, IconData icon) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    String? optEn;
+    String? optTa;
+    if (q.optionsEn != null && optionIndex < q.optionsEn!.length) {
+      optEn = q.optionsEn![optionIndex];
+      optTa = q.optionsTa![optionIndex];
+    }
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -272,13 +283,13 @@ class ReviewScreen extends StatelessWidget {
                     color: isDark ? Colors.white60 : Colors.black54,
                   ),
                 ),
-                Text(
-                  _formatBilingual(answer),
-                  style: AppTheme.getStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
+                BilingualText(
+                  en: optEn,
+                  ta: optTa,
+                  legacy: q.options[optionIndex],
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: color,
                 ),
               ],
             ),

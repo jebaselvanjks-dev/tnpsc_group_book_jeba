@@ -101,7 +101,7 @@ class _ResultScreenState extends State<ResultScreen> {
       String category = 'general_studies';
       final qType = q.quizType?.toLowerCase() ?? "";
       final qSub = q.subject?.toLowerCase() ?? "";
-      final qText = q.question.toLowerCase();
+      final qText = "${q.questionEn ?? ""} ${q.questionTa ?? ""} ${q.question}".toLowerCase();
 
       // DEBUG: Log question metadata
       debugPrint("AI_DEBUG_RESULT: Q$i -> type: '$qType', sub: '$qSub', text: '${qText.substring(0, qText.length > 20 ? 20 : qText.length)}...'");

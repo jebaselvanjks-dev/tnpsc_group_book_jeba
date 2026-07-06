@@ -941,6 +941,65 @@ class AppLanguage {
     return "$en\n$ta";
   }
 
+  /// Parses bilingual text and returns a map with 'en' and 'ta' keys
+  static Map<String, String> parseBilingual(String raw) {
+    if (raw.isEmpty) return {'en': '', 'ta': ''};
+
+    // Normalize escaped newlines
+    raw = raw.replaceAll('\\n', '\n');
+
+    String en = "";
+    String ta = "";
+
+    // 1. Check for explicit separators
+    if (raw.contains('\n') || raw.contains(' / ') || raw.contains(' | ')) {
+      List<String> parts;
+      if (raw.contains('\n')) {
+        parts = raw.split('\n');
+      } else if (raw.contains(' / ')) {
+        parts = raw.split(' / ');
+      } else {
+        parts = raw.split(' | ');
+      }
+
+      en = parts[0].trim();
+      ta = parts.length > 1 ? parts.sublist(1).join(' / ').trim() : en;
+    } else {
+      // 2. Smart detection: Split at the first Tamil character if no separator is found
+      int tamilIndex = -1;
+      for (int i = 0; i < raw.length; i++) {
+        int code = raw.codeUnitAt(i);
+        if (code >= 0x0B80 && code <= 0x0BFF) {
+          if (i == 0 || raw[i-1] == ' ' || raw[i-1] == '"' || raw[i-1] == "'" || raw[i-1] == '(') {
+            tamilIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (tamilIndex > 0) {
+        int splitIndex = tamilIndex;
+        if (splitIndex > 0 && (raw[splitIndex-1] == '"' || raw[splitIndex-1] == "'" || raw[splitIndex-1] == '(')) {
+          splitIndex--;
+        }
+
+        en = raw.substring(0, splitIndex).trim();
+        while (en.endsWith('/') || en.endsWith('|') || en.endsWith(':') || en.endsWith('-')) {
+          en = en.substring(0, en.length - 1).trim();
+        }
+        ta = raw.substring(splitIndex).trim();
+      } else if (tamilIndex == 0) {
+        ta = raw.trim();
+        en = ta;
+      } else {
+        en = raw.trim();
+        ta = en;
+      }
+    }
+    
+    return {'en': en, 'ta': ta};
+  }
+
   /// Check if text is single language and translate if so
   static Future<String> translateIfSingleLanguage(String raw) async {
     if (raw.isEmpty) return "";
