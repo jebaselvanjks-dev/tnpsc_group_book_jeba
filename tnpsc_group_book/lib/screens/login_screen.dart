@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
+import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
 import '../main.dart'; // To navigate to MainWrapper
@@ -144,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
         return PopScope(
           canPop: _isExiting,
           onPopInvokedWithResult: (didPop, result) {
-            debugPrint("AI_DEBUG: [LoginScreen] PopScope triggered. didPop: $didPop");
+            AppLog.d("AI_DEBUG: [LoginScreen] PopScope triggered. didPop: $didPop");
             if (didPop) return;
             _showExitDialog(context);
           },

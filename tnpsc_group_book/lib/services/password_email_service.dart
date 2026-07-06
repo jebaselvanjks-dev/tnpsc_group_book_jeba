@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:flutter/foundation.dart';
+import '../utils/app_log.dart';
 import 'package:http/http.dart' as http;
 
 import '../config/password_email_config.dart';
@@ -35,7 +35,7 @@ class PasswordEmailService {
         )
         .timeout(const Duration(seconds: 45));
 
-    debugPrint('Apps Script response: ${response.statusCode} ${response.body}');
+    AppLog.d('Apps Script response: ${response.statusCode} ${response.body}');
 
     if (response.statusCode != 200) {
       throw FirebaseFunctionsException(
@@ -96,7 +96,7 @@ class PasswordEmailService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      debugPrint('EmailJS error: ${response.statusCode} ${response.body}');
+      AppLog.e('EmailJS error: ${response.statusCode} ${response.body}');
       throw FirebaseFunctionsException(
         code: 'internal',
         message: 'EMAIL_SEND_FAILED',
@@ -124,7 +124,7 @@ class PasswordEmailService {
     );
 
     if (response.statusCode != 200) {
-      debugPrint('Apps Script sync failed: ${response.body}');
+      AppLog.e('Apps Script sync failed: ${response.body}');
     }
   }
 
@@ -207,7 +207,7 @@ class PasswordEmailService {
         try {
           final body = jsonDecode(response.body) as Map<String, dynamic>;
           if (body['success'] == true) return;
-          debugPrint('Apps Script returned error: ${body['error']}');
+          AppLog.e('Apps Script returned error: ${body['error']}');
         } catch (e) {
           return; // If it's not JSON but 200 OK, assume success to be safe
         }

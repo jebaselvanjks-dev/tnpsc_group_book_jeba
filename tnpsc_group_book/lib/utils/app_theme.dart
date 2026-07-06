@@ -191,6 +191,18 @@ class AppTheme {
     );
   }
 
+  static void init() {
+    try {
+      final saved = HiveService.getThemeMode();
+      if (saved != null) {
+        themeNotifier.value = saved;
+      }
+      fontSizeFactorNotifier.value = HiveService.getFontSizeFactor();
+    } catch (e) {
+      // Silently fail if Hive not ready
+    }
+  }
+
   static Future<void> loadThemePreference() async {
     final saved = HiveService.getThemeMode();
     if (saved != null) {

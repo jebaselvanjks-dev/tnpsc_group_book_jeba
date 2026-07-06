@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/foundation.dart';
+import '../utils/app_log.dart';
 import 'hive_service.dart';
 
 class GoogleAuthService {
@@ -19,21 +19,21 @@ class GoogleAuthService {
       // Prompt the user to select a Google account
       GoogleSignInAccount? googleUser;
       try {
-        debugPrint('AI_DEBUG: Calling authenticate()...');
+        AppLog.d('AI_DEBUG: Calling authenticate()...');
         googleUser = await _googleSignIn.authenticate();
         
         if (googleUser == null) {
-          debugPrint('AI_DEBUG: Google Sign-In was canceled by the user (result is null).');
+          AppLog.d('AI_DEBUG: Google Sign-In was canceled by the user (result is null).');
           return null;
         }
         
-        debugPrint('AI_DEBUG: Authenticate success: ${googleUser.email}');
+        AppLog.d('AI_DEBUG: Authenticate success: ${googleUser.email}');
       } catch (e) {
-        debugPrint('AI_DEBUG: Google Sign In Error: $e');
-        debugPrint('AI_DEBUG: Authenticate error type: ${e.runtimeType}');
+        AppLog.e('AI_DEBUG: Google Sign In Error: $e');
+        AppLog.d('AI_DEBUG: Authenticate error type: ${e.runtimeType}');
         
         if (e is GoogleSignInException && e.code == GoogleSignInExceptionCode.canceled) {
-          debugPrint('AI_DEBUG: User canceled the sign-in flow.');
+          AppLog.d('AI_DEBUG: User canceled the sign-in flow.');
           return null;
         }
         rethrow;
@@ -41,7 +41,7 @@ class GoogleAuthService {
 
       // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      debugPrint('AI_DEBUG: Got idToken: ${googleAuth.idToken != null}');
+      AppLog.d('AI_DEBUG: Got idToken: ${googleAuth.idToken != null}');
 
       // Create a new credential using idToken
       final OAuthCredential credential = GoogleAuthProvider.credential(
@@ -49,13 +49,13 @@ class GoogleAuthService {
       );
 
       // Sign in to Firebase with the Google credential
-      debugPrint('AI_DEBUG: Signing in to Firebase...');
+      AppLog.d('AI_DEBUG: Signing in to Firebase...');
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
-      debugPrint('AI_DEBUG: Firebase sign-in success: ${userCredential.user?.uid}');
+      AppLog.d('AI_DEBUG: Firebase sign-in success: ${userCredential.user?.uid}');
       
       return userCredential;
     } catch (e) {
-      debugPrint('AI_DEBUG: Error during Google Sign-In caught in service: $e');
+      AppLog.e('AI_DEBUG: Error during Google Sign-In caught in service: $e');
       rethrow;
     }
   }
@@ -66,7 +66,7 @@ class GoogleAuthService {
       await _googleSignIn.signOut();
       await _auth.signOut();
     } catch (e) {
-      debugPrint('Error during Sign-Out: $e');
+      AppLog.e('Error during Sign-Out: $e');
     }
   }
 }

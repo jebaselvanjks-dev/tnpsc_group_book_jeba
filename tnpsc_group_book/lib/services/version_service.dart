@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:tnpsc_group_book/utils/app_language.dart';
 import 'package:tnpsc_group_book/utils/app_theme.dart';
+import '../utils/app_log.dart';
 
 class VersionService {
   static const String _playStoreUrl = "https://play.google.com/store/apps/details?id=com.tnpsc.master";
@@ -24,13 +25,13 @@ class VersionService {
       // Using buildNumber (int) for reliable comparison
       int currentVersion = int.parse(packageInfo.version.replaceAll(".", ""));
       
-      debugPrint("API: Version Check: $_requiredVersion");
-      debugPrint("CURRENT: Version Check: $currentVersion");
-      debugPrint("CURRENT: Version Check: ${currentVersion != _requiredVersion}");
+      AppLog.d("API: Version Check: $_requiredVersion");
+      AppLog.d("CURRENT: Version Check: $currentVersion");
+      AppLog.d("CURRENT: Version Check: ${currentVersion != _requiredVersion}");
       // Returns true if versions are NOT equal
       return currentVersion != _requiredVersion;
     } catch (e) {
-      debugPrint("AI_DEBUG: Version check error: $e");
+      AppLog.d("AI_DEBUG: Version check error: $e");
       return false; 
     }
   }

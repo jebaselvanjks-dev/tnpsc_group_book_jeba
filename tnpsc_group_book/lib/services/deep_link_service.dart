@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../utils/app_log.dart';
 import 'package:tnpsc_group_book/utils/app_language.dart';
 import 'dart:ui';
 import '../main.dart';
@@ -25,18 +26,18 @@ class DeepLinkService with WidgetsBindingObserver {
     try {
       ClipboardData? data = await Clipboard.getData(Clipboard.kTextPlain);
       if (data?.text != null) {
-        debugPrint("DeepLinkService: Checking clipboard for room code...");
+        AppLog.d("DeepLinkService: Checking clipboard for room code...");
         _handleLink(data!.text!);
       }
     } catch (e) {
-      debugPrint("DeepLinkService: Error checking clipboard: $e");
+      AppLog.e("DeepLinkService: Error checking clipboard: $e");
     }
   }
 
   void _checkInitialLink() {
     // In Flutter, the initial deep link is often passed as the default route name
     String? initialRoute = PlatformDispatcher.instance.defaultRouteName;
-    debugPrint("DeepLinkService: Checking initial route: $initialRoute");
+    AppLog.d("DeepLinkService: Checking initial route: $initialRoute");
     
     if (initialRoute != "/" && initialRoute != "index.html") {
       _handleLink(initialRoute);
@@ -45,7 +46,7 @@ class DeepLinkService with WidgetsBindingObserver {
 
   @override
   Future<bool> didPushRoute(String route) async {
-    debugPrint("DeepLinkService: Observer received route: $route");
+    AppLog.d("DeepLinkService: Observer received route: $route");
     _handleLink(route);
     return false; // Return false to allow standard navigation to proceed if needed
   }
@@ -53,7 +54,7 @@ class DeepLinkService with WidgetsBindingObserver {
   @override
   Future<bool> didPushRouteInformation(RouteInformation routeInformation) async {
     final String location = routeInformation.uri.toString();
-    debugPrint("DeepLinkService: Observer received location: $location");
+    AppLog.d("DeepLinkService: Observer received location: $location");
     _handleLink(location);
     return false;
   }
@@ -63,7 +64,7 @@ class DeepLinkService with WidgetsBindingObserver {
   }
 
   void _handleLink(String link) {
-    debugPrint("DeepLinkService: Received raw input: '$link'");
+    AppLog.d("DeepLinkService: Received raw input: '$link'");
     if (link.isEmpty || link == "/" || link == "index.html") return;
 
     // AI_DEBUG: Support various formats (Full text messages, deep links, or just the code)
@@ -103,7 +104,7 @@ class DeepLinkService with WidgetsBindingObserver {
         String code = foundCode.toUpperCase();
         if (code.length >= 5 && code.length <= 8) {
           pendingRoomCode.value = code;
-          debugPrint("DeepLinkService: SUCCESS! Extracted Code: ${pendingRoomCode.value}");
+          AppLog.d("DeepLinkService: SUCCESS! Extracted Code: ${pendingRoomCode.value}");
           
           scaffoldMessengerKey.currentState?.showSnackBar(
             SnackBar(
@@ -118,9 +119,9 @@ class DeepLinkService with WidgetsBindingObserver {
         }
       }
       
-      debugPrint("DeepLinkService: No valid room code found in input.");
+      AppLog.d("DeepLinkService: No valid room code found in input.");
     } catch (e) {
-      debugPrint("DeepLinkService: Error processing input '$link': $e");
+      AppLog.e("DeepLinkService: Error processing input '$link': $e");
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../services/hive_service.dart';
+import '../utils/app_log.dart';
 
 class AdBanner extends StatefulWidget {
   const AdBanner({super.key});
@@ -42,7 +43,7 @@ class _AdBannerState extends State<AdBanner> {
         },
         onAdFailedToLoad: (ad, err) {
           ad.dispose();
-          print("AI_DEBUG: Ad failed to load: $err");
+          AppLog.d("AI_DEBUG: Ad failed to load: $err");
         },
       ),
     )..load();

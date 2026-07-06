@@ -6,6 +6,7 @@ import '../services/ai_service.dart';
 import '../services/firestore_service.dart';
 import '../services/hive_service.dart';
 import '../services/reward_service.dart';
+import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
 
@@ -36,7 +37,7 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
     if (userText.isEmpty) return;
 
     if (!HiveService.canUseAi()) {
-      print("AI_LIMIT: Daily limit reached. Switching to local database for: $userText");
+      AppLog.d("AI_LIMIT: Daily limit reached. Switching to local database for: $userText");
       _showLocalResponse(userText);
       return;
     }
@@ -58,7 +59,7 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
   }
 
   Future<void> _handleHybridResponse(String userText) async {
-    print("HYBRID_DEBUG: Starting process for: $userText");
+    AppLog.d("HYBRID_DEBUG: Starting process for: $userText");
     
     try {
       // 1. Fetch relevant context
@@ -71,10 +72,10 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
       );
 
       if (aiResponse == null) {
-        print("HYBRID_DEBUG: AI Failed or Null. Switching to local database.");
+        AppLog.d("HYBRID_DEBUG: AI Failed or Null. Switching to local database.");
         await _showLocalResponse(userText);
       } else {
-        print("HYBRID_DEBUG: AI Success. Showing AI response.");
+        AppLog.d("HYBRID_DEBUG: AI Success. Showing AI response.");
         await HiveService.incrementAiUsage();
         if (mounted) {
           setState(() {
@@ -85,7 +86,7 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
         }
       }
     } catch (e) {
-      print("HYBRID_DEBUG: Error in hybrid handler: $e");
+      AppLog.e("HYBRID_DEBUG: Error in hybrid handler: $e");
       await _showLocalResponse(userText);
     }
   }

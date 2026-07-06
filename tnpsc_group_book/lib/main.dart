@@ -23,38 +23,54 @@ import 'firebase_options.dart';
 import 'services/firestore_service.dart';
 import 'services/version_service.dart';
 import 'services/deep_link_service.dart';
+import 'utils/app_log.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
-void main() async {
+void main() {
+  // 1. Core Flutter initialization (Instant)
   WidgetsFlutterBinding.ensureInitialized();
   
+  // 2. Start UI immediately
+  runApp(const TNPSCPrepApp());
+}
+
+// Background initializations triggered by SplashScreen
+Future<void> initializeServices() async {
+  AppLog.d("AI_DEBUG: initializeServices started");
+  
   // Lock orientation to portrait
-  await SystemChrome.setPreferredOrientations([
+  SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
   
-  // 1. Critical local-only initializations (Fast)
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // 1. Critical initializations
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    AppLog.d("AI_DEBUG: Firebase initialized");
+  } catch (e) {
+    AppLog.e("AI_DEBUG: Firebase init error: $e");
+  }
   
-  // Initialize DeepLinkService immediately to catch early links
-  DeepLinkService().init();
-
-  // Initialize Hive immediately as it's needed for UI state
+  // Initialize Hive immediately as it's needed for UI state and other services
   await HiveService.init();
-  
-  // Load local preferences
-  await AppTheme.loadThemePreference();
-  await AppTheme.loadFontSizePreference();
+  AppLog.d("AI_DEBUG: Hive initialized");
 
+  // Load preferences from Hive
+  AppLanguage.init();
+  AppTheme.init();
+  AppLog.d("AI_DEBUG: App preferences initialized");
+
+  // Initialize DeepLinkService after Hive as it may depend on app settings/language
+  DeepLinkService().init();
+  
   // 2. Network/Heavy initializations (In Background)
-  // Move everything else to a non-blocking background initialization
   _initServicesInBackground();
   
-  runApp(const TNPSCPrepApp());
+  AppLog.d("AI_DEBUG: initializeServices completed");
 }
 
 // Background initializations to speed up startup
@@ -135,15 +151,15 @@ class _MainWrapperState extends State<MainWrapper> {
   ];
 
   Future<void> _handleBackNavigation() async {
-    debugPrint("AI_DEBUG: [MainWrapper] _handleBackNavigation called. Current index: $_selectedIndex, isExiting: $_isExiting");
+    AppLog.d("AI_DEBUG: [MainWrapper] _handleBackNavigation called. Current index: $_selectedIndex, isExiting: $_isExiting");
     if (_isExiting) {
-      debugPrint("AI_DEBUG: [MainWrapper] Already in exiting state, ignoring.");
+      AppLog.d("AI_DEBUG: [MainWrapper] Already in exiting state, ignoring.");
       return;
     }
 
     // 1. If not on Home tab, switch to Home tab
     if (_selectedIndex != 0) {
-      debugPrint("AI_DEBUG: [MainWrapper] Not on Home tab (index $_selectedIndex). Switching to Home (index 0).");
+      AppLog.d("AI_DEBUG: [MainWrapper] Not on Home tab (index $_selectedIndex). Switching to Home (index 0).");
       setState(() {
         _selectedIndex = 0;
       });
@@ -151,7 +167,7 @@ class _MainWrapperState extends State<MainWrapper> {
     }
 
     // 2. If on Home tab, show exit confirmation
-    debugPrint("AI_DEBUG: [MainWrapper] On Home tab. Showing exit confirmation dialog.");
+    AppLog.d("AI_DEBUG: [MainWrapper] On Home tab. Showing exit confirmation dialog.");
     _isExiting = true;
     final shouldPop = await showDialog<bool>(
       context: context,
@@ -183,7 +199,7 @@ class _MainWrapperState extends State<MainWrapper> {
         actions: [
           TextButton(
             onPressed: () {
-              debugPrint("AI_DEBUG: [MainWrapper] User chose NOT to exit.");
+              AppLog.d("AI_DEBUG: [MainWrapper] User chose NOT to exit.");
               _isExiting = false;
               Navigator.pop(context, false);
             },
@@ -197,7 +213,7 @@ class _MainWrapperState extends State<MainWrapper> {
           ),
           ElevatedButton(
             onPressed: () {
-              debugPrint("AI_DEBUG: [MainWrapper] User chose YES to exit.");
+              AppLog.d("AI_DEBUG: [MainWrapper] User chose YES to exit.");
               Navigator.pop(context, true);
             },
             style: ElevatedButton.styleFrom(
@@ -213,10 +229,10 @@ class _MainWrapperState extends State<MainWrapper> {
     );
 
     if (shouldPop ?? false) {
-      debugPrint("AI_DEBUG: [MainWrapper] Executing SystemNavigator.pop()");
+      AppLog.d("AI_DEBUG: [MainWrapper] Executing SystemNavigator.pop()");
       SystemNavigator.pop();
     } else {
-      debugPrint("AI_DEBUG: [MainWrapper] Resetting isExiting to false.");
+      AppLog.d("AI_DEBUG: [MainWrapper] Resetting isExiting to false.");
       _isExiting = false;
     }
   }
@@ -229,7 +245,7 @@ class _MainWrapperState extends State<MainWrapper> {
         return PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, result) {
-            debugPrint("AI_DEBUG: [MainWrapper] Global PopScope triggered. didPop: $didPop");
+            AppLog.d("AI_DEBUG: [MainWrapper] Global PopScope triggered. didPop: $didPop");
             if (didPop) return;
             _handleBackNavigation();
           },
@@ -266,7 +282,7 @@ class _MainWrapperState extends State<MainWrapper> {
                     ],
                     selectedIndex: _selectedIndex,
                     onTabChange: (index) {
-                      debugPrint("AI_DEBUG: [MainWrapper] Tab changed to index $index");
+                      AppLog.d("AI_DEBUG: [MainWrapper] Tab changed to index $index");
                       setState(() {
                         _selectedIndex = index;
                       });

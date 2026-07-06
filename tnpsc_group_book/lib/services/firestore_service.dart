@@ -5,6 +5,7 @@ import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 import '../models/question.dart';
 import '../models/subject.dart';
+import '../utils/app_log.dart';
 import 'hive_service.dart';
 import 'ai_service.dart';
 import 'package:tnpsc_group_book/utils/app_language.dart';
@@ -24,7 +25,7 @@ class FirestoreService {
         if (attempt >= maxAttempts || e.toString().contains('permission-denied')) {
           rethrow;
         }
-        debugPrint("AI_DEBUG: Firestore Operation failed (Attempt $attempt/$maxAttempts). Retrying in ${attempt * 2}s...");
+        AppLog.d("AI_DEBUG: Firestore Operation failed (Attempt $attempt/$maxAttempts). Retrying in ${attempt * 2}s...");
         await Future.delayed(Duration(seconds: attempt * 2));
       }
     }
@@ -39,12 +40,12 @@ class FirestoreService {
         'name': name,
         'lastNameUpdateDate': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint("AI_DEBUG: User profile name updated in Firestore: $name");
+      AppLog.d("AI_DEBUG: User profile name updated in Firestore: $name");
       
       // Refresh user data immediately after save
       await getUserData(forceRefresh: true);
     } catch (e) {
-      debugPrint("Error updating profile name: $e");
+      AppLog.e("Error updating profile name", e);
     }
   }
 
@@ -82,7 +83,7 @@ class FirestoreService {
 
       return context.isNotEmpty ? context : "No specific local context found.";
     } catch (e) {
-      debugPrint("Error fetching context: $e");
+      AppLog.e("Error fetching context", e);
       return "Error retrieving context.";
     }
   }
@@ -135,7 +136,7 @@ class FirestoreService {
       try {
         DocumentSnapshot cachedDoc = await _db.collection('users').doc(uid).get(const GetOptions(source: Source.cache));
         if (cachedDoc.exists) {
-          debugPrint("AI_DEBUG: User data fetched from FIRESTORE CACHE (Initial)");
+          AppLog.d("AI_DEBUG: User data fetched from FIRESTORE CACHE (Initial)");
           var data = cachedDoc.data() as Map<String, dynamic>;
           await _syncCompletedQuizzesToHive(data);
           return cachedDoc;
@@ -145,7 +146,7 @@ class FirestoreService {
 
     try {
       // 2. Try server fetch with retry logic
-      debugPrint("AI_DEBUG: Fetching user data from SERVER...");
+      AppLog.d("AI_DEBUG: Fetching user data from SERVER...");
       DocumentSnapshot doc = await _retry(() => _db.collection('users').doc(uid).get(const GetOptions(source: Source.serverAndCache)));
       
       if (doc.exists) {
@@ -169,7 +170,7 @@ class FirestoreService {
       }
       return doc;
     } catch (e) {
-      debugPrint("AI_DEBUG: Server fetch failed after retries, falling back to cache: $e");
+      AppLog.d("AI_DEBUG: Server fetch failed after retries, falling back to cache: $e");
       try {
         DocumentSnapshot doc = await _db.collection('users').doc(uid).get(const GetOptions(source: Source.cache));
         if (doc.exists) {
@@ -178,7 +179,7 @@ class FirestoreService {
         }
         return doc;
       } catch (ce) {
-        debugPrint("AI_DEBUG: Firestore cache failed, app will use HiveService fallback");
+        AppLog.d("AI_DEBUG: Firestore cache failed, app will use HiveService fallback");
         return null;
       }
     }
@@ -192,12 +193,12 @@ class FirestoreService {
       await _db.collection('users').doc(uid).set({
         'totalScore': FieldValue.increment(points),
       }, SetOptions(merge: true));
-      debugPrint("AI_DEBUG: User points incremented in Firestore by $points");
+      AppLog.d("AI_DEBUG: User points incremented in Firestore by $points");
       
       // Refresh user data immediately after save
       await getUserData(forceRefresh: true);
     } catch (e) {
-      debugPrint("Error incrementing user points: $e");
+      AppLog.e("Error incrementing user points", e);
     }
   }
 
@@ -211,7 +212,7 @@ class FirestoreService {
       List<Question> cachedToday = HiveService.getQuestions("Daily Quiz");
       String? lastActiveDate = Hive.box(HiveService.userBoxName).get('last_active_quiz_date') as String?;
       if (cachedToday.isNotEmpty && lastActiveDate == today) {
-        debugPrint("AI_DEBUG: Today's Daily quiz fetched from HIVE");
+        AppLog.d("AI_DEBUG: Today's Daily quiz fetched from HIVE");
         return cachedToday;
       }
 
@@ -226,10 +227,10 @@ class FirestoreService {
       DocumentSnapshot? resolvedDoc;
       if (todaySnap.docs.isNotEmpty) {
         resolvedDoc = todaySnap.docs.first;
-        debugPrint("AI_DEBUG: Today's Daily quiz found in Firestore");
+        AppLog.d("AI_DEBUG: Today's Daily quiz found in Firestore");
       } else {
         // 2. Not found, try generating via AI (with timeout to prevent delay)
-        debugPrint("AI_DEBUG: Today's Daily quiz not found. Generating via AI...");
+        AppLog.d("AI_DEBUG: Today's Daily quiz not found. Generating via AI...");
         try {
           bool generated = await AiService.generateAndSaveDailyQuiz(DateTime.now())
               .timeout(const Duration(seconds: 30));
@@ -242,11 +243,11 @@ class FirestoreService {
                 .get();
             if (newTodaySnap.docs.isNotEmpty) {
               resolvedDoc = newTodaySnap.docs.first;
-              debugPrint("AI_DEBUG: AI Generated Daily quiz for today fetched successfully");
+              AppLog.d("AI_DEBUG: AI Generated Daily quiz for today fetched successfully");
             }
           }
         } catch (e) {
-          debugPrint("AI_DEBUG: Daily quiz generation timed out or failed: $e. Falling back...");
+          AppLog.d("AI_DEBUG: Daily quiz generation timed out or failed: $e. Falling back...");
         }
       }
 
@@ -259,14 +260,14 @@ class FirestoreService {
             .limit(1)
             .get();
          if (tomorrowSnap.docs.isEmpty) {
-           debugPrint("AI_DEBUG: Tomorrow's quiz not found. Generating in background...");
+           AppLog.d("AI_DEBUG: Tomorrow's quiz not found. Generating in background...");
            AiService.generateAndSaveDailyQuiz(DateTime.now().add(const Duration(days: 1)));
          }
       } catch (_) {}
 
       // 3. Fallback: If AI fails or today's quiz still missing, fetch older quiz
       if (resolvedDoc == null) {
-        debugPrint("AI_DEBUG: Daily quiz generation failed or missing today. Fetching older quiz as fallback...");
+        AppLog.d("AI_DEBUG: Daily quiz generation failed or missing today. Fetching older quiz as fallback...");
         QuerySnapshot fallbackSnap = await _db
             .collection('quizzes')
             .where('type', isEqualTo: 'daily_quiz')
@@ -279,7 +280,7 @@ class FirestoreService {
           final docsList = List<DocumentSnapshot>.from(fallbackSnap.docs);
           docsList.shuffle(); // Pick one at random for variety
           resolvedDoc = docsList.first;
-          debugPrint("AI_DEBUG: Fallback to a random older Daily quiz from date: ${resolvedDoc.get('date')}");
+          AppLog.d("AI_DEBUG: Fallback to a random older Daily quiz from date: ${resolvedDoc.get('date')}");
         }
       }
 
@@ -297,11 +298,11 @@ class FirestoreService {
         return questions;
       }
     } catch (e) {
-      debugPrint("Error fetching daily quiz: $e");
+      AppLog.e("Error fetching daily quiz", e);
     }
     
     // 4. Guaranteed non-empty: Final fallback to Hive
-    debugPrint("AI_DEBUG: Fetching daily quiz from HIVE (Offline Fallback)");
+    AppLog.d("AI_DEBUG: Fetching daily quiz from HIVE (Offline Fallback)");
     return HiveService.getQuestions("Daily Quiz");
   }
 
@@ -315,7 +316,7 @@ class FirestoreService {
       List<Question> cachedToday = HiveService.getQuestions("Mock Quiz");
       String? lastActiveDate = Hive.box(HiveService.userBoxName).get('last_active_mock_quiz_date') as String?;
       if (cachedToday.isNotEmpty && lastActiveDate == today) {
-        debugPrint("AI_DEBUG: Today's Mock quiz fetched from HIVE");
+        AppLog.d("AI_DEBUG: Today's Mock quiz fetched from HIVE");
         return cachedToday;
       }
 
@@ -331,10 +332,10 @@ class FirestoreService {
       DocumentSnapshot? resolvedDoc;
       if (todaySnap.docs.isNotEmpty) {
         resolvedDoc = todaySnap.docs.first;
-        debugPrint("AI_DEBUG: Today's Mock quiz found in Firestore");
+        AppLog.d("AI_DEBUG: Today's Mock quiz found in Firestore");
       } else {
         // 2. Not found, try generating via AI (with timeout)
-        debugPrint("AI_DEBUG: Today's Mock quiz not found. Generating via AI...");
+        AppLog.d("AI_DEBUG: Today's Mock quiz not found. Generating via AI...");
         try {
           bool generated = await AiService.generateAndSaveMockQuiz(DateTime.now())
               .timeout(const Duration(seconds: 45)); // Mock quiz has more questions, give more time
@@ -348,11 +349,11 @@ class FirestoreService {
                 .get();
             if (newTodaySnap.docs.isNotEmpty) {
               resolvedDoc = newTodaySnap.docs.first;
-              debugPrint("AI_DEBUG: AI Generated Mock quiz for today fetched successfully");
+              AppLog.d("AI_DEBUG: AI Generated Mock quiz for today fetched successfully");
             }
           }
         } catch (e) {
-          debugPrint("AI_DEBUG: Mock quiz generation timed out or failed: $e. Falling back...");
+          AppLog.d("AI_DEBUG: Mock quiz generation timed out or failed: $e. Falling back...");
         }
       }
 
@@ -366,14 +367,14 @@ class FirestoreService {
             .limit(1)
             .get();
          if (tomorrowSnap.docs.isEmpty) {
-           debugPrint("AI_DEBUG: Tomorrow's mock quiz not found. Generating in background...");
+           AppLog.d("AI_DEBUG: Tomorrow's mock quiz not found. Generating in background...");
            AiService.generateAndSaveMockQuiz(DateTime.now().add(const Duration(days: 1)));
          }
       } catch (_) {}
 
       // 3. Fallback: If AI fails or today's quiz still missing, fetch older mock quiz
       if (resolvedDoc == null) {
-        debugPrint("AI_DEBUG: Mock quiz generation failed or missing today. Fetching older mock quiz as fallback...");
+        AppLog.d("AI_DEBUG: Mock quiz generation failed or missing today. Fetching older mock quiz as fallback...");
         QuerySnapshot fallbackSnap = await _db
             .collection('mock_tests')
             .where('type', isEqualTo: 'daily_quiz')
@@ -387,7 +388,7 @@ class FirestoreService {
           final docsList = List<DocumentSnapshot>.from(fallbackSnap.docs);
           docsList.shuffle(); // Pick one at random for variety
           resolvedDoc = docsList.first;
-          debugPrint("AI_DEBUG: Fallback to a random older Mock quiz from date: ${resolvedDoc.get('date')}");
+          AppLog.d("AI_DEBUG: Fallback to a random older Mock quiz from date: ${resolvedDoc.get('date')}");
         }
       }
 
@@ -405,11 +406,11 @@ class FirestoreService {
         return questions;
       }
     } catch (e) {
-      debugPrint("Error fetching mock quiz: $e");
+      AppLog.e("Error fetching mock quiz", e);
     }
     
     // 4. Final fallback to Hive
-    debugPrint("AI_DEBUG: Fetching mock quiz from HIVE (Offline Fallback)");
+    AppLog.d("AI_DEBUG: Fetching mock quiz from HIVE (Offline Fallback)");
     return HiveService.getQuestions("Mock Quiz");
   }
 
@@ -442,18 +443,18 @@ class FirestoreService {
     // AI_DEBUG: Use 'en_US' to ensure consistent document IDs regardless of device language
     String dayName = DateFormat('EEEE', 'en_US').format(targetDate);
     String docId = "mock_${dayName}_${DateFormat('yyyy-MM-dd').format(targetDate)}";
-    debugPrint("AI_DEBUG: Generated Mock Leaderboard Doc ID: $docId");
+    AppLog.d("AI_DEBUG: Generated Mock Leaderboard Doc ID: $docId");
     return docId;
   }
 
   // Get Top Scorers for Leaderboard (Static Fetch - No Stream)
   Future<List<Map<String, dynamic>>> getLeaderboard({bool isDaily = true, bool forceRefresh = false}) async {
     try {
-      debugPrint("AI_DEBUG: getLeaderboard(isDaily: $isDaily, forceRefresh: $forceRefresh) started");
+      AppLog.d("AI_DEBUG: getLeaderboard(isDaily: $isDaily, forceRefresh: $forceRefresh) started");
       
       if (!forceRefresh) {
         if (!HiveService.shouldFetchLeaderboard(isDaily)) {
-           debugPrint("AI_DEBUG: Returning Leaderboard from HIVE cache");
+           AppLog.d("AI_DEBUG: Returning Leaderboard from HIVE cache");
            return HiveService.getLeaderboardData(isDaily) ?? [];
         }
       }
@@ -470,7 +471,7 @@ class FirestoreService {
         query = _db.collection('leaderboards').doc(docId).collection('scores');
       }
 
-      debugPrint("AI_DEBUG: Fetching from Firestore Path: $fullPath");
+      AppLog.d("AI_DEBUG: Fetching from Firestore Path: $fullPath");
 
       // Server fetch
       QuerySnapshot snapshot = await _retry(() => query
@@ -478,16 +479,16 @@ class FirestoreService {
           .limit(20)
           .get());
       
-      debugPrint("AI_DEBUG: Fetch successful. Document count: ${snapshot.docs.length}");
+      AppLog.d("AI_DEBUG: Fetch successful. Document count: ${snapshot.docs.length}");
       
       if (snapshot.docs.isEmpty) {
-        debugPrint("AI_DEBUG: No documents found at path: $fullPath");
+        AppLog.d("AI_DEBUG: No documents found at path: $fullPath");
         
         // Fallback: Check if collection exists without ordering (in case index is missing)
         try {
           QuerySnapshot testSnap = await query.limit(1).get();
           if (testSnap.docs.isNotEmpty) {
-             debugPrint("AI_DEBUG: ALERT: Collection HAS data, but orderBy failed. MISSING INDEX?");
+             AppLog.d("AI_DEBUG: ALERT: Collection HAS data, but orderBy failed. MISSING INDEX?");
           }
         } catch (_) {}
       }
@@ -500,7 +501,7 @@ class FirestoreService {
             d[key] = value.toDate().toIso8601String();
           }
         });
-        debugPrint("AI_DEBUG: Found User: ${d['userName']} with Score: ${d['score']}");
+        AppLog.d("AI_DEBUG: Found User: ${d['userName']} with Score: ${d['score']}");
         return d;
       }).toList();
       
@@ -511,8 +512,7 @@ class FirestoreService {
 
       return data;
     } catch (e, stack) {
-      debugPrint("AI_DEBUG: LEADERBOARD ERROR: $e");
-      debugPrint("AI_DEBUG: STACKTRACE: $stack");
+      AppLog.e("AI_DEBUG: LEADERBOARD ERROR", e, stack);
       // Fallback to Hive if server fails
       return HiveService.getLeaderboardData(isDaily) ?? [];
     }
@@ -540,7 +540,7 @@ class FirestoreService {
           .doc(uid)
           .get(const GetOptions(source: Source.cache));
       if (doc.exists) {
-        debugPrint("AI_DEBUG: User ${isDaily ? 'daily' : 'mock'} score fetched from CACHE");
+        AppLog.d("AI_DEBUG: User ${isDaily ? 'daily' : 'mock'} score fetched from CACHE");
         return doc.data() as Map<String, dynamic>;
       }
       // Fallback to server if not in cache
@@ -551,11 +551,11 @@ class FirestoreService {
           .doc(uid)
           .get();
       if (doc.exists) {
-        debugPrint("AI_DEBUG: User ${isDaily ? 'daily' : 'mock'} score fetched from SERVER");
+        AppLog.d("AI_DEBUG: User ${isDaily ? 'daily' : 'mock'} score fetched from SERVER");
         return doc.data() as Map<String, dynamic>;
       }
     } catch (e) {
-      debugPrint("AI_DEBUG: Error fetching user's score: $e");
+      AppLog.d("AI_DEBUG: Error fetching user's score: $e");
     }
     return null;
   }
@@ -599,7 +599,7 @@ class FirestoreService {
 
          // Update Daily (Subcollection format for TTL)
          batch.set(_db.collection('leaderboards').doc('daily_$today').collection('scores').doc(uid), scoreData, SetOptions(merge: true));
-         debugPrint("AI_DEBUG: BATCH: Daily Score updated (New Best: $score > $existingBest)");
+         AppLog.d("AI_DEBUG: BATCH: Daily Score updated (New Best: $score > $existingBest)");
 
          // Update Weekly (Subcollection format for TTL)
          batch.set(_db.collection('leaderboards').doc('weekly_$monday').collection('scores').doc(uid), scoreData, SetOptions(merge: true));
@@ -607,7 +607,7 @@ class FirestoreService {
          // AI_DEBUG: Reset daily leaderboard fetch tracking to force refresh on next visit
          await HiveService.saveLeaderboardData(true, []); // Clear local cache
        } else if (subject == "Daily Quiz") {
-         debugPrint("AI_DEBUG: Daily Leaderboard write SKIPPED (Score $score <= Best $existingBest)");
+         AppLog.d("AI_DEBUG: Daily Leaderboard write SKIPPED (Score $score <= Best $existingBest)");
        }
 
        // --- NEW: Save Mock Quiz Result to Scheduled Leaderboard ---
@@ -624,12 +624,12 @@ class FirestoreService {
          };
 
          batch.set(_db.collection('leaderboards').doc(docId).collection('scores').doc(uid), scoreData, SetOptions(merge: true));
-         debugPrint("AI_DEBUG: BATCH: Mock Score updated (New Best: $score > $existingBest)");
+         AppLog.d("AI_DEBUG: BATCH: Mock Score updated (New Best: $score > $existingBest)");
 
          // AI_DEBUG: Reset mock leaderboard fetch tracking
          await HiveService.saveLeaderboardData(false, []);
        } else if (subject == "Mock Quiz") {
-         debugPrint("AI_DEBUG: Mock Leaderboard write SKIPPED (Score $score <= Best $existingBest)");
+         AppLog.d("AI_DEBUG: Mock Leaderboard write SKIPPED (Score $score <= Best $existingBest)");
        }
 
       if (subject == "Daily Quiz") {
@@ -639,14 +639,14 @@ class FirestoreService {
           'completedDailyQuizzes': today,
           'dailyquiz_complete': true,
         }, SetOptions(merge: true));
-        debugPrint("AI_DEBUG: BATCH: Completed quiz date $today");
+        AppLog.d("AI_DEBUG: BATCH: Completed quiz date $today");
       } else if (subject == "Mock Quiz") {
         String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
         
         batch.set(_db.collection('users').doc(uid), {
           'completedMockQuizzes': today,
         }, SetOptions(merge: true));
-        debugPrint("AI_DEBUG: BATCH: Completed mock quiz date $today");
+        AppLog.d("AI_DEBUG: BATCH: Completed mock quiz date $today");
       }
 
       // Update local Hive stats immediately for real-time UI update
@@ -664,7 +664,7 @@ class FirestoreService {
       
       // Commit the batch
       await batch.commit();
-      debugPrint("AI_DEBUG: Quiz result saved via WriteBatch");
+      AppLog.d("AI_DEBUG: Quiz result saved via WriteBatch");
 
       // Refresh user data immediately after save to sync all stats
       await getUserData(forceRefresh: true);
@@ -682,7 +682,7 @@ class FirestoreService {
     // 1. Local check to prevent double execution in same session/device
     String localLastActive = userBox.get('lastActiveDate', defaultValue: "") as String;
     if (localLastActive == today) {
-      debugPrint("AI_DEBUG: Streak already updated today (Local Hive Check)");
+      AppLog.d("AI_DEBUG: Streak already updated today (Local Hive Check)");
       return;
     }
 
@@ -744,7 +744,7 @@ class FirestoreService {
       await getUserData(forceRefresh: true);
 
     } catch (e) {
-      debugPrint("Error updating streak: $e");
+      AppLog.e("Error updating streak", e);
     }
   }
 
@@ -767,7 +767,7 @@ class FirestoreService {
       
       return higherScorers.docs.length + 1;
     } catch (e) {
-      debugPrint("Error calculating rank: $e");
+      AppLog.e("Error calculating rank", e);
       return 0;
     }
   }
@@ -775,7 +775,7 @@ class FirestoreService {
   // Upload all static questions from models/question.dart to Firestore
   Future<void> uploadAllLocalQuestions() async {
     try {
-      print("AI_DEBUG: Starting bulk upload...");
+      AppLog.d("AI_DEBUG: Starting bulk upload...");
       for (var entry in subjectQuestions.entries) {
         String subject = entry.key;
         List<Question> questions = entry.value;
@@ -783,7 +783,7 @@ class FirestoreService {
         // Sanitize subject name to be used as document ID (replace / with -)
         String safeId = subject.replaceAll('/', '-');
 
-        print("AI_DEBUG: Uploading subject: $subject as $safeId (${questions.length} questions)");
+        AppLog.d("AI_DEBUG: Uploading subject: $subject as $safeId (${questions.length} questions)");
 
         List<Map<String, dynamic>> questionsData = questions.map((q) => {
           'question': q.question,
@@ -798,9 +798,9 @@ class FirestoreService {
           'lastUpdated': FieldValue.serverTimestamp(),
         });
       }
-      print("AI_DEBUG: Bulk upload completed successfully!");
+      AppLog.d("AI_DEBUG: Bulk upload completed successfully!");
     } catch (e) {
-      print("AI_DEBUG: BULK UPLOAD ERROR: $e");
+      AppLog.e("AI_DEBUG: BULK UPLOAD ERROR", e);
       rethrow;
     }
   }
@@ -811,7 +811,7 @@ class FirestoreService {
       if (!forceRefresh) {
         List<Question> cached = HiveService.getQuestions(subject);
         if (cached.isNotEmpty) {
-          debugPrint("AI_DEBUG: Subject questions $subject fetched from HIVE");
+          AppLog.d("AI_DEBUG: Subject questions $subject fetched from HIVE");
           return cached;
         }
       }
@@ -823,7 +823,7 @@ class FirestoreService {
         try {
           doc = await _db.collection('subject_questions').doc(safeId).get(const GetOptions(source: Source.cache));
           if (doc.exists) {
-            debugPrint("AI_DEBUG: Subject questions $subject fetched from FIRESTORE CACHE");
+            AppLog.d("AI_DEBUG: Subject questions $subject fetched from FIRESTORE CACHE");
             List<dynamic> questionsData = doc.get('questions');
             List<Question> questions = questionsData.map((q) => Question.fromMap(Map<String, dynamic>.from(q))).toList();
             
@@ -837,7 +837,7 @@ class FirestoreService {
       // Try server fetch
       doc = await _db.collection('subject_questions').doc(safeId).get();
       if (doc.exists) {
-        debugPrint("AI_DEBUG: Subject questions $subject fetched from SERVER");
+        AppLog.d("AI_DEBUG: Subject questions $subject fetched from SERVER");
         List<dynamic> questionsData = doc.get('questions');
         List<Question> questions = questionsData.map((q) => Question.fromMap(Map<String, dynamic>.from(q))).toList();
         
@@ -846,11 +846,11 @@ class FirestoreService {
         return questions;
       }
     } catch (e) {
-      print("Error fetching subject questions: $e");
+      AppLog.e("Error fetching subject questions", e);
     }
     
     // Fallback to Hive
-    debugPrint("AI_DEBUG: Fetching $subject from HIVE (Last Fallback)");
+    AppLog.d("AI_DEBUG: Fetching $subject from HIVE (Last Fallback)");
     return HiveService.getQuestions(subject);
   }
 
@@ -867,7 +867,7 @@ class FirestoreService {
         return questionsData.map((q) => Question.fromMap(Map<String, dynamic>.from(q))).toList();
       }
     } catch (e) {
-      print("Error fetching mock test: $e");
+      AppLog.e("Error fetching mock test: $e");
     }
     return [];
   }
@@ -887,13 +887,13 @@ class FirestoreService {
       final doc = await bookmarkRef.doc(qId).get();
       if (doc.exists) {
         await bookmarkRef.doc(qId).delete();
-        debugPrint("AI_DEBUG: Removed Bookmark: $qId");
+        AppLog.d("AI_DEBUG: Removed Bookmark: $qId");
       } else {
         await bookmarkRef.doc(qId).set(question.toMap());
-        debugPrint("AI_DEBUG: Added Bookmark: $qId");
+        AppLog.d("AI_DEBUG: Added Bookmark: $qId");
       }
     } catch (e) {
-      debugPrint("Error toggling bookmark: $e");
+      AppLog.e("Error toggling bookmark", e);
     }
   }
 
@@ -906,7 +906,7 @@ class FirestoreService {
       final doc = await _db.collection('users').doc(user.uid).collection('bookmarks').doc(qId).get();
       return doc.exists;
     } catch (e) {
-      debugPrint("Error checking bookmark status: $e");
+      AppLog.e("Error checking bookmark status", e);
       return false;
     }
   }
@@ -919,7 +919,7 @@ class FirestoreService {
       final snapshot = await _db.collection('users').doc(user.uid).collection('bookmarks').get();
       return snapshot.docs.map((doc) => Question.fromMap(doc.data())).toList();
     } catch (e) {
-      print("Error fetching bookmarks: $e");
+      AppLog.e("Error fetching bookmarks: $e");
       return [];
     }
   }
@@ -945,7 +945,7 @@ class FirestoreService {
       });
       return true;
     } catch (e) {
-      print("Error sending feedback: $e");
+      AppLog.e("Error sending feedback: $e");
       return false;
     }
   }
@@ -967,7 +967,7 @@ class FirestoreService {
         'lastMistakeAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint("Error saving mistake: $e");
+      AppLog.e("Error saving mistake", e);
     }
   }
 
@@ -979,7 +979,7 @@ class FirestoreService {
       String qId = questionText.hashCode.toString();
       await _db.collection('users').doc(user.uid).collection('mistakes').doc(qId).delete();
     } catch (e) {
-      debugPrint("Error removing mistake: $e");
+      AppLog.e("Error removing mistake", e);
     }
   }
 
@@ -991,7 +991,7 @@ class FirestoreService {
       final snapshot = await _db.collection('users').doc(user.uid).collection('mistakes').get();
       return snapshot.docs.map((doc) => Question.fromMap(doc.data())).toList();
     } catch (e) {
-      print("Error fetching mistakes: $e");
+      AppLog.e("Error fetching mistakes: $e");
       return [];
     }
   }
@@ -1002,7 +1002,7 @@ class FirestoreService {
       if (!forceRefresh) {
         List<Map<String, dynamic>>? cached = HiveService.getStudyMaterial(subject);
         if (cached != null && cached.isNotEmpty) {
-          debugPrint("AI_DEBUG: Study material $subject fetched from HIVE");
+          AppLog.d("AI_DEBUG: Study material $subject fetched from HIVE");
           return cached;
         }
       }
@@ -1014,7 +1014,7 @@ class FirestoreService {
         try {
           doc = await _db.collection('subject_study_material').doc(safeId).get(const GetOptions(source: Source.cache));
           if (doc.exists) {
-            debugPrint("AI_DEBUG: Study material $subject fetched from FIRESTORE CACHE");
+            AppLog.d("AI_DEBUG: Study material $subject fetched from FIRESTORE CACHE");
             List<dynamic> material = doc.get('material');
             var data = material.map((e) => Map<String, dynamic>.from(e)).toList();
             await HiveService.saveStudyMaterial(subject, data);
@@ -1025,14 +1025,14 @@ class FirestoreService {
 
       doc = await _db.collection('subject_study_material').doc(safeId).get();
       if (doc.exists) {
-        debugPrint("AI_DEBUG: Study material $subject fetched from SERVER");
+        AppLog.d("AI_DEBUG: Study material $subject fetched from SERVER");
         List<dynamic> material = doc.get('material');
         var data = material.map((e) => Map<String, dynamic>.from(e)).toList();
         await HiveService.saveStudyMaterial(subject, data);
         return data;
       }
     } catch (e) {
-      debugPrint("Error fetching study material: $e");
+      AppLog.e("Error fetching study material", e);
     }
     return [];
   }
@@ -1055,7 +1055,7 @@ class FirestoreService {
         return data;
       }).toList();
     } catch (e) {
-      debugPrint("Error fetching history: $e");
+      AppLog.e("Error fetching history", e);
       return [];
     }
   }
@@ -1073,7 +1073,7 @@ class FirestoreService {
               .where('userId', isEqualTo: uid)
               .get(const GetOptions(source: Source.cache));
           if (snapshot.docs.isNotEmpty) {
-            debugPrint("AI_DEBUG: Mastery data fetched from CACHE");
+            AppLog.d("AI_DEBUG: Mastery data fetched from CACHE");
             return _calculateMastery(snapshot);
           }
         } catch (_) {}
@@ -1086,7 +1086,7 @@ class FirestoreService {
 
       return _calculateMastery(snapshot);
     } catch (e) {
-      debugPrint("Error calculating mastery: $e");
+      AppLog.e("Error calculating mastery", e);
       return {};
     }
   }
@@ -1154,7 +1154,7 @@ class FirestoreService {
 
       return _calculateSubjectScores(snapshot);
     } catch (e) {
-      debugPrint("Error calculating subject scores: $e");
+      AppLog.e("Error calculating subject scores", e);
       return {};
     }
   }
@@ -1189,7 +1189,7 @@ class FirestoreService {
   // Upload all static subjects from models/subject.dart to Firestore
   Future<void> uploadAllSubjects() async {
     try {
-      print("AI_DEBUG: Starting bulk upload for subjects...");
+      AppLog.d("AI_DEBUG: Starting bulk upload for subjects...");
       for (var subject in tnpscSubjects) {
         String safeId = subject.id;
         
@@ -1208,11 +1208,11 @@ class FirestoreService {
           'subTopicsMapEn': subject.subTopicsMapEn,
           'lastUpdated': FieldValue.serverTimestamp(),
         });
-        print("AI_DEBUG: Uploaded subject: ${subject.titleEn}");
+        AppLog.d("AI_DEBUG: Uploaded subject: ${subject.titleEn}");
       }
-      print("AI_DEBUG: Bulk upload for subjects completed successfully!");
+      AppLog.d("AI_DEBUG: Bulk upload for subjects completed successfully!");
     } catch (e) {
-      print("AI_DEBUG: BULK UPLOAD SUBJECTS ERROR: $e");
+      AppLog.e("AI_DEBUG: BULK UPLOAD SUBJECTS ERROR", e);
       rethrow;
     }
   }

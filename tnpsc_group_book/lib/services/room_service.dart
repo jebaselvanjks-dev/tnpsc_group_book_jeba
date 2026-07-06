@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../models/room.dart';
 import '../models/question.dart';
+import '../utils/app_log.dart';
 import 'firestore_service.dart';
 import 'ai_service.dart';
 import 'hive_service.dart';
@@ -86,7 +87,7 @@ class RoomService {
 
     return attemptsCount < allowedLimit;
   } catch (e) {
-    debugPrint("Error checking room limit: $e");
+    AppLog.e("Error checking room limit", e);
     return false; // Fail safe
   }
 }
@@ -157,7 +158,7 @@ class RoomService {
       // 1. Priority: Fetch and shuffle from the pre-generated room quiz pool
       List<Question> allQuestions = [];
       try {
-        debugPrint("RoomService: Checking for pre-generated room quiz pool for $subject...");
+        AppLog.d("RoomService: Checking for pre-generated room quiz pool for $subject...");
         
         final roomQuizDoc = await _db
             .collection('room_predefined_quizzes')
@@ -175,16 +176,16 @@ class RoomService {
             for (var q in pool.take(roomQuestionCount)) {
               allQuestions.add(Question.fromMap(Map<String, dynamic>.from(q)));
             }
-            debugPrint("RoomService: Shuffled pool and selected ${allQuestions.length} unique questions.");
+            AppLog.d("RoomService: Shuffled pool and selected ${allQuestions.length} unique questions.");
           }
         }
       } catch (e) {
-        debugPrint("RoomService: Error fetching pre-generated room quiz pool: $e");
+        AppLog.e("RoomService: Error fetching pre-generated room quiz pool", e);
       }
 
       // 2. Force AI Generation if pre-generated is not found or empty
       if (allQuestions.isEmpty) {
-        debugPrint("RoomService: No pre-generated quiz found. Trying AI generation for subject: $subject...");
+        AppLog.d("RoomService: No pre-generated quiz found. Trying AI generation for subject: $subject...");
         try {
           // AI_DEBUG: Use the room-specific generation method for consistency
           bool generated = await AiService.generateAndSaveRoomPredefinedQuiz(subject);
@@ -207,13 +208,13 @@ class RoomService {
             }
           }
         } catch (e) {
-          debugPrint("RoomService: AI generation failed: $e");
+          AppLog.e("RoomService: AI generation failed", e);
         }
       }
 
       // 3. Fallback: Retrieve questions from other subjects in 'subject_questions'
       if (allQuestions.length < roomQuestionCount) {
-        debugPrint("RoomService: Still not enough. Trying fallback: fetching subject_questions for $subject...");
+        AppLog.d("RoomService: Still not enough. Trying fallback: fetching subject_questions for $subject...");
         try {
           // Try specific subject document first
           String safeId = subject.replaceAll('/', '-');
@@ -246,15 +247,15 @@ class RoomService {
               }
             }
           }
-          debugPrint("RoomService: After fallback 3 (Subject Questions), pool size: ${allQuestions.length}");
+          AppLog.d("RoomService: After fallback 3 (Subject Questions), pool size: ${allQuestions.length}");
         } catch (e) {
-          debugPrint("RoomService: Error fetching fallback subject questions: $e");
+          AppLog.e("RoomService: Error fetching fallback subject questions", e);
         }
       }
 
       // 4. Fallback: Load static default bilingual questions so room creation NEVER fails
       if (allQuestions.isEmpty) {
-        debugPrint("RoomService: All online fallbacks empty. Using high-quality hardcoded default questions.");
+        AppLog.d("RoomService: All online fallbacks empty. Using high-quality hardcoded default questions.");
         allQuestions.addAll(defaultRoomQuestions);
       }
 
@@ -367,7 +368,7 @@ class RoomService {
 
       return roomCode;
     } catch (e) {
-      debugPrint("Error creating room: $e");
+      AppLog.e("Error creating room", e);
       return null;
     }
   }
@@ -402,7 +403,7 @@ class RoomService {
         return null;
       }
     } catch (e) {
-      debugPrint("Error in getActiveHostRoom: $e");
+      AppLog.e("Error in getActiveHostRoom", e);
       String? cachedCode = HiveService.getHostRoomCode();
       if (cachedCode != null) {
         return {'roomCode': cachedCode};
@@ -459,11 +460,11 @@ class RoomService {
       }, SetOptions(merge: true));
 
       await batch.commit();
-      debugPrint("AI_DEBUG: Joined room and updated history in one batch");
+      AppLog.d("AI_DEBUG: Joined room and updated history in one batch");
       
       return 'success';
     } catch (e) {
-      debugPrint("Error joining room: $e");
+      AppLog.e("Error joining room", e);
       return 'error';
     }
   }
@@ -503,7 +504,7 @@ class RoomService {
       await batch.commit();
       return 'success';
     } catch (e) {
-      debugPrint("Error starting room: $e");
+      AppLog.e("Error starting room", e);
       return 'error';
     }
   }
@@ -540,14 +541,14 @@ class RoomService {
       }, SetOptions(merge: true));
 
       await batch.commit();
-      debugPrint("AI_DEBUG: Score submitted and history updated in one batch");
+      AppLog.d("AI_DEBUG: Score submitted and history updated in one batch");
       
       // Refresh user data immediately after save to sync history
       await _firestoreService.getUserData(forceRefresh: true);
 
       return await _checkAndMarkRoomFinished(roomCode);
     } catch (e) {
-      debugPrint("Error submitting score: $e");
+      AppLog.e("Error submitting score", e);
       return false;
     }
   }
@@ -724,7 +725,7 @@ class RoomService {
 
       // 2. Migration: If field is empty, check old subcollection
       if (historyStrings.isEmpty) {
-        debugPrint("AI_DEBUG: Field room_history is empty, checking subcollection for migration...");
+        AppLog.d("AI_DEBUG: Field room_history is empty, checking subcollection for migration...");
         QuerySnapshot oldSnap = await _db
             .collection('users')
             .doc(uid)
@@ -750,7 +751,7 @@ class RoomService {
             await _db.collection('users').doc(uid).set({
               'room_history': latestRoom,
             }, SetOptions(merge: true));
-            debugPrint("AI_DEBUG: Migrated latest item to room_history field: $latestRoom");
+            AppLog.d("AI_DEBUG: Migrated latest item to room_history field: $latestRoom");
             historyStrings = [latestRoom];
           }
         }
@@ -766,7 +767,7 @@ class RoomService {
       }).toList();
 
     } catch (e) {
-      debugPrint("Error fetching room history: $e");
+      AppLog.e("Error fetching room history", e);
       return [];
     }
   }

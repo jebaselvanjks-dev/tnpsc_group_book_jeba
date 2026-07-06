@@ -1,6 +1,6 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
+import '../utils/app_log.dart';
 
 import 'auth_local_api.dart';
 import 'auth_status_service.dart';
@@ -45,7 +45,7 @@ class AuthService {
         'action': isSignUp ? 'register' : 'login',
       });
     } on FirebaseFunctionsException catch (e) {
-      debugPrint('AuthService.saveUserAuth: ${e.code} ${e.message}');
+      AppLog.e('AuthService.saveUserAuth: ${e.code} ${e.message}');
       if (_useLocalFallback(e)) {
         await AuthLocalApi.saveUserAuth(
           email: email,
@@ -70,7 +70,7 @@ class AuthService {
       await AuthStatusService.setMustChangePassword(trimmed, true);
       return 'PASSWORD_EMAIL_SENT';
     } on FirebaseFunctionsException catch (e) {
-      debugPrint('AuthService.forgotPassword: ${e.code} ${e.message}');
+      AppLog.e('AuthService.forgotPassword: ${e.code} ${e.message}');
       if (_useLocalFallback(e)) {
         if (PasswordEmailConfig.canSendPasswordEmail) {
           return PasswordEmailService.sendForgotPasswordEmail(trimmed);
@@ -109,7 +109,7 @@ class AuthService {
       });
       await AuthStatusService.clearMustChangePassword(email);
     } on FirebaseFunctionsException catch (e) {
-      debugPrint('AuthService.changePassword: ${e.code} ${e.message}');
+      AppLog.e('AuthService.changePassword: ${e.code} ${e.message}');
       if (_useLocalFallback(e)) {
         await AuthLocalApi.changePassword(
           email: email,

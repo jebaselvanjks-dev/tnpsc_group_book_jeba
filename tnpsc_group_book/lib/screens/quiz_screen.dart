@@ -14,6 +14,7 @@ import '../services/tts_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/reward_service.dart';
 import '../widgets/bilingual_text.dart';
+import '../utils/app_log.dart';
 
 class QuizScreen extends StatefulWidget {
   final String subjectTitle;
@@ -557,15 +558,15 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Future<void> _handleBack() async {
-    debugPrint("AI_DEBUG: [QuizScreen] _handleBack called. isExiting: $_isExiting");
+    AppLog.d("AI_DEBUG: [QuizScreen] _handleBack called. isExiting: $_isExiting");
     if (_isExiting) return;
     final confirmed = await _showExitConfirmation();
-    debugPrint("AI_DEBUG: [QuizScreen] Exit confirmed: $confirmed");
+    AppLog.d("AI_DEBUG: [QuizScreen] Exit confirmed: $confirmed");
     if (confirmed && mounted) {
       setState(() {
         _isExiting = true;
       });
-      debugPrint("AI_DEBUG: [QuizScreen] Popping screen now.");
+      AppLog.d("AI_DEBUG: [QuizScreen] Popping screen now.");
       // Small delay to ensure build completes with canPop: true
       Future.delayed(Duration.zero, () {
         if (mounted) Navigator.of(context).pop();
@@ -1025,7 +1026,7 @@ class _QuizScreenState extends State<QuizScreen> {
         return PopScope(
           canPop: _isExiting,
           onPopInvokedWithResult: (didPop, result) {
-            debugPrint("AI_DEBUG: [QuizScreen] PopScope onPopInvokedWithResult. didPop: $didPop, isExiting: $_isExiting");
+            AppLog.d("AI_DEBUG: [QuizScreen] PopScope onPopInvokedWithResult. didPop: $didPop, isExiting: $_isExiting");
             if (didPop) return;
             _handleBack();
           },

@@ -25,8 +25,15 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _navigateToHome() async {
-    // Wait for the animation to be visible
-    await Future.delayed(const Duration(milliseconds: 1200));
+    // 1. Run all critical services in background while splash is showing
+    final initFuture = initializeServices();
+    
+    // 2. Wait for a minimum time for the animation (1.5s)
+    final delayFuture = Future.delayed(const Duration(milliseconds: 1500));
+    
+    // AI_DEBUG: Await both. This ensures services are ready AND the user sees the logo.
+    await Future.wait([initFuture, delayFuture]);
+
     if (!mounted) return;
     
     User? user = FirebaseAuth.instance.currentUser;

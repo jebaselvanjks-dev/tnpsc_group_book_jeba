@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../services/ai_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
+import '../utils/app_log.dart';
 
 import 'admin_feedback_screen.dart';
 import 'admin_quiz_manage_screen.dart';
@@ -436,9 +437,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           List questions = querySnap.docs.first.get('questions') ?? [];
           if (questions.length >= 50) {
             needsGeneration = false;
-            debugPrint("[BulkGen] $dateStr already has ${questions.length} questions. Skipping.");
+            AppLog.d("[BulkGen] $dateStr already has ${questions.length} questions. Skipping.");
           } else {
-            debugPrint("[BulkGen] $dateStr has only ${questions.length} questions. Regenerating...");
+            AppLog.d("[BulkGen] $dateStr has only ${questions.length} questions. Regenerating...");
           }
         }
 
@@ -451,7 +452,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           
           if (!success) {
             // Retry once if failed
-            debugPrint("[BulkGen] Failed first attempt for $dateStr. Retrying...");
+            AppLog.d("[BulkGen] Failed first attempt for $dateStr. Retrying...");
             success = await AiService.generateAndSaveMockQuiz(date);
           }
 
@@ -473,7 +474,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         _isGenerating = false;
         _currentStatus = "Error: $e";
       });
-      print("AI_DEBUG: Bulk 5‑day Generation Error: $e");
+      AppLog.e("AI_DEBUG: Bulk 5‑day Generation Error", e);
     }
   }
 

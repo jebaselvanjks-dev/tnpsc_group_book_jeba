@@ -14,6 +14,7 @@ import 'package:lottie/lottie.dart';
 import '../widgets/ad_banner.dart';
 import '../services/reward_service.dart';
 import '../services/hive_service.dart';
+import '../utils/app_log.dart';
 
 class ResultScreen extends StatefulWidget {
   final int score;
@@ -67,7 +68,7 @@ class _ResultScreenState extends State<ResultScreen> {
       Future.delayed(const Duration(seconds: 1), () {
         RewardService.showRewardAdIfAllowed(
           onRewardEarned: () {
-            debugPrint("Ad reward earned on result screen");
+            AppLog.d("Ad reward earned on result screen");
           },
         );
       });
@@ -104,7 +105,7 @@ class _ResultScreenState extends State<ResultScreen> {
       final qText = "${q.questionEn ?? ""} ${q.questionTa ?? ""} ${q.question}".toLowerCase();
 
       // DEBUG: Log question metadata
-      debugPrint("AI_DEBUG_RESULT: Q$i -> type: '$qType', sub: '$qSub', text: '${qText.substring(0, qText.length > 20 ? 20 : qText.length)}...'");
+      AppLog.d("AI_DEBUG_RESULT: Q$i -> type: '$qType', sub: '$qSub', text: '${qText.substring(0, qText.length > 20 ? 20 : qText.length)}...'");
 
       // Improved Hierarchy: Check keywords in type, subject, AND question text
       if (qType.contains('aptitude') || qSub.contains('aptitude') || qSub.contains('math') || qSub.contains('mental') || qText.contains('கணித') || qText.contains('aptitude') || qText.contains('எண்') || qText.contains('திறன்')) {
@@ -115,7 +116,7 @@ class _ResultScreenState extends State<ResultScreen> {
         category = 'general_studies';
       }
 
-      debugPrint("AI_DEBUG_RESULT: -> Final Category: $category");
+      AppLog.d("AI_DEBUG_RESULT: -> Final Category: $category");
 
       if (category == 'general_tamil') {
         tamilTotal++;
@@ -129,7 +130,7 @@ class _ResultScreenState extends State<ResultScreen> {
       }
     }
 
-    debugPrint("AI_DEBUG_STATS: Tamil: $tamilCorrect/$tamilTotal, GS: $gsCorrect/$gsTotal, Aptitude: $aptitudeCorrect/$aptitudeTotal");
+    AppLog.d("AI_DEBUG_STATS: Tamil: $tamilCorrect/$tamilTotal, GS: $gsCorrect/$gsTotal, Aptitude: $aptitudeCorrect/$aptitudeTotal");
 
     if (tamilTotal > 0) HiveService.updateCategoryPerformance('general_tamil', tamilCorrect, tamilTotal);
     if (gsTotal > 0) HiveService.updateCategoryPerformance('general_studies', gsCorrect, gsTotal);
@@ -162,7 +163,7 @@ class _ResultScreenState extends State<ResultScreen> {
         await Share.shareXFiles([XFile(imagePath.path)], text: shareText);
       }
     } catch (e) {
-      debugPrint("AI_DEBUG: Share error: $e");
+      AppLog.d("AI_DEBUG: Share error: $e");
     }
   }
 
@@ -264,7 +265,7 @@ class _ResultScreenState extends State<ResultScreen> {
         return PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, result) {
-            debugPrint("AI_DEBUG: [ResultScreen] PopScope triggered. didPop: $didPop");
+            AppLog.d("AI_DEBUG: [ResultScreen] PopScope triggered. didPop: $didPop");
             if (didPop) return;
             Navigator.pushAndRemoveUntil(
               context,

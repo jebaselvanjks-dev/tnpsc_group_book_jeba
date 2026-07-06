@@ -4,6 +4,7 @@ import 'package:hive/hive.dart';
 
 import 'hive_service.dart';
 import 'firestore_service.dart';
+import '../utils/app_log.dart';
 
 class RewardService {
   static RewardedAd? _rewardedAd;
@@ -23,7 +24,7 @@ class RewardService {
   static String get adUnitId => useTestAds ? testAdUnitId : realAdUnitId;
 
   static void loadRewardedAd() {
-    debugPrint('AI_DEBUG: Loading Rewarded Ad (ID: $adUnitId)');
+    AppLog.d('AI_DEBUG: Loading Rewarded Ad (ID: $adUnitId)');
     RewardedAd.load(
       adUnitId: adUnitId,
       request: const AdRequest(),
@@ -31,13 +32,13 @@ class RewardService {
         onAdLoaded: (ad) {
           _rewardedAd = ad;
           _isAdLoaded = true;
-          debugPrint('AI_DEBUG: Rewarded Ad Loaded Successfully');
+          AppLog.d('AI_DEBUG: Rewarded Ad Loaded Successfully');
         },
         onAdFailedToLoad: (err) {
           _isAdLoaded = false;
-          debugPrint('AI_DEBUG: Rewarded Ad failed to load: $err');
+          AppLog.d('AI_DEBUG: Rewarded Ad failed to load: $err');
           if (err.message.contains('403')) {
-             debugPrint('AI_DEBUG: ERROR 403: This usually means the AdMob account is not approved or the Ad Unit ID/Package Name mismatch.');
+             AppLog.d('AI_DEBUG: ERROR 403: This usually means the AdMob account is not approved or the Ad Unit ID/Package Name mismatch.');
           }
         },
       ),
@@ -49,14 +50,14 @@ class RewardService {
     try {
       if (points <= 0) return;
       await HiveService.addPoints(points);
-      debugPrint('AI_DEBUG: Added $points points via HiveService');
+      AppLog.d('AI_DEBUG: Added $points points via HiveService');
       
       if (syncToCloud) {
         final fs = FirestoreService();
         await fs.incrementUserPoints(points);
       }
     } catch (e) {
-      debugPrint('AI_DEBUG: Failed to add points: $e');
+      AppLog.d('AI_DEBUG: Failed to add points: $e');
     }
   }
 
@@ -66,7 +67,7 @@ class RewardService {
     bool useLimit = false
   }) {
     if (useLimit && !HiveService.canWatchRewardAdToday()) {
-      debugPrint('AI_DEBUG: Daily limit reached for settings ad.');
+      AppLog.d('AI_DEBUG: Daily limit reached for settings ad.');
       onRewardEarned(); 
       return;
     }
@@ -126,13 +127,13 @@ class RewardService {
         onRewardEarned();
       });
     } else {
-      debugPrint('AI_DEBUG: Rewarded Ad not ready yet, loading and will retry.');
+      AppLog.d('AI_DEBUG: Rewarded Ad not ready yet, loading and will retry.');
       loadRewardedAd();
       Future.delayed(const Duration(seconds: 2), () {
         if (_isAdLoaded && _rewardedAd != null) {
           showRewardAd(onRewardEarned: onRewardEarned, onFailure: onFailure);
         } else {
-          debugPrint('AI_DEBUG: Ad still not ready after 2s, proceeding to failure path.');
+          AppLog.d('AI_DEBUG: Ad still not ready after 2s, proceeding to failure path.');
           if (onFailure != null) onFailure(); else onRewardEarned();
         }
       });

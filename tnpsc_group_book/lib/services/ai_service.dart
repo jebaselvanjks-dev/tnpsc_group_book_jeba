@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:http/http.dart' as http;
+import '../utils/app_log.dart';
 
 class AiService {
   static List<String>? _cachedApiKeys;
@@ -31,7 +32,7 @@ class AiService {
       if (keysStr.isNotEmpty) {
         _cachedApiKeys =
             keysStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-        print("AI_DEBUG: Loaded ${_cachedApiKeys!.length} API keys from Remote Config");
+        AppLog.d("AI_DEBUG: Loaded ${_cachedApiKeys!.length} API keys from Remote Config");
       }
 
       // 2. Preferred Models
@@ -39,10 +40,10 @@ class AiService {
       if (modelsStr.isNotEmpty) {
         _cachedPreferredModels =
             modelsStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-        print("AI_DEBUG: Preferred Models from Remote Config: $_cachedPreferredModels");
+        AppLog.d("AI_DEBUG: Preferred Models from Remote Config: $_cachedPreferredModels");
       }
     } catch (e) {
-      print("AI_DEBUG: Remote Config Error: $e");
+      AppLog.d("AI_DEBUG: Remote Config Error: $e");
     } finally {
       _isFetchingConfig = false;
     }
@@ -102,7 +103,7 @@ class AiService {
       // 1. Discover available models
       List<String> discoveredModels = [];
       try {
-        print("AI_DEBUG: Discovering models with key: ${apiKey.substring(0, 5)}...");
+        AppLog.d("AI_DEBUG: Discovering models with key: ${apiKey.substring(0, 5)}...");
         final listUrl = Uri.parse(
           'https://generativelanguage.googleapis.com/v1/models?key=$apiKey',
         );
@@ -116,11 +117,11 @@ class AiService {
             }
           }
         } else {
-          print("AI_DEBUG: Key ${apiKey.substring(0, 5)} discovery failed (${listRes.statusCode}). Trying next key...");
+          AppLog.d("AI_DEBUG: Key ${apiKey.substring(0, 5)} discovery failed (${listRes.statusCode}). Trying next key...");
           continue; // Try next API key
         }
       } catch (e) {
-        print("AI_DEBUG: Discovery failed for key ${apiKey.substring(0, 5)}: $e");
+        AppLog.d("AI_DEBUG: Discovery failed for key ${apiKey.substring(0, 5)}: $e");
         continue;
       }
 
@@ -147,7 +148,7 @@ class AiService {
         finalModelsToTry = ['gemini-1.5-flash', 'gemini-pro'];
       }
 
-      print("AI_DEBUG: Trying restricted stable models: $finalModelsToTry");
+      AppLog.d("AI_DEBUG: Trying restricted stable models: $finalModelsToTry");
 
       // 3. Try each model (v1beta then v1)
       bool keyFailed = false;
@@ -159,7 +160,7 @@ class AiService {
 
           while (retries <= maxRetries) {
             try {
-              print("AI_DEBUG: REST Call - Trying $modelName on $version (Attempt ${retries + 1})...");
+              AppLog.d("AI_DEBUG: REST Call - Trying $modelName on $version (Attempt ${retries + 1})...");
               final url = Uri.parse(
                 'https://generativelanguage.googleapis.com/$version/models/$modelName:generateContent?key=$apiKey',
               );
@@ -209,7 +210,7 @@ class AiService {
                 final data = jsonDecode(response.body);
                 final candidate = data['candidates'][0];
                 if (candidate['finishReason'] != 'STOP') {
-                   print("AI_DEBUG: Model finished with reason: ${candidate['finishReason']}");
+                   AppLog.d("AI_DEBUG: Model finished with reason: ${candidate['finishReason']}");
                    break; // Try next model
                 }
 
@@ -227,30 +228,30 @@ class AiService {
                     jsonDecode(text);
                     return text;
                   } catch (e) {
-                    print("AI_DEBUG: JSON Decode failed for: ${text.substring(0, text.length > 50 ? 50 : text.length)}...");
+                    AppLog.d("AI_DEBUG: JSON Decode failed for: ${text.substring(0, text.length > 50 ? 50 : text.length)}...");
                     break; // Try next model
                   }
                 }
               } else if (response.statusCode == 429) {
-                print("AI_DEBUG: Rate limit reached (429). Retrying after backoff...");
+                AppLog.d("AI_DEBUG: Rate limit reached (429). Retrying after backoff...");
                 await Future.delayed(Duration(seconds: 2 * (retries + 1)));
                 retries++;
                 continue; 
               } else if (response.statusCode == 403) {
-                print("AI_DEBUG: Key invalid or permission denied (403). Switching key...");
+                AppLog.d("AI_DEBUG: Key invalid or permission denied (403). Switching key...");
                 keyFailed = true;
                 break;
               } else if (response.statusCode == 503 || response.statusCode == 500) {
-                print("AI_DEBUG: Server error (${response.statusCode}). Retrying...");
+                AppLog.d("AI_DEBUG: Server error (${response.statusCode}). Retrying...");
                 await Future.delayed(Duration(seconds: 1 * (retries + 1)));
                 retries++;
                 continue;
               } else {
-                print("AI_DEBUG: REST FAIL - Status: ${response.statusCode}");
+                AppLog.d("AI_DEBUG: REST FAIL - Status: ${response.statusCode}");
                 break; // Try next model
               }
             } catch (e) {
-              print("AI_DEBUG: REST Error: $e");
+              AppLog.d("AI_DEBUG: REST Error: $e");
               break; // Try next model
             }
           }
@@ -286,7 +287,7 @@ class AiService {
         }
       }
     } catch (e) {
-      print("AI_DEBUG: Context fetch error ($collectionName): $e");
+      AppLog.d("AI_DEBUG: Context fetch error ($collectionName): $e");
     }
     return context;
   }
@@ -454,7 +455,7 @@ $commonRules
           // Validation: Trim if more, fail if less
           if (q.length > expectedCount) q = q.sublist(0, expectedCount);
           if (q.length < expectedCount) {
-            print(
+            AppLog.d(
               "AI_DEBUG: Count mismatch for $quizType. Got ${q.length}, expected $expectedCount",
             );
             return;
@@ -464,7 +465,7 @@ $commonRules
             q.map((item) => {...item, 'quiz_type': quizType}),
           );
         } catch (e) {
-          print("AI_DEBUG: JSON Decode Error in fetchAndTag ($quizType): $e");
+          AppLog.d("AI_DEBUG: JSON Decode Error in fetchAndTag ($quizType): $e");
         }
       }
     }
@@ -648,7 +649,7 @@ $commonRules
     List<dynamic> allQuestions = [];
 
     // 1️⃣ Tamil questions
-    print("AI_DEBUG: Generating 25 Tamil Questions...");
+    AppLog.d("AI_DEBUG: Generating 25 Tamil Questions...");
     final resTamil = await _generateWithFallback(promptTamil);
     if (resTamil != null) {
       try {
@@ -661,12 +662,12 @@ $commonRules
           );
         }
       } catch (e) {
-        print("AI_DEBUG: Tamil JSON Parse Error: $e");
+        AppLog.d("AI_DEBUG: Tamil JSON Parse Error: $e");
       }
     }
 
     // 2️⃣ General Studies
-    print("AI_DEBUG: Generating 15 GS Questions...");
+    AppLog.d("AI_DEBUG: Generating 15 GS Questions...");
     final resGS = await _generateWithFallback(promptGS);
     if (resGS != null) {
       try {
@@ -678,12 +679,12 @@ $commonRules
           );
         }
       } catch (e) {
-        print("AI_DEBUG: GS JSON Parse Error: $e");
+        AppLog.d("AI_DEBUG: GS JSON Parse Error: $e");
       }
     }
 
     // 3️⃣ Aptitude
-    print("AI_DEBUG: Generating 10 Aptitude Questions...");
+    AppLog.d("AI_DEBUG: Generating 10 Aptitude Questions...");
     final resAptitude = await _generateWithFallback(promptAptitude);
     if (resAptitude != null) {
       try {
@@ -696,7 +697,7 @@ $commonRules
           );
         }
       } catch (e) {
-        print("AI_DEBUG: Aptitude JSON Parse Error: $e");
+        AppLog.d("AI_DEBUG: Aptitude JSON Parse Error: $e");
       }
     }
 
@@ -844,7 +845,7 @@ Only return the raw JSON array, no other text or markdown formatting.
           
           if (combinedQs.length > maxPoolSize) {
             combinedQs = combinedQs.sublist(0, maxPoolSize);
-            print("AI_DEBUG: Pool Size Management for $subject. Kept latest 500 questions.");
+            AppLog.d("AI_DEBUG: Pool Size Management for $subject. Kept latest 500 questions.");
           }
 
           // 4. Save back to Firestore
@@ -858,7 +859,7 @@ Only return the raw JSON array, no other text or markdown formatting.
           return true;
         }
       } catch (e) {
-        print("AI_DEBUG: Room Predefined Quiz JSON Parse Error: $e");
+        AppLog.d("AI_DEBUG: Room Predefined Quiz JSON Parse Error: $e");
       }
     }
     return false;
@@ -924,7 +925,7 @@ Return only the raw JSON array of EXACTLY $count items.
 
           // STRICT VALIDATION: Ensure exactly 'count' questions
           if (allQuestions.length != count) {
-            print(
+            AppLog.d(
               "AI_DEBUG: Count mismatch. Got ${allQuestions.length}, expected $count. Retrying logic...",
             );
             // If too many, trim. If too few, this attempt failed.
@@ -968,7 +969,7 @@ Return only the raw JSON array of EXACTLY $count items.
           return true;
         }
       } catch (e) {
-        print("AI_DEBUG: JSON Parse Error: $e");
+        AppLog.d("AI_DEBUG: JSON Parse Error: $e");
       }
     }
     return false;
@@ -1095,7 +1096,7 @@ Only return the raw JSON array, no other text or markdown formatting.
           return true;
         }
       } catch (e) {
-        print("AI_DEBUG: JSON Parse Error for $subject: $e");
+        AppLog.d("AI_DEBUG: JSON Parse Error for $subject: $e");
       }
     }
     return false;
@@ -1149,7 +1150,7 @@ Only return the raw JSON array, no other text or markdown formatting.
           return true;
         }
       } catch (e) {
-        print("AI_DEBUG: Study Material Parse Error: $e");
+        AppLog.d("AI_DEBUG: Study Material Parse Error: $e");
       }
     }
     return false;

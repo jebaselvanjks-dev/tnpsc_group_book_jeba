@@ -3,20 +3,28 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/question.dart';
 import 'dart:convert';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../utils/app_log.dart';
 
 class HiveService {
   static const String questionsBoxName = 'offline_questions';
   static const String userBoxName = 'user_data';
   static const String studyMaterialBoxName = 'study_material';
 
+  static bool isInitialized = false;
+
   static Future<void> init() async {
+    if (isInitialized) return;
+    
     await Hive.initFlutter();
     await Hive.openBox(userBoxName);
     await Hive.openBox(questionsBoxName);
     await Hive.openBox(studyMaterialBoxName);
     
+    isInitialized = true;
+    
     // AI_DEBUG: Run daily cleanup to reduce mobile memory usage
-    await _cleanupOldDailyData();
+    // Don't await this to speed up startup, but it's now optimized
+    _cleanupOldDailyData();
   }
 
   // AI_DEBUG: Deletes old daily stat keys to prevent local storage growth
@@ -27,6 +35,8 @@ class HiveService {
     
     if (lastCleanupDate != today) {
       List<dynamic> keys = box.keys.toList();
+      List<String> keysToDelete = [];
+      
       for (var key in keys) {
         if (key is String && (
             key.startsWith('reward_points_') ||
@@ -37,14 +47,19 @@ class HiveService {
             key.startsWith('quiz_ad_watches_') ||
             key.startsWith('room_create_attempts_')
         )) {
-          // If the key belongs to a different date, delete it
+          // If the key belongs to a different date, add to delete list
           if (!key.endsWith(today)) {
-             await box.delete(key);
+             keysToDelete.add(key);
           }
         }
       }
+
+      if (keysToDelete.isNotEmpty) {
+        await box.deleteAll(keysToDelete);
+        AppLog.d("AI_DEBUG: Mobile Memory Cleanup: Removed ${keysToDelete.length} old daily stat keys from Hive.");
+      }
+      
       await box.put('last_daily_cleanup_date', today);
-      debugPrint("AI_DEBUG: Mobile Memory Cleanup: Removed old daily stat keys from Hive.");
     }
   }
 
@@ -110,7 +125,7 @@ class HiveService {
     if (cachedTopics.length > 10) {
       String oldest = cachedTopics.removeAt(0);
       await box.delete(oldest);
-      debugPrint("AI_DEBUG: Memory Cleanup: Removed old subject cache for $oldest");
+      AppLog.d("AI_DEBUG: Memory Cleanup: Removed old subject cache for $oldest");
     }
 
     await userBox.put('cached_topics_list', cachedTopics);
@@ -148,7 +163,7 @@ class HiveService {
     var box = Hive.box(userBoxName);
     String today = DateTime.now().toString().split(' ')[0];
     int usage = box.get('ai_usage_$today', defaultValue: 0);
-    print("AI_DEBUG: Daily usage for $today is $usage / 50");
+    AppLog.d("AI_DEBUG: Daily usage for $today is $usage / 50");
     return usage < 50; // Increased limit to 50 messages per day
   }
 
@@ -228,7 +243,7 @@ class HiveService {
     int curTotal = box.get('totalScore', defaultValue: 0) as int;
     await box.put('totalScore', curTotal + pts);
     
-    debugPrint('AI_DEBUG: Points added: +$pts. New Total: ${curTotal + pts}');
+    AppLog.d('AI_DEBUG: Points added: +$pts. New Total: ${curTotal + pts}');
   }
 
   static Future<void> deductPoints(int pts) async {
@@ -385,7 +400,7 @@ class HiveService {
     
     // If it's a "login/app start" fresh fetch, we allow it once per session regardless of date
     if (!shouldFetch && !sessionFetched) {
-       debugPrint("AI_DEBUG: Forcing leaderboard fetch for new session");
+       AppLog.d("AI_DEBUG: Forcing leaderboard fetch for new session");
        return true;
     }
 

@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import '../services/hive_service.dart';
 import '../services/ai_service.dart';
+import '../utils/app_log.dart';
 
 class AppLanguage {
-  static final ValueNotifier<String> languageNotifier = ValueNotifier<String>(HiveService.getLanguage());
+  static final ValueNotifier<String> languageNotifier = ValueNotifier<String>('ta');
+
+  static void init() {
+    try {
+      languageNotifier.value = HiveService.getLanguage();
+    } catch (e) {
+      AppLog.e("AppLanguage init error: $e");
+    }
+  }
 
   static void changeLanguage(String code) {
     languageNotifier.value = code;
@@ -1044,7 +1053,7 @@ class AppLanguage {
         return translated.replaceAll('\\n', '\n').trim();
       }
     } catch (e) {
-      debugPrint("Translation error: $e");
+      AppLog.e("Translation error: $e");
     }
 
     return raw;

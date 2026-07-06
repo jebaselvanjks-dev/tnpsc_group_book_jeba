@@ -17,6 +17,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/question.dart';
 import '../services/deep_link_service.dart';
+import '../utils/app_log.dart';
 
 class RoomSetupScreen extends StatefulWidget {
   const RoomSetupScreen({super.key});
@@ -65,11 +66,11 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
   void _handleDeepLinkCode() {
     final code = DeepLinkService().pendingRoomCode.value;
-    debugPrint("AI_DEBUG: RoomSetupScreen - Received pending code from service: $code");
+    AppLog.d("AI_DEBUG: RoomSetupScreen - Received pending code from service: $code");
     if (code != null && mounted) {
       setState(() {
         _codeController.text = code;
-        debugPrint("AI_DEBUG: RoomSetupScreen - Set _codeController.text to: $code");
+        AppLog.d("AI_DEBUG: RoomSetupScreen - Set _codeController.text to: $code");
       });
       DeepLinkService().clearPendingCode();
       
@@ -595,7 +596,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   }
 
   void _showError(String message) {
-    debugPrint(message);
+    AppLog.e(message);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red));
   }
 
