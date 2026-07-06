@@ -30,12 +30,16 @@ class BilingualText extends StatelessWidget {
     String displayEn = en ?? "";
     String displayTa = ta ?? "";
     
-    // If structured fields are missing, try legacy splitting
+    // estructured fields or legacy splitting
     if (displayEn.isEmpty && displayTa.isEmpty && legacy != null) {
       var parsed = AppLanguage.parseBilingual(legacy!);
       displayEn = parsed['en']!;
       displayTa = parsed['ta']!;
     }
+    
+    // Safety check: if one is empty but the other isn't, use the available one for both to avoid empty lines
+    if (displayEn.isEmpty && displayTa.isNotEmpty) displayEn = displayTa;
+    if (displayTa.isEmpty && displayEn.isNotEmpty) displayTa = displayEn;
 
     // 1. If only one language is requested and available
     if (!showBoth) {

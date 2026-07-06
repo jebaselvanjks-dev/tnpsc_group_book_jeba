@@ -211,63 +211,7 @@ class RoomService {
         }
       }
 
-      // 3. Fallback: Retrieve questions from historical quizzes in the 'quizzes' collection
-      if (allQuestions.length < roomQuestionCount) {
-        debugPrint("RoomService: Not enough questions. Trying fallback: fetching old quizzes for $subject...");
-        try {
-          String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-          QuerySnapshot quizSnap = await _db.collection('quizzes')
-              .where('date', isNotEqualTo: today)
-              .orderBy('date', descending: true)
-              .limit(10)
-              .get();
-          
-          for (var doc in quizSnap.docs) {
-            var data = doc.data() as Map<String, dynamic>;
-            List? qs = data['questions'];
-            if (qs != null) {
-              for (var q in qs) {
-                // IMPORTANT: Filter by subject or quiz_type to avoid mixing
-                String? qType = q['quiz_type'] ?? q['subject'];
-                if (qType == subject) {
-                  allQuestions.add(Question.fromMap(Map<String, dynamic>.from(q)));
-                }
-              }
-            }
-            if (allQuestions.length >= 100) break; // Optimization: Don't over-fetch
-          }
-          debugPrint("RoomService: After fallback 3 (Old Quizzes), pool size: ${allQuestions.length}");
-        } catch (e) {
-          debugPrint("RoomService: Error fetching fallback old quizzes: $e");
-        }
-      }
-
-      // 4. Fallback: Retrieve questions from 'mock_tests' collection
-      if (allQuestions.length < roomQuestionCount) {
-        debugPrint("RoomService: Still not enough. Trying fallback: fetching mock tests for $subject...");
-        try {
-          QuerySnapshot mockSnap = await _db.collection('mock_tests').limit(5).get();
-          for (var doc in mockSnap.docs) {
-            var data = doc.data() as Map<String, dynamic>;
-            List? qs = data['questions'];
-            if (qs != null) {
-              for (var q in qs) {
-                // IMPORTANT: Filter by subject or quiz_type
-                String? qType = q['quiz_type'] ?? q['subject'];
-                if (qType == subject) {
-                  allQuestions.add(Question.fromMap(Map<String, dynamic>.from(q)));
-                }
-              }
-            }
-            if (allQuestions.length >= 100) break;
-          }
-          debugPrint("RoomService: After fallback 4 (Mock Tests), pool size: ${allQuestions.length}");
-        } catch (e) {
-          debugPrint("RoomService: Error fetching fallback mock tests: $e");
-        }
-      }
-
-      // 5. Fallback: Retrieve questions from other subjects in 'subject_questions'
+      // 3. Fallback: Retrieve questions from other subjects in 'subject_questions'
       if (allQuestions.length < roomQuestionCount) {
         debugPrint("RoomService: Still not enough. Trying fallback: fetching subject_questions for $subject...");
         try {
@@ -302,13 +246,13 @@ class RoomService {
               }
             }
           }
-          debugPrint("RoomService: After fallback 5 (Subject Questions), pool size: ${allQuestions.length}");
+          debugPrint("RoomService: After fallback 3 (Subject Questions), pool size: ${allQuestions.length}");
         } catch (e) {
           debugPrint("RoomService: Error fetching fallback subject questions: $e");
         }
       }
 
-      // 6. Fallback: Load static default bilingual questions so room creation NEVER fails
+      // 4. Fallback: Load static default bilingual questions so room creation NEVER fails
       if (allQuestions.isEmpty) {
         debugPrint("RoomService: All online fallbacks empty. Using high-quality hardcoded default questions.");
         allQuestions.addAll(defaultRoomQuestions);

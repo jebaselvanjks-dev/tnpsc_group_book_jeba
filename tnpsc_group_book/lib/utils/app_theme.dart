@@ -25,13 +25,13 @@ class AppTheme {
   // Glassmorphism constants
   static Color glassWhite(BuildContext context) => 
     Theme.of(context).brightness == Brightness.dark 
-      ? Colors.white.withOpacity(0.08) 
+      ? Colors.white.withValues(alpha: 0.08) 
       : Colors.white;
   
   static Color glassBorder(BuildContext context) => 
     Theme.of(context).brightness == Brightness.dark 
-      ? Colors.white.withOpacity(0.12) 
-      : Colors.grey.withOpacity(0.1);
+      ? Colors.white.withValues(alpha: 0.12) 
+      : Colors.grey.withValues(alpha: 0.1);
 
   static ThemeData get lightTheme => _buildTheme(Brightness.light);
   static ThemeData get darkTheme => _buildTheme(Brightness.dark);
@@ -65,6 +65,20 @@ class AppTheme {
         surface: isDark ? darkSurfaceColor : backgroundColor,
       ),
       scaffoldBackgroundColor: isDark ? darkBgColor : backgroundColor,
+      dialogTheme: DialogThemeData(
+        backgroundColor: isDark ? darkSurfaceColor : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titleTextStyle: getStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : textMainColor,
+        ),
+        contentTextStyle: getStyle(
+          fontSize: 15,
+          color: isDark ? Colors.white70 : textSecondaryColor,
+        ),
+      ),
       textTheme: baseTextTheme.copyWith(
         displayLarge: baseTextTheme.displayLarge?.copyWith(
           fontSize: (32 + sizeOffset) * fontSizeFactorNotifier.value,

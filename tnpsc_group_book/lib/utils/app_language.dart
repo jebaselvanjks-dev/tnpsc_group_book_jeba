@@ -823,8 +823,12 @@ class AppLanguage {
         return ta ? 'சரியான விடை:' : 'Correct answer:';
       case 'mock_quiz_title':
         return ta ? 'மாதிரி வினாடி வினா' : 'Mock Quiz';
+      case 'start_prep_recommendation':
+        return ta ? 'உங்கள் பயிற்சியைத் தொடங்கி உங்கள் பலத்தை அறியுங்கள்!' : 'Start your practice to see your strength analysis!';
       case 'focus_recommendation':
         return ta ? 'உங்களுக்கு {category} பாடத்தில் அதிக கவனம் தேவை' : 'You need to focus more on: {category}';
+      case 'focus_recommendation_plural':
+        return ta ? 'உங்களுக்கு {categories} பாடங்களில் அதிக கவனம் தேவை' : 'You need to focus more on: {categories}';
       case 'excellent_work':
         return ta ? 'அனைத்து பாடங்களிலும் சிறப்பான செயல்பாடு!' : 'Excellent performance in all areas!';
       case 'room_info_title':

@@ -228,20 +228,25 @@ class FirestoreService {
         resolvedDoc = todaySnap.docs.first;
         debugPrint("AI_DEBUG: Today's Daily quiz found in Firestore");
       } else {
-        // 2. Not found, try generating via AI
+        // 2. Not found, try generating via AI (with timeout to prevent delay)
         debugPrint("AI_DEBUG: Today's Daily quiz not found. Generating via AI...");
-        bool generated = await AiService.generateAndSaveDailyQuiz(DateTime.now());
-        if (generated) {
-          QuerySnapshot newTodaySnap = await _db
-              .collection('quizzes')
-              .where('type', isEqualTo: 'daily_quiz')
-              .where('date', isEqualTo: today)
-              .limit(1)
-              .get();
-          if (newTodaySnap.docs.isNotEmpty) {
-            resolvedDoc = newTodaySnap.docs.first;
-            debugPrint("AI_DEBUG: AI Generated Daily quiz for today fetched successfully");
+        try {
+          bool generated = await AiService.generateAndSaveDailyQuiz(DateTime.now())
+              .timeout(const Duration(seconds: 30));
+          if (generated) {
+            QuerySnapshot newTodaySnap = await _db
+                .collection('quizzes')
+                .where('type', isEqualTo: 'daily_quiz')
+                .where('date', isEqualTo: today)
+                .limit(1)
+                .get();
+            if (newTodaySnap.docs.isNotEmpty) {
+              resolvedDoc = newTodaySnap.docs.first;
+              debugPrint("AI_DEBUG: AI Generated Daily quiz for today fetched successfully");
+            }
           }
+        } catch (e) {
+          debugPrint("AI_DEBUG: Daily quiz generation timed out or failed: $e. Falling back...");
         }
       }
 
@@ -267,14 +272,14 @@ class FirestoreService {
             .where('type', isEqualTo: 'daily_quiz')
             .where('date', isLessThan: today)
             .orderBy('date', descending: true)
-            .limit(10)
+            .limit(20)
             .get();
             
         if (fallbackSnap.docs.isNotEmpty) {
           final docsList = List<DocumentSnapshot>.from(fallbackSnap.docs);
-          docsList.shuffle(); // Pick one at random to ensure variety
+          docsList.shuffle(); // Pick one at random for variety
           resolvedDoc = docsList.first;
-          debugPrint("AI_DEBUG: Fallback to older Daily quiz from date: ${resolvedDoc.get('date')}");
+          debugPrint("AI_DEBUG: Fallback to a random older Daily quiz from date: ${resolvedDoc.get('date')}");
         }
       }
 
@@ -328,21 +333,26 @@ class FirestoreService {
         resolvedDoc = todaySnap.docs.first;
         debugPrint("AI_DEBUG: Today's Mock quiz found in Firestore");
       } else {
-        // 2. Not found, try generating via AI
+        // 2. Not found, try generating via AI (with timeout)
         debugPrint("AI_DEBUG: Today's Mock quiz not found. Generating via AI...");
-        bool generated = await AiService.generateAndSaveMockQuiz(DateTime.now());
-        if (generated) {
-          QuerySnapshot newTodaySnap = await _db
-              .collection('mock_tests')
-              .where('type', isEqualTo: 'daily_quiz')
-              .where('quizType', isEqualTo: 'daily_50_quiz')
-              .where('date', isEqualTo: today)
-              .limit(1)
-              .get();
-          if (newTodaySnap.docs.isNotEmpty) {
-            resolvedDoc = newTodaySnap.docs.first;
-            debugPrint("AI_DEBUG: AI Generated Mock quiz for today fetched successfully");
+        try {
+          bool generated = await AiService.generateAndSaveMockQuiz(DateTime.now())
+              .timeout(const Duration(seconds: 45)); // Mock quiz has more questions, give more time
+          if (generated) {
+            QuerySnapshot newTodaySnap = await _db
+                .collection('mock_tests')
+                .where('type', isEqualTo: 'daily_quiz')
+                .where('quizType', isEqualTo: 'daily_50_quiz')
+                .where('date', isEqualTo: today)
+                .limit(1)
+                .get();
+            if (newTodaySnap.docs.isNotEmpty) {
+              resolvedDoc = newTodaySnap.docs.first;
+              debugPrint("AI_DEBUG: AI Generated Mock quiz for today fetched successfully");
+            }
           }
+        } catch (e) {
+          debugPrint("AI_DEBUG: Mock quiz generation timed out or failed: $e. Falling back...");
         }
       }
 
@@ -370,14 +380,14 @@ class FirestoreService {
             .where('quizType', isEqualTo: 'daily_50_quiz')
             .where('date', isLessThan: today)
             .orderBy('date', descending: true)
-            .limit(10)
+            .limit(20)
             .get();
             
         if (fallbackSnap.docs.isNotEmpty) {
           final docsList = List<DocumentSnapshot>.from(fallbackSnap.docs);
-          docsList.shuffle();
+          docsList.shuffle(); // Pick one at random for variety
           resolvedDoc = docsList.first;
-          debugPrint("AI_DEBUG: Fallback to older Mock quiz from date: ${resolvedDoc.get('date')}");
+          debugPrint("AI_DEBUG: Fallback to a random older Mock quiz from date: ${resolvedDoc.get('date')}");
         }
       }
 
@@ -1191,7 +1201,7 @@ class FirestoreService {
           'subtitleEn': subject.subtitleEn,
           'iconCodePoint': subject.icon.codePoint,
           'iconFontFamily': subject.icon.fontFamily,
-          'colorValue': subject.color.value,
+          'colorValue': subject.color.toARGB32(),
           'topicsTa': subject.topicsTa,
           'topicsEn': subject.topicsEn,
           'subTopicsMapTa': subject.subTopicsMapTa,

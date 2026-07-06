@@ -431,21 +431,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final gsPerf = HiveService.getCategoryPerformance('general_studies');
     final aptitudePerf = HiveService.getCategoryPerformance('aptitude');
 
-    if (tamilPerf['total'] == 0 && gsPerf['total'] == 0 && aptitudePerf['total'] == 0) {
-      return const SizedBox.shrink();
-    }
-
-    // Determine weakest area
-    String weakestCategory = "";
+    // Determine weakest area(s)
+    List<String> weakestCategories = [];
     double lowestPercent = 101;
 
     void checkWeakest(String key, Map<String, dynamic> perf) {
-      if (perf['total'] > 0) {
-        double correctPercent = perf['correctPercent'];
-        if (correctPercent < lowestPercent) {
-          lowestPercent = correctPercent;
-          weakestCategory = key;
-        }
+      double correctPercent = perf['correctPercent'];
+      if (correctPercent < lowestPercent) {
+        lowestPercent = correctPercent;
+        weakestCategories = [key];
+      } else if (correctPercent == lowestPercent) {
+        weakestCategories.add(key);
       }
     }
 
@@ -453,16 +449,36 @@ class _HomeScreenState extends State<HomeScreen> {
     checkWeakest("general_studies", gsPerf);
     checkWeakest("aptitude", aptitudePerf);
 
-    String recommendation = "";
-    if (weakestCategory.isNotEmpty && lowestPercent < 75) {
-      String catName = "";
-      if (weakestCategory == 'general_tamil') catName = isTamil ? 'பொது தமிழ்' : 'General Tamil';
-      else if (weakestCategory == 'general_studies') catName = isTamil ? 'பொது அறிவு' : 'General Studies';
-      else if (weakestCategory == 'aptitude') catName = isTamil ? 'கணிதத் திறன்' : 'Aptitude';
+    bool hasAnyAttempt = tamilPerf['total'] > 0 || gsPerf['total'] > 0 || aptitudePerf['total'] > 0;
 
-      recommendation = AppLanguage.getString('focus_recommendation').replaceAll('{category}', catName);
-    } else if (lowestPercent >= 75) {
+    String recommendation = "";
+    Color boxColor = Colors.blue;
+    IconData boxIcon = Icons.rocket_launch_rounded;
+
+    if (hasAnyAttempt && weakestCategories.isNotEmpty && lowestPercent < 75) {
+      List<String> catNames = [];
+      for (var cat in weakestCategories) {
+        if (cat == 'general_tamil') catNames.add(isTamil ? 'பொது தமிழ்' : 'General Tamil');
+        else if (cat == 'general_studies') catNames.add(isTamil ? 'பொது அறிவு' : 'General Studies');
+        else if (cat == 'aptitude') catNames.add(isTamil ? 'கணிதத் திறன்' : 'Aptitude');
+      }
+
+      String joinedNames = catNames.join(', ');
+      if (catNames.length > 1) {
+        recommendation = AppLanguage.getString('focus_recommendation_plural').replaceAll('{categories}', joinedNames);
+      } else {
+        recommendation = AppLanguage.getString('focus_recommendation').replaceAll('{category}', joinedNames);
+      }
+      boxColor = Colors.orange;
+      boxIcon = Icons.lightbulb_outline_rounded;
+    } else if (hasAnyAttempt && lowestPercent >= 75 && lowestPercent <= 100) {
       recommendation = AppLanguage.getString('excellent_work');
+      boxColor = Colors.green;
+      boxIcon = Icons.emoji_events_outlined;
+    } else {
+      recommendation = AppLanguage.getString('start_prep_recommendation');
+      boxColor = Colors.blue;
+      boxIcon = Icons.rocket_launch_rounded;
     }
 
     return Column(
@@ -505,15 +521,15 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: (lowestPercent < 75 ? Colors.orange : Colors.green).withValues(alpha: 0.1),
+              color: boxColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: (lowestPercent < 75 ? Colors.orange : Colors.green).withValues(alpha: 0.2)),
+              border: Border.all(color: boxColor.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
                 Icon(
-                  lowestPercent < 75 ? Icons.lightbulb_outline_rounded : Icons.emoji_events_outlined, 
-                  color: lowestPercent < 75 ? Colors.orange : Colors.green, 
+                  boxIcon, 
+                  color: boxColor, 
                   size: 24
                 ),
                 const SizedBox(width: 16),
@@ -523,7 +539,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: AppTheme.getStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: lowestPercent < 75 ? Colors.orange.shade800 : Colors.green.shade800,
+                      color: isDark ? boxColor.withValues(alpha: 0.9) : boxColor.darken(0.2),
                     ),
                   ),
                 ),
@@ -543,9 +559,6 @@ class _HomeScreenState extends State<HomeScreen> {
     required IconData icon,
     required Color color,
   }) {
-    // If there are no attempts, hide the widget.
-    if (total == 0) return const SizedBox.shrink();
-
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     bool isTamil = AppLanguage.languageNotifier.value == 'ta';
 

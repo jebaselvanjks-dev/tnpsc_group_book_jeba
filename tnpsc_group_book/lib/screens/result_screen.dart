@@ -107,7 +107,7 @@ class _ResultScreenState extends State<ResultScreen> {
       debugPrint("AI_DEBUG_RESULT: Q$i -> type: '$qType', sub: '$qSub', text: '${qText.substring(0, qText.length > 20 ? 20 : qText.length)}...'");
 
       // Improved Hierarchy: Check keywords in type, subject, AND question text
-      if (qType.contains('aptitude') || qSub.contains('aptitude') || qSub.contains('math') || qSub.contains('mental') || qText.contains('கணித') || qText.contains('aptitude')) {
+      if (qType.contains('aptitude') || qSub.contains('aptitude') || qSub.contains('math') || qSub.contains('mental') || qText.contains('கணித') || qText.contains('aptitude') || qText.contains('எண்') || qText.contains('திறன்')) {
         category = 'aptitude';
       } else if (qType.contains('general_tamil') || qSub.contains('tamil') || qText.contains('தமிழ்')) {
         category = 'general_tamil';
@@ -602,11 +602,12 @@ class _ResultScreenState extends State<ResultScreen> {
       String category = 'general_studies';
       final qType = q.quizType?.toLowerCase() ?? "";
       final qSub = q.subject?.toLowerCase() ?? "";
+      final qText = "${q.questionEn ?? ""} ${q.questionTa ?? ""} ${q.question}".toLowerCase();
 
-      // Improved Hierarchy: Check Aptitude first, then Tamil, then default to GS
-      if (qType.contains('aptitude') || qSub.contains('aptitude') || qSub.contains('math') || qSub.contains('mental')) {
+      // Improved Hierarchy: Check keywords
+      if (qType.contains('aptitude') || qSub.contains('aptitude') || qSub.contains('math') || qSub.contains('mental') || qText.contains('கணித') || qText.contains('aptitude') || qText.contains('எண்') || qText.contains('திறன்')) {
         category = 'aptitude';
-      } else if (qType.contains('tamil') || qSub.contains('tamil')) {
+      } else if (qType.contains('general_tamil') || qSub.contains('tamil') || qText.contains('தமிழ்')) {
         category = 'general_tamil';
       } else {
         category = 'general_studies';
@@ -628,26 +629,30 @@ class _ResultScreenState extends State<ResultScreen> {
       double gsAccuracy = gsTotal > 0 ? (gsCorrect / gsTotal) * 100 : 100.0;
       double aptitudeAccuracy = aptitudeTotal > 0 ? (aptitudeCorrect / aptitudeTotal) * 100 : 100.0;
 
-      String weakest = '';
+      List<String> weakestCategories = [];
       double lowestAcc = 100.0;
 
-      if (tamilTotal > 0 && tamilAccuracy < lowestAcc) {
-        lowestAcc = tamilAccuracy;
-        weakest = 'general_tamil';
-      }
-      if (gsTotal > 0 && gsAccuracy < lowestAcc) {
-        lowestAcc = gsAccuracy;
-        weakest = 'general_studies';
-      }
-      if (aptitudeTotal > 0 && aptitudeAccuracy < lowestAcc) {
-        lowestAcc = aptitudeAccuracy;
-        weakest = 'aptitude';
+      void checkAcc(String key, double acc, int total) {
+        if (total > 0) {
+          if (acc < lowestAcc) {
+            lowestAcc = acc;
+            weakestCategories = [key];
+          } else if (acc == lowestAcc) {
+            weakestCategories.add(key);
+          }
+        }
       }
 
-      if (weakest.isEmpty || lowestAcc == 100.0) {
+      checkAcc('general_tamil', tamilAccuracy, tamilTotal);
+      checkAcc('general_studies', gsAccuracy, gsTotal);
+      checkAcc('aptitude', aptitudeAccuracy, aptitudeTotal);
+
+      if (weakestCategories.isEmpty || lowestAcc == 100.0) {
         return isTamil ? 'ஏதுமில்லை' : 'None';
       }
-      return _getCategoryName(weakest, isTamil);
+      
+      List<String> names = weakestCategories.map((k) => _getCategoryName(k, isTamil)).toList();
+      return names.join(', ');
     }
 
     // Fallback to subject-based
@@ -802,11 +807,12 @@ class _ResultScreenState extends State<ResultScreen> {
       String category = 'general_studies';
       final qType = q.quizType?.toLowerCase() ?? "";
       final qSub = q.subject?.toLowerCase() ?? "";
+      final qText = "${q.questionEn ?? ""} ${q.questionTa ?? ""} ${q.question}".toLowerCase();
 
-      // Improved Hierarchy: Check Aptitude first, then Tamil, then default to GS
-      if (qType.contains('aptitude') || qSub.contains('aptitude') || qSub.contains('math') || qSub.contains('mental')) {
+      // Improved Hierarchy: Check keywords
+      if (qType.contains('aptitude') || qSub.contains('aptitude') || qSub.contains('math') || qSub.contains('mental') || qText.contains('கணித') || qText.contains('aptitude') || qText.contains('எண்') || qText.contains('திறன்')) {
         category = 'aptitude';
-      } else if (qType.contains('tamil') || qSub.contains('tamil')) {
+      } else if (qType.contains('general_tamil') || qSub.contains('tamil') || qText.contains('தமிழ்')) {
         category = 'general_tamil';
       } else {
         category = 'general_studies';
@@ -828,15 +834,15 @@ class _ResultScreenState extends State<ResultScreen> {
     double gsAccuracy = gsTotal > 0 ? (gsCorrect / gsTotal) * 100 : 0.0;
     double aptitudeAccuracy = aptitudeTotal > 0 ? (aptitudeCorrect / aptitudeTotal) * 100 : 0.0;
 
-    String weakestCategory = "";
+    List<String> weakestCategories = [];
     double lowestPercent = 101;
 
     void checkWeakest(String key, double accuracy, int total) {
-      if (total > 0) {
-        if (accuracy < lowestPercent) {
-          lowestPercent = accuracy;
-          weakestCategory = key;
-        }
+      if (accuracy < lowestPercent) {
+        lowestPercent = accuracy;
+        weakestCategories = [key];
+      } else if (accuracy == lowestPercent) {
+        weakestCategories.add(key);
       }
     }
 
@@ -844,14 +850,22 @@ class _ResultScreenState extends State<ResultScreen> {
     checkWeakest("general_studies", gsAccuracy, gsTotal);
     checkWeakest("aptitude", aptitudeAccuracy, aptitudeTotal);
 
+    // Note: Result screen always has attempts because a quiz just finished
     String recommendation = "";
-    if (weakestCategory.isNotEmpty && lowestPercent < 75) {
-      String catName = "";
-      if (weakestCategory == 'general_tamil') catName = isTamil ? 'பொது தமிழ்' : 'General Tamil';
-      else if (weakestCategory == 'general_studies') catName = isTamil ? 'பொது அறிவு' : 'General Studies';
-      else if (weakestCategory == 'aptitude') catName = isTamil ? 'கணிதத் திறன்' : 'Aptitude';
+    if (weakestCategories.isNotEmpty && lowestPercent < 75) {
+      List<String> catNames = [];
+      for (var cat in weakestCategories) {
+        if (cat == 'general_tamil') catNames.add(isTamil ? 'பொது தமிழ்' : 'General Tamil');
+        else if (cat == 'general_studies') catNames.add(isTamil ? 'பொது அறிவு' : 'General Studies');
+        else if (cat == 'aptitude') catNames.add(isTamil ? 'கணிதத் திறன்' : 'Aptitude');
+      }
 
-      recommendation = AppLanguage.getString('focus_recommendation').replaceAll('{category}', catName);
+      String joinedNames = catNames.join(', ');
+      if (catNames.length > 1) {
+        recommendation = AppLanguage.getString('focus_recommendation_plural').replaceAll('{categories}', joinedNames);
+      } else {
+        recommendation = AppLanguage.getString('focus_recommendation').replaceAll('{category}', joinedNames);
+      }
     } else if (lowestPercent >= 75 && lowestPercent <= 100) {
       recommendation = AppLanguage.getString('excellent_work');
     }

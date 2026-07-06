@@ -2,13 +2,11 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../models/question.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
 import '../services/firestore_service.dart';
 import 'result_screen.dart';
-import 'package:percent_indicator/percent_indicator.dart';
 import '../services/hive_service.dart';
 import '../services/analytics_service.dart';
 import '../services/ai_service.dart';
@@ -298,11 +296,15 @@ class _QuizScreenState extends State<QuizScreen> {
     final String wrongLabel = AppLanguage.getString('wrong_feedback');
     final String correctAnswerLabel = AppLanguage.getString('correct_answer_feedback');
 
+    // Show bilingual correct answer in SnackBar if user is wrong
+    final correctOpt = _visibleQuestions[_currentQuestionIndex].options[correctIndex];
+    final bilingualCorrect = AppLanguage.formatBilingual(correctOpt);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(isCorrect 
           ? correctLabel 
-          : '$wrongLabel $correctAnswerLabel ${_localizedOption(_visibleQuestions[_currentQuestionIndex].options[correctIndex])}'),
+          : '$wrongLabel $correctAnswerLabel $bilingualCorrect'),
         backgroundColor: isCorrect ? Colors.green : Colors.red,
         duration: Duration(seconds: isCorrect ? 1 : 3),
       ),
@@ -390,20 +392,20 @@ class _QuizScreenState extends State<QuizScreen> {
   Future<void> _generateMoreQuestions() async {
     if (!mounted) return;
     setState(() => _isGenerating = true);
-    bool success = false;
+    
     if (widget.isMockTest) {
-      success = await AiService.generateAndSaveMockQuiz(DateTime.now());
+      await AiService.generateAndSaveMockQuiz(DateTime.now());
     } else if (widget.subjectTitle == "Daily Quiz" || widget.subjectTitle == AppLanguage.getString('daily_quiz')) {
-      success = await AiService.generateAndSaveDailyQuiz(DateTime.now());
+      await AiService.generateAndSaveDailyQuiz(DateTime.now());
     } else if (widget.subjectTitle == "Mock Quiz" || widget.subjectTitle == AppLanguage.getString('mock_quiz')) {
-      success = await AiService.generateAndSaveMockQuiz(DateTime.now());
+      await AiService.generateAndSaveMockQuiz(DateTime.now());
     } else {
-      success = await AiService.generateSubjectQuestions(
+      await AiService.generateSubjectQuestions(
         widget.topicKey ?? widget.subjectTitle,
         category: widget.categoryKey ?? widget.category,
       );
     }
-    
+
     // Always call _loadQuestions() after generation attempt.
     // If success is false, _loadQuestions will still be called and 
     // it will try to fetch old quizzes or use local fallback.
@@ -644,7 +646,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                 margin: const EdgeInsets.only(bottom: 12),
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
-                                  color: isCorrect ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.05),
+                                  color: isCorrect ? Colors.green.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.05),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: isCorrect ? Colors.green : Colors.transparent,
@@ -769,6 +771,9 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
                 ],
               ),
+              actions: [
+
+              ],
             ),
             body: SafeArea(
               child: Column(
@@ -844,7 +849,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 24.0),
                     child: LinearProgressIndicator(
                       value: progress,
-                      backgroundColor: AppTheme.secondaryColor.withOpacity(0.1),
+                      backgroundColor: AppTheme.secondaryColor.withValues(alpha: 0.1),
                       valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.secondaryColor),
                       borderRadius: BorderRadius.circular(10),
                       minHeight: 8,
@@ -908,16 +913,16 @@ class _QuizScreenState extends State<QuizScreen> {
                                     Color borderColor;
                                     if (selected == null) {
                                       cardColor = isDark ? Theme.of(context).cardColor : Colors.white;
-                                      borderColor = isDark ? Colors.grey.withOpacity(0.2) : Colors.grey.withOpacity(0.2);
+                                      borderColor = isDark ? Colors.grey.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2);
                                     } else if (isSelected) {
-                                      cardColor = isCorrect ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1);
+                                      cardColor = isCorrect ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1);
                                       borderColor = isCorrect ? Colors.green : Colors.red;
                                     } else if (index == correctIndex) {
-                                      cardColor = Colors.green.withOpacity(0.1);
+                                      cardColor = Colors.green.withValues(alpha: 0.1);
                                       borderColor = Colors.green;
                                     } else {
                                       cardColor = isDark ? Theme.of(context).cardColor : Colors.white;
-                                      borderColor = isDark ? Colors.grey.withOpacity(0.2) : Colors.grey.withOpacity(0.2);
+                                      borderColor = isDark ? Colors.grey.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2);
                                     }
 
                                     return Padding(
@@ -934,7 +939,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                             border: Border.all(color: borderColor, width: 2),
                                             boxShadow: isSelected ? [
                                               BoxShadow(
-                                                color: borderColor.withOpacity(0.2),
+                                                color: borderColor.withValues(alpha: 0.2),
                                                 blurRadius: 10,
                                                 offset: const Offset(0, 4),
                                               )
@@ -989,7 +994,7 @@ class _QuizScreenState extends State<QuizScreen> {
                       color: Theme.of(context).scaffoldBackgroundColor,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           offset: const Offset(0, -4),
                           blurRadius: 10,
                         )
