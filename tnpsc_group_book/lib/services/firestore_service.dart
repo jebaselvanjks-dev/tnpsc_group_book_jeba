@@ -538,17 +538,6 @@ class FirestoreService {
           .doc(docId)
           .collection('scores')
           .doc(uid)
-          .get(const GetOptions(source: Source.cache));
-      if (doc.exists) {
-        AppLog.d("AI_DEBUG: User ${isDaily ? 'daily' : 'mock'} score fetched from CACHE");
-        return doc.data() as Map<String, dynamic>;
-      }
-      // Fallback to server if not in cache
-      doc = await _db
-          .collection('leaderboards')
-          .doc(docId)
-          .collection('scores')
-          .doc(uid)
           .get();
       if (doc.exists) {
         AppLog.d("AI_DEBUG: User ${isDaily ? 'daily' : 'mock'} score fetched from SERVER");
@@ -566,6 +555,8 @@ class FirestoreService {
     required int score,
     required int totalQuestions,
     required int timeTaken,
+    bool isDaily = false,
+    bool isMock = false,
   }) async {
     String? uid = _auth.currentUser?.uid;
     if (uid != null) {
@@ -577,13 +568,24 @@ class FirestoreService {
       }
 
       WriteBatch batch = _db.batch();
+
+      // 1. Save to results collection (For My History screen)
+      batch.set(_db.collection('results').doc(), {
+        'userId': uid,
+        'subject': subject,
+        'score': score,
+        'totalQuestions': totalQuestions,
+        'timeTaken': timeTaken,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      AppLog.d("AI_DEBUG: BATCH: Quiz result added to history");
       
       // AI_DEBUG: Only update leaderboard if score is better than previous best today
-      Map<String, dynamic>? bestResult = await getUserBestResultToday(isDaily: subject == "Daily Quiz");
+      Map<String, dynamic>? bestResult = await getUserBestResultToday(isDaily: isDaily);
       int existingBest = (bestResult?['score'] as num?)?.toInt() ?? -1;
 
        // Update Daily and Weekly Leaderboards if score > existingBest AND it's a Daily Quiz
-       if (score > 0 && subject == "Daily Quiz" && score > existingBest) {
+       if (score > 0 && isDaily && score > existingBest) {
          String today = DateFormat('yyyy-MM-dd', 'en_US').format(DateTime.now());
          String monday = _getMondayDateString();
 
@@ -606,12 +608,12 @@ class FirestoreService {
          
          // AI_DEBUG: Reset daily leaderboard fetch tracking to force refresh on next visit
          await HiveService.saveLeaderboardData(true, []); // Clear local cache
-       } else if (subject == "Daily Quiz") {
+       } else if (isDaily) {
          AppLog.d("AI_DEBUG: Daily Leaderboard write SKIPPED (Score $score <= Best $existingBest)");
        }
 
        // --- NEW: Save Mock Quiz Result to Scheduled Leaderboard ---
-       if (score > 0 && subject == "Mock Quiz" && score > existingBest) {
+       if (score > 0 && isMock && score > existingBest) {
          String docId = _getMockLeaderboardDocId();
          var scoreData = {
            'userId': uid,
@@ -628,11 +630,11 @@ class FirestoreService {
 
          // AI_DEBUG: Reset mock leaderboard fetch tracking
          await HiveService.saveLeaderboardData(false, []);
-       } else if (subject == "Mock Quiz") {
+       } else if (isMock) {
          AppLog.d("AI_DEBUG: Mock Leaderboard write SKIPPED (Score $score <= Best $existingBest)");
        }
 
-      if (subject == "Daily Quiz") {
+      if (isDaily) {
         String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
         batch.set(_db.collection('users').doc(uid), {
@@ -640,7 +642,7 @@ class FirestoreService {
           'dailyquiz_complete': true,
         }, SetOptions(merge: true));
         AppLog.d("AI_DEBUG: BATCH: Completed quiz date $today");
-      } else if (subject == "Mock Quiz") {
+      } else if (isMock) {
         String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
         
         batch.set(_db.collection('users').doc(uid), {

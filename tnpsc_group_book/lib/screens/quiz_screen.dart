@@ -438,11 +438,18 @@ class _QuizScreenState extends State<QuizScreen> {
         widget.subjectTitle != AppLanguage.getString('bookmarks')) {
       
       String saveTitle = widget.categoryKey ?? widget.category ?? widget.topicKey ?? widget.subjectTitle;
-      if (widget.subjectTitle == AppLanguage.getString('daily_quiz') ||
-          widget.subjectTitle == "Daily Quiz") {
+      
+      // Robust identification for Daily and Mock quizzes
+      bool isDaily = widget.subjectTitle == AppLanguage.getString('daily_quiz') || 
+                     widget.subjectTitle == "Daily Quiz";
+      bool isMock = widget.subjectTitle == AppLanguage.getString('mock_quiz') || 
+                    widget.subjectTitle == AppLanguage.getString('mock_quiz_title') ||
+                    widget.subjectTitle == "Mock Quiz" || 
+                    widget.isMockTest;
+
+      if (isDaily) {
         saveTitle = "Daily Quiz";
-      } else if (widget.subjectTitle == AppLanguage.getString('mock_quiz') ||
-                 widget.subjectTitle == "Mock Quiz") {
+      } else if (isMock) {
         saveTitle = "Mock Quiz";
       }
 
@@ -451,13 +458,15 @@ class _QuizScreenState extends State<QuizScreen> {
         score: score,
         totalQuestions: _visibleQuestions.length,
         timeTaken: timeTakenSeconds,
+        isDaily: isDaily,
+        isMock: isMock,
       );
 
-      if (saveTitle == "Daily Quiz") {
+      if (isDaily) {
         HiveService.setDailyQuizDone();
         // Award 20 points guaranteed for Daily Quiz completion
         RewardService.addPoints(20, syncToCloud: true);
-      } else if (saveTitle == "Mock Quiz") {
+      } else if (isMock) {
         HiveService.setMockQuizDone();
         // Award 20 points guaranteed for Mock Quiz completion
         RewardService.addPoints(20, syncToCloud: true);
@@ -470,10 +479,14 @@ class _QuizScreenState extends State<QuizScreen> {
       _visibleQuestions.length
     );
 
-    if (widget.subjectTitle == AppLanguage.getString('daily_quiz') ||
+    bool isDailyOrMock = widget.subjectTitle == AppLanguage.getString('daily_quiz') ||
         widget.subjectTitle == "Daily Quiz" ||
         widget.subjectTitle == AppLanguage.getString('mock_quiz') ||
-        widget.subjectTitle == "Mock Quiz") {
+        widget.subjectTitle == AppLanguage.getString('mock_quiz_title') ||
+        widget.subjectTitle == "Mock Quiz" ||
+        widget.isMockTest;
+
+    if (isDailyOrMock) {
       RewardService.showRewardAdIfAllowed(
           useLimit: false,
           onRewardEarned: () {

@@ -127,7 +127,7 @@ class RoomService {
   }
 
   // Create a new room
-  Future<String?> createRoom(String subject, int maxPlayers) async {
+  Future<String?> createRoom(String subject, int maxPlayers, {DateTime? startTime, DateTime? endTime}) async {
     String? uid = _auth.currentUser?.uid;
     if (uid == null) return null;
 
@@ -272,6 +272,8 @@ class RoomService {
         status: 'waiting',
         mode: 'group_test',
         createdAt: DateTime.now(),
+        startTime: startTime,
+        endTime: endTime,
         questions: questionsMap,
       );
 
@@ -392,11 +394,14 @@ class RoomService {
       if (snap.docs.isNotEmpty) {
         String roomCode = snap.docs.first.id;
         await HiveService.saveHostRoom(roomCode, today);
+        final data = snap.docs.first.data() as Map<String, dynamic>;
         return {
           'roomCode': roomCode,
-          'subject': snap.docs.first.get('subject'),
-          'maxPlayers': snap.docs.first.get('maxPlayers'),
-          'status': snap.docs.first.get('status'),
+          'subject': data['subject'],
+          'maxPlayers': data['maxPlayers'],
+          'status': data['status'],
+          'startTime': data['startTime'],
+          'endTime': data['endTime'],
         };
       } else {
         await HiveService.clearHostRoom();
@@ -769,6 +774,17 @@ class RoomService {
     } catch (e) {
       AppLog.e("Error fetching room history", e);
       return [];
+    }
+  }
+
+  Future<void> updateRoomTimeRange(String roomCode, DateTime start, DateTime end) async {
+    try {
+      await _getRoomRef(roomCode).update({
+        'startTime': Timestamp.fromDate(start),
+        'endTime': Timestamp.fromDate(end),
+      });
+    } catch (e) {
+      AppLog.e("Error updating room time range", e);
     }
   }
 }

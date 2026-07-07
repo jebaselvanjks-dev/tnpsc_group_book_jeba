@@ -9,6 +9,8 @@ class Room {
   final String mode; // 'group_test'
   final int expectedPlayerCount;
   final DateTime createdAt;
+  final DateTime? startTime;
+  final DateTime? endTime;
   final List<dynamic> questions;
 
   Room({
@@ -20,6 +22,8 @@ class Room {
     this.mode = 'group_test',
     this.expectedPlayerCount = 0,
     required this.createdAt,
+    this.startTime,
+    this.endTime,
     required this.questions,
   });
 
@@ -33,6 +37,8 @@ class Room {
       mode: map['mode'] ?? 'group_test',
       expectedPlayerCount: map['expectedPlayerCount'] ?? 0,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      startTime: (map['startTime'] as Timestamp?)?.toDate(),
+      endTime: (map['endTime'] as Timestamp?)?.toDate(),
       questions: map['questions'] ?? [],
     );
   }
@@ -46,6 +52,8 @@ class Room {
       'mode': mode,
       'expectedPlayerCount': expectedPlayerCount,
       'createdAt': FieldValue.serverTimestamp(),
+      'startTime': startTime != null ? Timestamp.fromDate(startTime!) : null,
+      'endTime': endTime != null ? Timestamp.fromDate(endTime!) : null,
       'questions': questions,
       'rewardDistributed': false,
     };

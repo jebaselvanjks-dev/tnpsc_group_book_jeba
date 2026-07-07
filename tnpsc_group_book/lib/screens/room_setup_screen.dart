@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:tnpsc_group_book/screens/room_leaderboard_screen.dart';
 import '../services/room_service.dart';
 import '../utils/app_language.dart';
@@ -35,6 +35,8 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   bool _isExiting = false;
   String _selectedSubject = 'general_tamil';
   int _selectedMaxPlayers = RoomService.baseMaxPlayers;
+  late TimeOfDay _startTime;
+  late TimeOfDay _endTime;
   bool _isFirstAttempt = true;
   Map<String, dynamic>? _activeRoomData;
 
@@ -52,6 +54,12 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // Initialize with a safe future time (5 mins from now) to avoid immediate validation error
+    final now = DateTime.now().add(const Duration(minutes: 5));
+    _startTime = TimeOfDay.fromDateTime(now);
+    _endTime = TimeOfDay.fromDateTime(now.add(const Duration(hours: 1)));
+
     _loadTeaserQuestions();
     _refreshExistingRoom();
 
@@ -186,8 +194,65 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         // Ad successful - Unlock the attempt
         await HiveService.incrementRoomAdWatchCount();
         
+        // Prepare dates
+        final now = DateTime.now();
+        final startDateTime = DateTime(now.year, now.month, now.day, _startTime.hour, _startTime.minute);
+        final endDateTime = DateTime(now.year, now.month, now.day, _endTime.hour, _endTime.minute);
+        
+        // Validation: Start time must be in future (at least 2 mins from now)
+        final nowAtCreation = DateTime.now();
+        if (startDateTime.isBefore(nowAtCreation.add(const Duration(minutes: 2)))) {
+          if (mounted) {
+            _showError(AppLanguage.languageNotifier.value == 'ta' 
+              ? "தொடக்க நேரம் குறைந்தது 2 நிமிடங்கள் எதிர்காலத்தில் இருக்க வேண்டும்" 
+              : "Start time must be at least 2 minutes in the future");
+            setState(() => _isLoading = false);
+          }
+          return;
+        }
+
+        // Validation: End time cannot be before start time
+        if (endDateTime.isBefore(startDateTime)) {
+          if (mounted) {
+            _showError(AppLanguage.languageNotifier.value == 'ta' 
+              ? "முடிவு நேரம் தொடக்க நேரத்திற்குப் பிறகு இருக்க வேண்டும்" 
+              : "End time must be after start time");
+            setState(() => _isLoading = false);
+          }
+          return;
+        }
+
+        final diffInMinutes = endDateTime.difference(startDateTime).inMinutes;
+
+        // Validation: At least 1 hour difference
+        if (diffInMinutes < 60) {
+          if (mounted) {
+            _showError(AppLanguage.languageNotifier.value == 'ta' 
+              ? "குறைந்தது 1 மணிநேர இடைவெளி தேவை (எ.கா: 5:40 PM - 6:40 PM)" 
+              : "Minimum 1 hour duration required (e.g., 5:40 PM - 6:40 PM)");
+            setState(() => _isLoading = false);
+          }
+          return;
+        }
+
+        // Validation: Maximum 24 hours
+        if (diffInMinutes > 1440) {
+          if (mounted) {
+            _showError(AppLanguage.languageNotifier.value == 'ta' 
+              ? "அதிகபட்சம் 24 மணிநேரம் மட்டுமே அனுமதிக்கப்படுகிறது" 
+              : "Maximum duration is 24 hours");
+            setState(() => _isLoading = false);
+          }
+          return;
+        }
+
         // Start creating the room on Firestore
-        String? code = await _roomService.createRoom(_selectedSubject, _selectedMaxPlayers);
+        String? code = await _roomService.createRoom(
+          _selectedSubject, 
+          _selectedMaxPlayers,
+          startTime: startDateTime,
+          endTime: endDateTime,
+        );
       
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -1105,6 +1170,200 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                         });
                       } : null,
                     ),
+                    const SizedBox(height: 20),
+                    Text(
+                      AppLanguage.languageNotifier.value == 'ta' ? "தேர்வு நேரம் (Time Range)" : "Match Time Range",
+                      style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final picked = await showTimePicker(
+                                context: context,
+                                initialTime: _startTime,
+                                builder: (context, child) {
+                                  bool isDark = Theme.of(context).brightness == Brightness.dark;
+                                  Color accentColor = isDark ? AppTheme.secondaryColor : AppTheme.primaryColor;
+                                  Color goldColor = AppTheme.secondaryColor;
+
+                                  return Theme(
+                                    data: Theme.of(context).copyWith(
+                                      timePickerTheme: TimePickerThemeData(
+                                        backgroundColor: isDark ? const Color(0xFF101F42).withOpacity(0.9) : Colors.white.withOpacity(0.9),
+                                        hourMinuteTextColor: WidgetStateColor.resolveWith((states) => 
+                                          states.contains(WidgetState.selected) ? Colors.white : goldColor),
+                                        hourMinuteColor: WidgetStateColor.resolveWith((states) => 
+                                          states.contains(WidgetState.selected) ? accentColor : (isDark ? Colors.white10 : Colors.grey.shade200)),
+                                        dayPeriodTextColor: WidgetStateColor.resolveWith((states) => 
+                                          states.contains(WidgetState.selected) ? Colors.white : goldColor),
+                                        dayPeriodColor: WidgetStateColor.resolveWith((states) => 
+                                          states.contains(WidgetState.selected) ? accentColor : Colors.transparent),
+                                        dialHandColor: accentColor,
+                                        dialBackgroundColor: isDark ? Colors.white10 : Colors.grey.shade100,
+                                        dialTextColor: WidgetStateColor.resolveWith((states) => 
+                                          states.contains(WidgetState.selected) ? Colors.white : goldColor),
+                                        entryModeIconColor: goldColor,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                                        helpTextStyle: AppTheme.getStyle(fontSize: 14, color: goldColor, fontWeight: FontWeight.bold),
+                                      ),
+                                      colorScheme: ColorScheme.fromSeed(
+                                        seedColor: accentColor,
+                                        primary: accentColor,
+                                        onPrimary: Colors.white,
+                                        surface: isDark ? const Color(0xFF101F42) : Colors.white,
+                                        onSurface: goldColor,
+                                        brightness: isDark ? Brightness.dark : Brightness.light,
+                                      ),
+                                    ),
+                                    child: BackdropFilter(
+                                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                      child: child!,
+                                    ),
+                                  );
+                                },
+                              );
+                              if (picked != null) {
+                                final now = DateTime.now();
+                                final pickedDT = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+                                
+                                if (pickedDT.isBefore(now.subtract(const Duration(minutes: 1)))) {
+                                  if (mounted) {
+                                    _showError(AppLanguage.languageNotifier.value == 'ta' 
+                                      ? "கடந்த கால நேரத்தைத் தேர்ந்தெடுக்க முடியாது" 
+                                      : "Cannot select past time");
+                                  }
+                                  return;
+                                }
+
+                                setState(() {
+                                  _startTime = picked;
+                                  // Auto increment end time by 1 hour
+                                  _endTime = TimeOfDay(
+                                    hour: (picked.hour + 1) % 24,
+                                    minute: picked.minute,
+                                  );
+                                });
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(AppLanguage.languageNotifier.value == 'ta' ? "தொடக்க நேரம்" : "Start Time", style: AppTheme.getStyle(fontSize: 12, color: Colors.grey)),
+                                  Text(_startTime.format(context), style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final picked = await showTimePicker(
+                                context: context,
+                                initialTime: _endTime,
+                                builder: (context, child) {
+                                  bool isDark = Theme.of(context).brightness == Brightness.dark;
+                                  Color accentColor = isDark ? AppTheme.secondaryColor : AppTheme.primaryColor;
+                                  Color goldColor = AppTheme.secondaryColor;
+
+                                  return Theme(
+                                    data: Theme.of(context).copyWith(
+                                      timePickerTheme: TimePickerThemeData(
+                                        backgroundColor: isDark ? const Color(0xFF101F42).withOpacity(0.9) : Colors.white.withOpacity(0.9),
+                                        hourMinuteTextColor: WidgetStateColor.resolveWith((states) => 
+                                          states.contains(WidgetState.selected) ? Colors.white : goldColor),
+                                        hourMinuteColor: WidgetStateColor.resolveWith((states) => 
+                                          states.contains(WidgetState.selected) ? accentColor : (isDark ? Colors.white10 : Colors.grey.shade200)),
+                                        dayPeriodTextColor: WidgetStateColor.resolveWith((states) => 
+                                          states.contains(WidgetState.selected) ? Colors.white : goldColor),
+                                        dayPeriodColor: WidgetStateColor.resolveWith((states) => 
+                                          states.contains(WidgetState.selected) ? accentColor : Colors.transparent),
+                                        dialHandColor: accentColor,
+                                        dialBackgroundColor: isDark ? Colors.white10 : Colors.grey.shade100,
+                                        dialTextColor: WidgetStateColor.resolveWith((states) => 
+                                          states.contains(WidgetState.selected) ? Colors.white : goldColor),
+                                        entryModeIconColor: goldColor,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                                        helpTextStyle: AppTheme.getStyle(fontSize: 14, color: goldColor, fontWeight: FontWeight.bold),
+                                      ),
+                                      colorScheme: ColorScheme.fromSeed(
+                                        seedColor: accentColor,
+                                        primary: accentColor,
+                                        onPrimary: Colors.white,
+                                        surface: isDark ? const Color(0xFF101F42) : Colors.white,
+                                        onSurface: goldColor,
+                                        brightness: isDark ? Brightness.dark : Brightness.light,
+                                      ),
+                                    ),
+                                    child: BackdropFilter(
+                                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                      child: child!,
+                                    ),
+                                  );
+                                },
+                              );
+                              if (picked != null) {
+                                final now = DateTime.now();
+                                final startDT = DateTime(now.year, now.month, now.day, _startTime.hour, _startTime.minute);
+                                final pickedDT = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+                                
+                                if (pickedDT.isBefore(startDT)) {
+                                  if (mounted) {
+                                    _showError(AppLanguage.languageNotifier.value == 'ta' 
+                                      ? "முடிவு நேரம் தொடக்க நேரத்திற்குப் பிறகு இருக்க வேண்டும்" 
+                                      : "End time must be after start time");
+                                  }
+                                  return;
+                                }
+
+                                if (pickedDT.difference(startDT).inMinutes < 60) {
+                                  if (mounted) {
+                                    _showError(AppLanguage.languageNotifier.value == 'ta' 
+                                      ? "முடிவு நேரம் தொடக்க நேரத்திலிருந்து குறைந்தது 1 மணிநேரம் தள்ளி இருக்க வேண்டும்" 
+                                      : "End time must be at least 1 hour after start time");
+                                  }
+                                  return;
+                                }
+
+                                setState(() => _endTime = picked);
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(AppLanguage.languageNotifier.value == 'ta' ? "முடிவு நேரம்" : "End Time", style: AppTheme.getStyle(fontSize: 12, color: Colors.grey)),
+                                  Text(_endTime.format(context), style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      AppLanguage.languageNotifier.value == 'ta' 
+                        ? "* தொடக்க நேரத்திற்கும் முடிவு நேரத்திற்கும் குறைந்தது 1 மணிநேரம் வித்தியாசம் இருக்க வேண்டும்." 
+                        : "* Minimum 1 hour difference between start and end time.",
+                      style: AppTheme.getStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 10),
                     Text(
                       _selectedMaxPlayers > RoomService.baseMaxPlayers
                           ? AppLanguage.getString('extra_player_cost').replaceAll('{points}', '${RoomService.extraPlayersCostPoints}').replaceAll('{total}', '${_requiredRoomPoints()}')
