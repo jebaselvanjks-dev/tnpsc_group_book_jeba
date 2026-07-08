@@ -197,7 +197,7 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
         ),
         title: Text(
           AppLanguage.getString('ai_smart_prep'),
-          style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isDark ? Colors.white : AppTheme.textMainColor),
+          style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: true,
         actions: [

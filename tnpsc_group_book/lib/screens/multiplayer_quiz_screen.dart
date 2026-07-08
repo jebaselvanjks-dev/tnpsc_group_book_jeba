@@ -236,7 +236,7 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
           icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
           onPressed: _handleBack,
         ),
-        title: Text(AppLanguage.getString('battle_title') + ': ${widget.roomCode}', style: AppTheme.getStyle(fontSize: 16)),
+        title: Text(AppLanguage.getString('battle_title') + ': ${widget.roomCode}', style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),

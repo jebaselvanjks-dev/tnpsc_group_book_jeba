@@ -331,7 +331,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                       Text(
                         "TNPSC LIVE BATTLE",
                         style: AppTheme.getStyle(
-                          fontSize: 18,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -340,9 +340,9 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                       Text(
                         AppLanguage.getString(_subject),
                         style: AppTheme.getStyle(
-                          fontSize: 15,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.secondaryColor,
+                          color: AppTheme.primaryColor,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -372,14 +372,15 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
-                              ).copyWith(letterSpacing: 5),
+                              ).copyWith(letterSpacing: 3),
                             ),
+                            const SizedBox(height: 5),
                             Text(
                               widget.roomCode,
                               style: AppTheme.getStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.textMainColor,
+                                color: AppTheme.darkBgColor,
                               ).copyWith(letterSpacing: 6),
                             ),
                           ],
@@ -395,7 +396,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                           const SizedBox(width: 8),
                           Text(
                             formattedDateTime,
-                            style: AppTheme.getStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                            style: AppTheme.getStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -407,7 +408,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                           const SizedBox(width: 8),
                           Text(
                             AppLanguage.getString('lobby_max_players').replaceAll('{max}', '${roomData['maxPlayers']}'),
-                            style: AppTheme.getStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                            style: AppTheme.getStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -898,7 +899,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                 icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
                 onPressed: _handleBack,
               ),
-              title: Text(AppLanguage.getString('group_test_lobby'), style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              title: Text(AppLanguage.getString('group_test_lobby'), style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               backgroundColor: Colors.transparent,
               elevation: 0,
               iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),

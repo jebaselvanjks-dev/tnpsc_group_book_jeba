@@ -49,9 +49,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
         title: Text(
           AppLanguage.getString('bookmarks'),
           style: AppTheme.getStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: isDark ? Colors.white : AppTheme.textMainColor,
+            fontWeight: FontWeight.bold, fontSize: 18
           ),
         ),
         centerTitle: true,

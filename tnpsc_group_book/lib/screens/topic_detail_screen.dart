@@ -525,7 +525,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                 ),
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text(widget.topic),
+              title: Text(widget.topic, style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               bottom: TabBar(
                 tabs: [
                   Tab(text: AppLanguage.getString('exam')),

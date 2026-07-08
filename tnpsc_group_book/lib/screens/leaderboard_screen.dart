@@ -53,7 +53,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
                   Text(
                     AppLanguage.getString('leaderboard'),
                     style: AppTheme.getStyle(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w800,
                       fontSize: 18,
                       color: isDark ? Colors.white : AppTheme.textMainColor,
                     ),

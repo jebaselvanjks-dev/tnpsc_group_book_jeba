@@ -161,7 +161,7 @@ class AppTheme {
         centerTitle: true,
         titleTextStyle: (isTamil ? GoogleFonts.notoSansTamil() : GoogleFonts.outfit()).copyWith(
           color: mainTextColor,
-          fontSize: (20 + sizeOffset) * fontSizeFactorNotifier.value,
+          fontSize: 18 * fontSizeFactorNotifier.value,
           fontWeight: FontWeight.bold,
         ),
         iconTheme: IconThemeData(color: mainTextColor),

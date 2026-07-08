@@ -60,7 +60,7 @@ class WeakAreaScreen extends StatelessWidget {
           icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Smart Weak Area Analysis'),
+        title: Text('Smart Weak Area Analysis', style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: AppTheme.primaryColor,
       ),
       body: Padding(

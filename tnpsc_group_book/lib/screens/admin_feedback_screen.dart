@@ -19,7 +19,7 @@ class AdminFeedbackScreen extends StatelessWidget {
         ),
         title: Text(
           "User Feedbacks",
-          style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(

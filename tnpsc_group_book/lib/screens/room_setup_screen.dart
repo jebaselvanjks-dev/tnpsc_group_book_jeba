@@ -845,7 +845,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
             onPressed: () => _handleBack(context),
           ),
           title: Text(AppLanguage.getString('room_screen_title'), style: AppTheme.getStyle(
-              fontSize: 15, fontWeight: FontWeight.bold)),
+              fontWeight: FontWeight.bold, fontSize: 18)),
           backgroundColor: Colors.transparent,
           elevation: 0,
           iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),

@@ -31,7 +31,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Admin Dashboard"),
+        title: Text(
+          "Admin Dashboard",
+          style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(

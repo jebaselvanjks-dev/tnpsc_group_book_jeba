@@ -111,9 +111,7 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
           title: Text(
             ta ? 'குழு தேர்வு முடிவு' : 'Group Test Results',
             style: AppTheme.getStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-            color: isDark ? Colors.white : AppTheme.textMainColor,
+            fontWeight: FontWeight.bold, fontSize: 18
           ),
           ),
           centerTitle: true,

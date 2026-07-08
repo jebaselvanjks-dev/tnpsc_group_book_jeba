@@ -48,12 +48,7 @@ class _MistakeBankScreenState extends State<MistakeBankScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          AppLanguage.getString('mistake_bank'),
-          style: AppTheme.getStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: isDark ? Colors.white : AppTheme.textMainColor,
-          ),
+          AppLanguage.getString('mistake_bank'),style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: true,
         actions: [

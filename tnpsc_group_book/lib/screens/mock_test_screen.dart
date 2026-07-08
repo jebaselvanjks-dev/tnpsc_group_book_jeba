@@ -38,9 +38,7 @@ class MockTestScreen extends StatelessWidget {
                   ? "${AppLanguage.getString(category!)} ${AppLanguage.getString('mock_tests_title')}"
                   : AppLanguage.getString('mock_tests_title'),
               style: AppTheme.getStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: isDark ? Colors.white : AppTheme.textMainColor,
+                fontWeight: FontWeight.bold, fontSize: 18
               ),
             ),
             centerTitle: true,

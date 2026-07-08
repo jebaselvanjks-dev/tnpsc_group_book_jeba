@@ -145,7 +145,7 @@ class _AiTutorScreenState extends State<AiTutorScreen> {
         ),
         title: Text(
           AppLanguage.getString('ai_tutor'),
-          style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isDark ? Colors.white : AppTheme.textMainColor),
+          style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: true,
       ),

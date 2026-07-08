@@ -100,7 +100,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
               onPressed: () => Navigator.pop(context),
             ),
-            title: Text(AppLanguage.getString('feedback_title')),
+            title: Text(AppLanguage.getString('feedback_title'), style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),

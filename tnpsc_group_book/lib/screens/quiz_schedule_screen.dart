@@ -26,7 +26,7 @@ class QuizScheduleScreen extends StatelessWidget {
           icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Quiz Schedule'),
+        title: Text('Quiz Schedule', style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: const Color(0xFF0A0E21),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(

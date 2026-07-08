@@ -38,9 +38,7 @@ class SubTopicScreen extends StatelessWidget {
             title: Text(
               parentTopic,
               style: AppTheme.getStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: isDark ? Colors.white : AppTheme.textMainColor,
+                fontWeight: FontWeight.bold, fontSize: 18
               ),
             ),
             centerTitle: true,

@@ -764,29 +764,26 @@ class _QuizScreenState extends State<QuizScreen> {
                 icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
                 onPressed: _handleBack,
               ),
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(displayTitle, style: AppTheme.getStyle(fontSize: 16)),
-                  Builder(
-                    builder: (context) {
-                      int mins = _remainingSeconds ~/ 60;
-                      int secs = _remainingSeconds % 60;
-                      String timeStr = "${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}";
-                      return Text(
-                        timeStr,
-                        style: AppTheme.getStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: _remainingSeconds < 60 ? Colors.red : AppTheme.secondaryColorLight,
-                        ),
-                      );
-                    }
-                  ),
-                ],
-              ),
+              title: Text(displayTitle, style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               actions: [
-
+                Padding(
+                  padding: const EdgeInsets.only(right: 15.0),
+                  child: Builder(
+                      builder: (context) {
+                        int mins = _remainingSeconds ~/ 60;
+                        int secs = _remainingSeconds % 60;
+                        String timeStr = "${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}";
+                        return Text(
+                          timeStr,
+                          style: AppTheme.getStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: _remainingSeconds < 60 ? Colors.red : AppTheme.secondaryColorLight,
+                          ),
+                        );
+                      }
+                  ),
+                ),
               ],
             ),
             body: SafeArea(

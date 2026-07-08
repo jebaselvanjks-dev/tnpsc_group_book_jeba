@@ -22,7 +22,7 @@ class BooksScreen extends StatelessWidget {
             ),
             title: Text(
               AppLanguage.getString('school_books'),
-              style: AppTheme.getStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
           ),
           body: AnimationLimiter(

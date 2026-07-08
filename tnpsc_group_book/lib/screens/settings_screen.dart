@@ -194,7 +194,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               onPressed: () => Navigator.pop(context),
             ),
-            title: Text(AppLanguage.getString('settings')),
+            title: Text(AppLanguage.getString('settings'), style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ),
           body: ValueListenableBuilder<ThemeMode>(
             valueListenable: AppTheme.themeNotifier,

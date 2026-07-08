@@ -35,7 +35,7 @@ class ReviewScreen extends StatelessWidget {
               icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
               onPressed: () => Navigator.pop(context),
             ),
-            title: Text(AppLanguage.getString('review_answers')),
+            title: Text(AppLanguage.getString('review_answers'), style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ),
           body: ListView.builder(
             padding: const EdgeInsets.all(20),
