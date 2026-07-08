@@ -5,6 +5,7 @@ import '../models/question.dart';
 import '../services/hive_service.dart';
 import '../services/room_service.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
 import '../services/reward_service.dart';
 import '../services/tts_service.dart';
@@ -233,7 +234,7 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+          icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
           onPressed: _handleBack,
         ),
         title: Text(AppLanguage.getString('battle_title') + ': ${widget.roomCode}', style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),

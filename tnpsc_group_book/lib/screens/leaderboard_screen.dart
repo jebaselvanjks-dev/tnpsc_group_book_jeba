@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
 import '../services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -54,7 +55,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
                     AppLanguage.getString('leaderboard'),
                     style: AppTheme.getStyle(
                       fontWeight: FontWeight.w800,
-                      fontSize: 18,
+                      fontSize: 20,
                       color: isDark ? Colors.white : AppTheme.textMainColor,
                     ),
                   ),
@@ -246,7 +247,7 @@ class _MyRankStickyCardState extends State<_MyRankStickyCard> {
                         // Refresh button
                         IconButton(
                           padding: EdgeInsets.all(0),
-                          icon: const Icon(Icons.refresh, color: Colors.white),
+                          icon: const AppIcon(AppIcons.refresh, color: Colors.white),
                           onPressed: () {
                             _loadFuture();
                           },
@@ -339,7 +340,7 @@ class _LeaderboardListState extends State<_LeaderboardList> {
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
                           onPressed: _onRefresh,
-                          icon: const Icon(Icons.refresh),
+                          icon: const AppIcon(AppIcons.refresh),
                           label: Text(lang == 'ta' ? 'மீண்டும் ஏற்றவும்' : 'Refresh'),
                         )
                       ],
@@ -430,7 +431,7 @@ class _LeaderboardListState extends State<_LeaderboardList> {
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  const Icon(Icons.timer_outlined, size: 14, color: Colors.grey),
+                                  const AppIcon(AppIcons.timer, size: 14, color: Colors.grey),
                                   const SizedBox(width: 4),
                                   Text(
                                     timeDisplay,

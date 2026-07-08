@@ -11,6 +11,7 @@ import '../services/reward_service.dart';
 import '../services/hive_service.dart';
 import '../utils/app_language.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../main.dart';
 
 class RoomLeaderboardScreen extends StatefulWidget {
@@ -116,16 +117,16 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
           ),
           centerTitle: true,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+            icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
             onPressed: () => Navigator.maybePop(context),
           ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_rounded),
+            icon: const AppIcon(AppIcons.share),
             onPressed: _shareResults,
           ),
           IconButton(
-            icon: const Icon(Icons.home_rounded),
+            icon: const AppIcon(AppIcons.home),
             onPressed: () => Navigator.popUntil(context, (r) => r.isFirst),
           ),
         ],

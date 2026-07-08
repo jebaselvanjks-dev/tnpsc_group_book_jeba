@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../utils/app_language.dart';
 
@@ -17,7 +18,7 @@ class BooksScreen extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+              icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(

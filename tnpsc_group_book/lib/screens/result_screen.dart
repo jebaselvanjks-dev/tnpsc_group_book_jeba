@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/question.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
 import '../main.dart'; // To navigate Home
 import 'review_screen.dart';
@@ -177,7 +178,7 @@ class _ResultScreenState extends State<ResultScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.emoji_events_rounded, color: Colors.amber, size: 80),
+          const AppIcon(AppIcons.leaderboard, color: Colors.amber, size: 80),
           const SizedBox(height: 20),
           Text(
             AppLanguage.getString('app_title').toUpperCase(),
@@ -452,7 +453,7 @@ class _ResultScreenState extends State<ResultScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 15),
                         child: ElevatedButton.icon(
                           onPressed: _shareScorecard,
-                          icon: const Icon(Icons.share_rounded, color: Colors.white),
+                          icon: const AppIcon(AppIcons.share, color: Colors.white),
                           label: Padding(
                             padding: const EdgeInsets.only(top: 8.0, bottom: 8),
                             child: Text(
@@ -914,7 +915,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close_rounded, color: isDark ? Colors.white60 : Colors.grey),
+                    icon: AppIcon(AppIcons.close, color: isDark ? Colors.white60 : Colors.grey),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],

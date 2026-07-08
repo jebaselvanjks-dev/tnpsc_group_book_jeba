@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/question.dart';
 import '../services/firestore_service.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
 import 'quiz_screen.dart';
 
@@ -43,7 +44,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
         backgroundColor: isDark ? Colors.black : Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+          icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -91,7 +92,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
                     ),
                   ).then((_) => _loadBookmarks());
                 },
-                icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+                icon: const AppIcon(AppIcons.play, color: Colors.white),
                 label: Text(
                   AppLanguage.getString('start_now'),
                   style: AppTheme.getStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
@@ -148,7 +149,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
           color: Colors.red.shade400,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 28),
+        child: const AppIcon(AppIcons.delete, color: Colors.white, size: 28),
       ),
       onDismissed: (direction) async {
         await _firestoreService.toggleBookmark(q);
@@ -185,7 +186,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle_outline_rounded, color: Colors.green, size: 20),
+                  const AppIcon(AppIcons.check, color: Colors.green, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(

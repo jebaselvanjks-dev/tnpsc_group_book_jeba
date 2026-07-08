@@ -7,6 +7,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:tnpsc_group_book/services/deep_link_service.dart';
 import '../models/subject.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import 'package:tnpsc_group_book/utils/app_language.dart';
 import '../services/notification_service.dart';
 import '../services/firestore_service.dart';
@@ -258,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.spatial_audio_off_rounded, color: Colors.white, size: 28),
+          const AppIcon(Icons.spatial_audio_off_rounded, color: Colors.white, size: 28),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -288,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IconButton(
             onPressed: () => TtsService.stop(),
-            icon: const Icon(Icons.stop_circle_rounded, color: Colors.white, size: 32),
+            icon: const AppIcon(Icons.stop_circle_rounded, color: Colors.white, size: 32),
           ),
         ],
       ),
@@ -770,7 +771,7 @@ void showSubjectTopicsBottomSheet(BuildContext context, Subject subject) {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close_rounded, color: isDark ? Colors.white : Colors.black),
+                      icon: AppIcon(AppIcons.close, color: isDark ? Colors.white : Colors.black),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -833,7 +834,7 @@ void showSubjectTopicsBottomSheet(BuildContext context, Subject subject) {
                                 ),
                               ),
                             ),
-                            Icon(Icons.arrow_forward_ios_rounded, color: subject.color, size: 18),
+                            AppIcon(AppIcons.forward, color: subject.color, size: 18),
                           ],
                         ),
                       ),

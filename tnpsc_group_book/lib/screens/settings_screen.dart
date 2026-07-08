@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
 import '../services/ai_service.dart';
 import '../services/firestore_service.dart';
@@ -144,7 +145,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           CircleAvatar(
             radius: 35,
             backgroundColor: AppTheme.secondaryColorLight.withOpacity(0.1),
-            child: const Icon(Icons.person_rounded, size: 40, color: AppTheme.secondaryColor),
+            child: const AppIcon(AppIcons.profile, size: 40, color: AppTheme.secondaryColor),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -169,7 +170,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(color: AppTheme.secondaryColor.withOpacity(0.1), shape: BoxShape.circle),
-              child: const Icon(Icons.edit_rounded, size: 20, color: AppTheme.cardColor),
+              child: const AppIcon(AppIcons.edit, size: 20, color: AppTheme.cardColor),
             ),
           ),
         ],
@@ -190,7 +191,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: IconButton(
               icon: Container(
                 // padding: const EdgeInsets.all(0),
-                child: Icon(Icons.arrow_back_ios_rounded, size: 25, color: isDarkMode ? Colors.white : Colors.black),
+                child: AppIcon(AppIcons.back, size: 25, color: isDarkMode ? Colors.white : Colors.black),
               ),
               onPressed: () => Navigator.pop(context),
             ),
@@ -237,7 +238,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 color: canWatch ? Colors.orange : Colors.grey, 
                                 shape: BoxShape.circle
                               ),
-                              child: const Icon(Icons.card_giftcard_rounded, color: Colors.white),
+                              child: const AppIcon(Icons.card_giftcard_rounded, color: Colors.white),
                             ),
                             title: Text(
                               canWatch 
@@ -331,11 +332,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), shape: BoxShape.circle),
-                        child: const Icon(Icons.feedback_rounded, color: Colors.blue),
+                        child: const AppIcon(AppIcons.feedback, color: Colors.blue),
                       ),
                       title: Text(AppLanguage.getString('feedback_support')),
                       subtitle: Text(AppLanguage.getString('report_bugs')),
-                      trailing: const Icon(Icons.chevron_right_rounded),
+                      trailing: const AppIcon(Icons.chevron_right_rounded),
                       onTap: () {
                         Navigator.push(context, MaterialPageRoute(builder: (context) => const FeedbackScreen()));
                       },
@@ -358,7 +359,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           secondary: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), shape: BoxShape.circle),
-                            child: const Icon(Icons.vibration_rounded, color: Colors.orange),
+                            child: const AppIcon(Icons.vibration_rounded, color: Colors.orange),
                           ),
                           title: Text(lang == 'ta' ? 'அதிர்வு (Vibration)' : 'Vibration Feedback'),
                           subtitle: Text(lang == 'ta' ? 'சரியான/தவறான பதில்களுக்கு அதிர்வை இயக்கு' : 'Vibrate on correct/wrong answers'),
@@ -452,17 +453,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: Column(
                         children: [
                           ListTile(
-                            leading: const Icon(Icons.dashboard_customize_rounded, color: Colors.indigo),
+                            leading: const AppIcon(Icons.dashboard_customize_rounded, color: Colors.indigo),
                             title: Text(AppLanguage.getString('admin_dashboard_label')),
                             subtitle: Text(AppLanguage.getString('manage_q_desc')),
-                            trailing: const Icon(Icons.chevron_right_rounded),
+                            trailing: const AppIcon(Icons.chevron_right_rounded),
                             onTap: () {
                               Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminPanelScreen()));
                             },
                           ),
                           const Divider(height: 1),
                           ListTile(
-                            leading: const Icon(Icons.cloud_upload_rounded, color: Colors.blue),
+                            leading: const AppIcon(Icons.cloud_upload_rounded, color: Colors.blue),
                             title: Text(AppLanguage.getString('upload_local_q')),
                             subtitle: Text(AppLanguage.getString('sync_local_firestore')),
                             onTap: () async {
@@ -493,7 +494,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const Divider(height: 1),
                           ListTile(
-                            leading: const Icon(Icons.delete_sweep_rounded, color: Colors.red),
+                            leading: const AppIcon(Icons.delete_sweep_rounded, color: Colors.red),
                             title: Text(AppLanguage.getString('clear_cloud_data')),
                             subtitle: Text(AppLanguage.getString('wipe_firestore_desc')),
                             onTap: () async {
@@ -565,10 +566,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: Column(
                         children: [
                           ListTile(
-                            leading: const Icon(Icons.storage_rounded, color: Colors.teal),
+                            leading: const AppIcon(Icons.storage_rounded, color: Colors.teal),
                             title: Text(AppLanguage.getString('clear_offline_data')),
                             subtitle: Text(AppLanguage.getString('clear_cache_desc')),
-                            trailing: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                            trailing: const AppIcon(AppIcons.delete, color: Colors.red),
                             onTap: () async {
                               final confirmed = await showDialog<bool>(
                                 context: context,

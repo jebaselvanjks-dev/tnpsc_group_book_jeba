@@ -164,7 +164,10 @@ class AppTheme {
           fontSize: 18 * fontSizeFactorNotifier.value,
           fontWeight: FontWeight.bold,
         ),
-        iconTheme: IconThemeData(color: mainTextColor),
+        iconTheme: IconThemeData(
+          color: mainTextColor,
+          size: 24 * fontSizeFactorNotifier.value,
+        ),
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
@@ -223,6 +226,11 @@ class AppTheme {
     double rounded = double.parse(factor.toStringAsFixed(1));
     fontSizeFactorNotifier.value = rounded;
     await HiveService.setFontSizeFactor(rounded);
+  }
+
+  /// Helper to get scaled icon size
+  static double getScaledIconSize(double baseSize) {
+    return baseSize * fontSizeFactorNotifier.value;
   }
 
   // Helper for bilingual text styling

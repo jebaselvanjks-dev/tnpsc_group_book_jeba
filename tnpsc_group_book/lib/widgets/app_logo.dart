@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_assets.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 
 class AppLogo extends StatelessWidget {
   final double size;
@@ -32,7 +33,7 @@ class AppLogo extends StatelessWidget {
               color: AppTheme.primaryColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(borderRadius),
             ),
-            child: Icon(
+            child: AppIcon(
               Icons.menu_book_rounded,
               size: size * 0.5,
               color: AppTheme.secondaryColor,

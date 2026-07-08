@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../models/subject.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import 'package:tnpsc_group_book/utils/app_language.dart';
 import 'quiz_screen.dart';
 import 'topic_detail_screen.dart';
@@ -32,7 +33,7 @@ class SubTopicScreen extends StatelessWidget {
             backgroundColor: isDark ? Colors.black : Colors.white,
             elevation: 0,
             leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+              icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(

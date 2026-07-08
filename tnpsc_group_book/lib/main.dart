@@ -9,6 +9,7 @@ import 'screens/profile_screen.dart';
 import 'screens/quiz_screen.dart';
 import 'utils/app_theme.dart';
 import 'utils/app_language.dart';
+import 'utils/app_icons.dart';
 import 'services/notification_service.dart';
 import 'services/hive_service.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
@@ -269,16 +270,16 @@ class _MainWrapperState extends State<MainWrapper> {
                     hoverColor: Colors.grey[100]!,
                     gap: 8,
                     activeColor: AppTheme.secondaryColor,
-                    iconSize: 24,
+                    iconSize: AppTheme.getScaledIconSize(24),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     duration: const Duration(milliseconds: 400),
                     tabBackgroundColor: AppTheme.secondaryColor.withOpacity(0.1),
                     color: Colors.grey,
                     tabs: [
-                      GButton(icon: Icons.home_rounded, text: AppLanguage.getString('home')),
-                      GButton(icon: Icons.menu_book_sharp, text: AppLanguage.getString('book')),
-                      GButton(icon: Icons.emoji_events_rounded, text: AppLanguage.getString('rank')),
-                      GButton(icon: Icons.person_rounded, text: AppLanguage.getString('profile')),
+                      GButton(icon: AppIcons.home, text: AppLanguage.getString('home')),
+                      GButton(icon: AppIcons.books, text: AppLanguage.getString('book')),
+                      GButton(icon: AppIcons.leaderboard, text: AppLanguage.getString('rank')),
+                      GButton(icon: AppIcons.profile, text: AppLanguage.getString('profile')),
                     ],
                     selectedIndex: _selectedIndex,
                     onTabChange: (index) {

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../services/ai_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
+import '../utils/app_icons.dart';
 import '../utils/app_log.dart';
 
 import 'admin_feedback_screen.dart';
@@ -28,7 +29,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+          icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -66,7 +67,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         const SnackBar(content: Text("AI Usage Reset for Today!")),
                       );
                     },
-                    icon: const Icon(Icons.refresh_rounded),
+                    icon: const AppIcon(AppIcons.refresh),
                     label: const Text("Reset AI Usage Limit"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.withValues(alpha: 0.1),
@@ -188,7 +189,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                       style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                  const AppIcon(Icons.chevron_right_rounded, color: Colors.grey),
                 ],
               ),
               if (extra != null) extra,
@@ -332,7 +333,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   Navigator.pop(context);
                   _startRoomQuizGeneration(selectedSubject, 1);
                 },
-                icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                icon: const AppIcon(AppIcons.ai, size: 18),
                 label: const Text("Generate 1 Set"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue.withValues(alpha: 0.1),

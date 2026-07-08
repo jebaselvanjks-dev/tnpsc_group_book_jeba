@@ -8,6 +8,7 @@ import '../services/reward_service.dart';
 import '../services/firestore_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
+import '../utils/app_icons.dart';
 
 class AiTutorScreen extends StatefulWidget {
   const AiTutorScreen({super.key});
@@ -140,7 +141,7 @@ class _AiTutorScreenState extends State<AiTutorScreen> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+          icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -223,7 +224,7 @@ class _AiTutorScreenState extends State<AiTutorScreen> {
                 gradient: LinearGradient(colors: [Colors.cyan, Colors.teal]),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.send_rounded, color: Colors.white, size: 24),
+              child: const AppIcon(Icons.send_rounded, color: Colors.white, size: 24),
             ),
           ),
         ],
@@ -265,7 +266,7 @@ class ChatMessage extends StatelessWidget {
                 color: Colors.cyan.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.auto_awesome, color: Colors.cyan, size: 14),
+              child: const AppIcon(AppIcons.ai, color: Colors.cyan, size: 14),
             ),
             const SizedBox(width: 10),
           ],
@@ -320,7 +321,7 @@ class ChatMessage extends StatelessWidget {
                 color: Colors.cyan.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.person_outline_rounded, color: Colors.cyan, size: 14),
+              child: const AppIcon(AppIcons.person, color: Colors.cyan, size: 14),
             ),
           ],
         ],

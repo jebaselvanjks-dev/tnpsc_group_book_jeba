@@ -207,7 +207,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               height: 20, 
                               child: CircularProgressIndicator(strokeWidth: 2)
                             )
-                          : const FaIcon(FontAwesomeIcons.google, color: Colors.red),
+                          : ValueListenableBuilder<double>(
+                              valueListenable: AppTheme.fontSizeFactorNotifier,
+                              builder: (context, factor, child) {
+                                return FaIcon(
+                                  FontAwesomeIcons.google, 
+                                  color: Colors.red,
+                                  size: 24 * factor,
+                                );
+                              },
+                            ),
                         label: Text(
                           ta ? 'Google மூலம் தொடரவும்' : 'Continue with Google',
                           style: AppTheme.getStyle(

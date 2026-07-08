@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/question.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
 import '../services/ai_service.dart';
 import '../widgets/bilingual_text.dart';
@@ -32,7 +33,7 @@ class ReviewScreen extends StatelessWidget {
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
             leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+              icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(AppLanguage.getString('review_answers'), style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),
@@ -129,7 +130,7 @@ class ReviewScreen extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.lightbulb_outline_rounded, color: Colors.orange, size: 20),
+                        const AppIcon(AppIcons.idea, color: Colors.orange, size: 20),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(
@@ -197,7 +198,7 @@ class ReviewScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.auto_awesome, color: AppTheme.primaryColor),
+                    const AppIcon(AppIcons.ai, color: AppTheme.primaryColor),
                     const SizedBox(width: 8),
                     Text(
                       "AI Deep Insight",
@@ -210,7 +211,7 @@ class ReviewScreen extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const AppIcon(AppIcons.close),
                 ),
               ],
             ),

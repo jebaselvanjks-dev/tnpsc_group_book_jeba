@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:intl/intl.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 
 class AdminFeedbackScreen extends StatelessWidget {
   const AdminFeedbackScreen({super.key});
@@ -14,7 +15,7 @@ class AdminFeedbackScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+          icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -41,7 +42,7 @@ class AdminFeedbackScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.feedback_outlined, size: 64, color: Colors.grey.shade400),
+                  const AppIcon(Icons.feedback_outlined, size: 64, color: Colors.grey),
                   const SizedBox(height: 16),
                   Text(
                     "No feedback yet",
@@ -122,7 +123,7 @@ class AdminFeedbackScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                            icon: const AppIcon(AppIcons.delete, color: Colors.redAccent, size: 20),
                             onPressed: () => _confirmDelete(context, doc.id),
                           ),
                         ],

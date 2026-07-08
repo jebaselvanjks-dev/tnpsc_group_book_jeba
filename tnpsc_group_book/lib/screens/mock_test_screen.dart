@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
 import '../services/hive_service.dart';
 import 'quiz_screen.dart';
@@ -30,7 +31,7 @@ class MockTestScreen extends StatelessWidget {
             backgroundColor: isDark ? Colors.black : Colors.white,
             elevation: 0,
             leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: isDark ? Colors.white : Colors.black),
+              icon: AppIcon(AppIcons.back, size: 16, color: isDark ? Colors.white : Colors.black),
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
@@ -55,7 +56,7 @@ class MockTestScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.assignment_late_outlined, size: 80, color: Colors.grey),
+                      const AppIcon(Icons.assignment_late_outlined, size: 80, color: Colors.grey),
                       const SizedBox(height: 16),
                       Text(
                         AppLanguage.getString('no_mock_tests'),
@@ -177,17 +178,17 @@ bool isAllowedDay = const [2, 4, 6, 7].contains(DateTime.now().weekday);
                   ),
                 ),
               ),
-              if (isLocked) const Icon(Icons.lock_outline_rounded, color: Colors.white, size: 28),
+              if (isLocked) const AppIcon(AppIcons.lock, color: Colors.white, size: 28),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(Icons.help_outline_rounded, color: Colors.white70, size: 16),
+              const AppIcon(Icons.help_outline_rounded, color: Colors.white70, size: 16),
               const SizedBox(width: 6),
               Text(AppLanguage.getString('questions_count_label').replaceAll('{count}', questionsCount.toString()), style: AppTheme.getStyle(color: Colors.white70, fontSize: 14)),
               const SizedBox(width: 16),
-              const Icon(Icons.timer_outlined, color: Colors.white70, size: 16),
+              const AppIcon(AppIcons.timer, color: Colors.white70, size: 16),
               const SizedBox(width: 6),
               Text(AppLanguage.getString('one_hour'), style: AppTheme.getStyle(color: Colors.white70, fontSize: 14)),
             ],

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/question.dart';
 import '../services/ai_service.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../widgets/bilingual_text.dart';
 
 class AdminQuizManageScreen extends StatefulWidget {
@@ -248,7 +249,7 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
         actions: [
           if (_questions.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.save_rounded),
+              icon: const AppIcon(AppIcons.save),
               onPressed: _isLoading ? null : _saveQuiz,
               tooltip: "Save Changes",
             ),
@@ -267,7 +268,7 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                     if (_quizType != 'room_quiz')
                       Expanded(
                         child: OutlinedButton.icon(
-                          icon: const Icon(Icons.calendar_month_rounded),
+                          icon: const AppIcon(AppIcons.calendar),
                           label: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
                           onPressed: () async {
                             final picked = await showDatePicker(
@@ -331,13 +332,13 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.quiz_outlined, size: 64, color: Colors.grey),
+                            const AppIcon(AppIcons.quiz, size: 64, color: Colors.grey),
                             const SizedBox(height: 16),
                             const Text("No quiz found for this date."),
                             const SizedBox(height: 24),
                             ElevatedButton.icon(
                               onPressed: _regenerateQuiz,
-                              icon: const Icon(Icons.auto_awesome_rounded),
+                              icon: const AppIcon(AppIcons.ai),
                               label: const Text("Generate with AI"),
                             ),
                           ],
@@ -367,7 +368,7 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                                         style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue),
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.edit_rounded, size: 20),
+                                        icon: const AppIcon(AppIcons.edit, size: 20),
                                         onPressed: () => _editQuestion(index),
                                       ),
                                     ],
@@ -395,8 +396,8 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                                       padding: const EdgeInsets.only(bottom: 4),
                                       child: Row(
                                         children: [
-                                          Icon(
-                                            isCorrect ? Icons.check_circle_rounded : Icons.circle_outlined,
+                                          AppIcon(
+                                            isCorrect ? AppIcons.check : AppIcons.uncheck,
                                             size: 16,
                                             color: isCorrect ? Colors.green : Colors.grey,
                                           ),

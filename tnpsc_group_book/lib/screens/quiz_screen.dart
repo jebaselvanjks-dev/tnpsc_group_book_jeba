@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/question.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
 import '../services/firestore_service.dart';
 import 'result_screen.dart';
@@ -711,7 +712,7 @@ class _QuizScreenState extends State<QuizScreen> {
           scaffoldBody = Scaffold(
             appBar: widget.hideAppBar ? null : AppBar(
               leading: IconButton(
-                icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+                icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
                 onPressed: _handleBack,
               ),
               title: Text(displayTitle),
@@ -721,7 +722,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Icon(Icons.quiz_outlined, size: 80, color: Colors.grey),
+                  const AppIcon(AppIcons.quiz, size: 80, color: Colors.grey),
                   const SizedBox(height: 20),
                   Text(AppLanguage.getString('no_questions'), textAlign: TextAlign.center,style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
@@ -761,7 +762,7 @@ class _QuizScreenState extends State<QuizScreen> {
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             appBar: widget.hideAppBar ? null : AppBar(
               leading: IconButton(
-                icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+                icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
                 onPressed: _handleBack,
               ),
               title: Text(displayTitle, style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),
@@ -817,7 +818,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                   : IconButton(
                                       padding: const EdgeInsets.only(right: 8, bottom: 0, top: 0),
                                       constraints: const BoxConstraints(),
-                                      icon: const Icon(Icons.auto_awesome_rounded, color: Colors.amber, size: 24),
+                                      icon: const AppIcon(AppIcons.ai, color: Colors.amber, size: 24),
                                       onPressed: _generateMoreQuestions,
                                     ),
                             if (widget.subjectTitle != "Daily Quiz" && 
@@ -971,7 +972,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                                   color: isSelected ? borderColor : Colors.transparent,
                                                 ),
                                                 child: isSelected
-                                                    ? const Icon(Icons.circle, size: 12, color: Colors.white)
+                                                    ? const AppIcon(Icons.circle, size: 12, color: Colors.white)
                                                     : null,
                                               ),
                                               const SizedBox(width: 16),

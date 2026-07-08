@@ -9,6 +9,7 @@ import '../services/reward_service.dart';
 import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
+import '../utils/app_icons.dart';
 
 class AiSmartPrepScreen extends StatefulWidget {
   const AiSmartPrepScreen({super.key});
@@ -192,7 +193,7 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+          icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -202,7 +203,7 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.manage_search_rounded, color: Colors.cyan),
+            icon: const AppIcon(Icons.manage_search_rounded, color: Colors.cyan),
             onPressed: () {
               if (_controller.text.isNotEmpty) {
                  _showLocalResponse(_controller.text);
@@ -261,7 +262,7 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
                 color: Colors.cyan.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.auto_awesome, size: 64, color: Colors.cyan),
+              child: const AppIcon(AppIcons.ai, size: 64, color: Colors.cyan),
             ),
             const SizedBox(height: 32),
             Text(
@@ -347,7 +348,7 @@ class _AiSmartPrepScreenState extends State<AiSmartPrepScreen> {
                 gradient: LinearGradient(colors: [Colors.cyan, Colors.teal]),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.send_rounded, color: Colors.white, size: 24),
+              child: const AppIcon(Icons.send_rounded, color: Colors.white, size: 24),
             ),
           ),
         ],
@@ -389,7 +390,7 @@ class ChatMessage extends StatelessWidget {
                 color: Colors.cyan.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.auto_awesome, color: Colors.cyan, size: 14),
+              child: const AppIcon(AppIcons.ai, color: Colors.cyan, size: 14),
             ),
             const SizedBox(width: 10),
           ],
@@ -444,7 +445,7 @@ class ChatMessage extends StatelessWidget {
                 color: Colors.cyan.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.person_outline_rounded, color: Colors.cyan, size: 14),
+              child: const AppIcon(AppIcons.person, color: Colors.cyan, size: 14),
             ),
           ],
         ],

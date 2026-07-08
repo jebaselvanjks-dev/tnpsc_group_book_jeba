@@ -4,6 +4,7 @@ import 'package:tnpsc_group_book/services/tts_service.dart';
 import '../models/question.dart';
 import '../services/firestore_service.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
 import 'quiz_screen.dart';
 
@@ -44,7 +45,7 @@ class _MistakeBankScreenState extends State<MistakeBankScreen> {
         backgroundColor: isDark ? Colors.black : Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+          icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -109,7 +110,7 @@ class _MistakeBankScreenState extends State<MistakeBankScreen> {
                     ),
                   ).then((_) => _loadMistakes());
                 },
-                icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+                icon: const AppIcon(AppIcons.play, color: Colors.white),
                 label: Text(
                   AppLanguage.getString('reattempt_all'),
                   textAlign: TextAlign.center,
@@ -191,7 +192,7 @@ class _MistakeBankScreenState extends State<MistakeBankScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.check_circle_outline_rounded, color: Colors.green, size: 20),
+                const AppIcon(AppIcons.check, color: Colors.green, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

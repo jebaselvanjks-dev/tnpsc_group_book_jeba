@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
 import '../services/firestore_service.dart';
 import '../services/ai_service.dart';
@@ -274,7 +275,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.tune_rounded, color: AppTheme.secondaryColor),
+                          const AppIcon(Icons.tune_rounded, color: AppTheme.secondaryColor),
                           const SizedBox(width: 10),
                           Text(
                             AppLanguage.getString('audio_settings'),
@@ -287,7 +288,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                         ],
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const AppIcon(AppIcons.close),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
@@ -433,7 +434,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.volume_up_rounded, color: AppTheme.secondaryColor),
+            const AppIcon(AppIcons.tts, color: AppTheme.secondaryColor),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -521,7 +522,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
               leading: IconButton(
                 icon: Container(
                   // padding: const EdgeInsets.all(0),
-                  child: Icon(Icons.arrow_back_ios_rounded, size: 25, color: isDark ? Colors.white : Colors.black),
+                  child: AppIcon(AppIcons.back, size: 25, color: isDark ? Colors.white : Colors.black),
                 ),
                 onPressed: () => Navigator.pop(context),
               ),
@@ -569,7 +570,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.auto_awesome_rounded, size: 60, color: Colors.amber),
+            const AppIcon(AppIcons.ai, size: 60, color: Colors.amber),
             const SizedBox(height: 20),
             Text(AppLanguage.getString('study_material_preparing')),
               const SizedBox(height: 20),
@@ -612,7 +613,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
               ),
               const SizedBox(width: 8),
               IconButton(
-                icon: Icon(Icons.tune_rounded, color: AppTheme.secondaryColor, size: 20),
+                icon: AppIcon(Icons.tune_rounded, color: AppTheme.secondaryColor, size: 20),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 onPressed: _showAudioSettingsBottomSheet,
@@ -632,7 +633,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                 if (_currentlyReadingIndex != null)
                   ElevatedButton.icon(
                     onPressed: () => _togglePlayAll(lang),
-                    icon: const Icon(Icons.stop_rounded),
+                    icon: const AppIcon(AppIcons.stop),
                     label: Text(AppLanguage.getString('stop_audio')),
                     style: ElevatedButton.styleFrom(
                       textStyle: AppTheme.getStyle(fontSize: 12.5),
@@ -649,7 +650,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                       if (_lastStoppedIndex != null) ...[
                         ElevatedButton.icon(
                           onPressed: () => _playFromIndex(_lastStoppedIndex!, lang),
-                          icon: const Icon(Icons.play_arrow_rounded),
+                          icon: const AppIcon(AppIcons.play),
                           label: Text(AppLanguage.getString('resume_audio')),
                           style: ElevatedButton.styleFrom(
                             textStyle: AppTheme.getStyle(fontSize: 12.5),
@@ -670,7 +671,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                           }
                           _playFromIndex(0, lang);
                         },
-                        icon: Icon(_lastStoppedIndex != null ? Icons.replay_rounded : Icons.play_arrow_rounded),
+                        icon: AppIcon(_lastStoppedIndex != null ? Icons.replay_rounded : AppIcons.play),
                         label: Text(_lastStoppedIndex != null 
                             ? AppLanguage.getString('play_from_start') 
                             : AppLanguage.getString('listen_all')),
@@ -707,7 +708,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                                 _visibleItems += 10;
                               });
                             },
-                            icon: const Icon(Icons.expand_more_rounded),
+                            icon: const AppIcon(Icons.expand_more_rounded),
                             label: Text(AppLanguage.getString('show_more')),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.secondaryColor.withOpacity(0.1),
@@ -733,7 +734,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                                   if (!mounted) return;
                                   setState(() => _isGenerating = false);
                                 },
-                                icon: const Icon(Icons.add_circle_outline_rounded),
+                                icon: const AppIcon(Icons.add_circle_outline_rounded),
                                 label: Text(AppLanguage.getString('more_details')),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),

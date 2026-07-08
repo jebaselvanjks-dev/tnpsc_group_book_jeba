@@ -6,6 +6,7 @@ import 'package:tnpsc_group_book/screens/room_leaderboard_screen.dart';
 import '../services/room_service.dart';
 import '../utils/app_language.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import '../models/subject.dart';
 import 'admin_quiz_manage_screen.dart';
 import 'waiting_room_screen.dart';
@@ -387,7 +388,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                       color: Colors.orange.withOpacity(0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.ondemand_video_rounded, color: Colors.orange, size: 40),
+                    child: const AppIcon(Icons.ondemand_video_rounded, color: Colors.orange, size: 40),
                   ),
                   const SizedBox(height: 16),
                   Text(AppLanguage.getString('room_limit_title'), style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 20),
@@ -460,7 +461,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                       }
                     );
                   },
-                  icon: const Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 18),
+                  icon: const AppIcon(Icons.play_circle_fill_rounded, color: Colors.white, size: 18),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                     foregroundColor: Colors.white,
@@ -623,7 +624,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                       color: AppTheme.secondaryColorLight.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.history_rounded, color: AppTheme.secondaryColorLight, size: 20),
+                    child: const AppIcon(AppIcons.history, color: AppTheme.secondaryColorLight, size: 20),
                   ),
                   title: Row(
                     children: [
@@ -641,7 +642,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                     date,
                     style: AppTheme.getStyle(fontSize: 12, color: Colors.grey),
                   ),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                  trailing: const AppIcon(AppIcons.forward, size: 14, color: Colors.grey),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -841,14 +842,17 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+            icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
             onPressed: () => _handleBack(context),
           ),
           title: Text(AppLanguage.getString('room_screen_title'), style: AppTheme.getStyle(
               fontWeight: FontWeight.bold, fontSize: 18)),
           backgroundColor: Colors.transparent,
           elevation: 0,
-          iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+          iconTheme: IconThemeData(
+            color: isDark ? Colors.white : Colors.black,
+            size: AppTheme.getScaledIconSize(24),
+          ),
         ),
       body: _isLoading
           ? Column(
@@ -978,7 +982,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.star_rounded, color: AppTheme.secondaryColor, size: 28),
+                        const AppIcon(AppIcons.star, color: AppTheme.secondaryColor, size: 28),
                         const SizedBox(width: 8),
                         Flexible(
                           child: Column(
@@ -1396,7 +1400,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _showRoomInfoDialog,
         backgroundColor: isDark ? AppTheme.secondaryColor : AppTheme.primaryColor,
-        child: const Icon(Icons.help_outline_rounded, color: Colors.white),
+        child: const AppIcon(Icons.help_outline_rounded, color: Colors.white),
       ),
     ));
   }

@@ -11,6 +11,7 @@ import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:intl/intl.dart';
 import '../services/room_service.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import 'multiplayer_quiz_screen.dart';
 import '../utils/app_language.dart';
 
@@ -51,7 +52,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
             ),
             const SizedBox(height: 20),
             ListTile(
-              leading: const Icon(Icons.text_fields_rounded, color: Colors.blue),
+              leading: const AppIcon(Icons.text_fields_rounded, color: Colors.blue),
               title: Text(isTamil ? "உரைச் செய்தியாக (Text Message)" : "Share as Text"),
               onTap: () {
                 Navigator.pop(modalContext);
@@ -59,7 +60,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.image_rounded, color: Colors.orange),
+              leading: const AppIcon(Icons.image_rounded, color: Colors.orange),
               title: Text(isTamil ? "அழைப்பிதழ் அட்டையாக (Image Card)" : "Share as Image Card"),
               onTap: () async {
                 Navigator.pop(modalContext);
@@ -298,7 +299,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                     child: Image.asset(
                       'asset/images/logo.png',
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.school, size: 40, color: AppTheme.primaryColor),
+                      errorBuilder: (context, error, stackTrace) => const AppIcon(Icons.school, size: 40, color: AppTheme.primaryColor),
                     ),
                   ),
                 ),
@@ -392,7 +393,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.calendar_today_rounded, size: 18, color: Colors.white),
+                          const AppIcon(Icons.calendar_today_rounded, size: 18, color: Colors.white),
                           const SizedBox(width: 8),
                           Text(
                             formattedDateTime,
@@ -404,7 +405,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.people_alt_rounded, size: 18, color: Colors.white),
+                          const AppIcon(AppIcons.group, size: 18, color: Colors.white),
                           const SizedBox(width: 8),
                           Text(
                             AppLanguage.getString('lobby_max_players').replaceAll('{max}', '${roomData['maxPlayers']}'),
@@ -774,7 +775,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.lightbulb_outline_rounded, color: AppTheme.secondaryColor, size: 18),
+              const AppIcon(AppIcons.idea, color: AppTheme.secondaryColor, size: 18),
               const SizedBox(width: 8),
               Text(
                 isTamil ? "உங்களுக்குத் தெரியுமா?" : "Did you know?",
@@ -896,17 +897,20 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             appBar: AppBar(
               leading: IconButton(
-                icon: Icon(Icons.arrow_back_ios_rounded, color: isDark ? Colors.white : AppTheme.textMainColor),
+                icon: AppIcon(AppIcons.back, color: isDark ? Colors.white : AppTheme.textMainColor),
                 onPressed: _handleBack,
               ),
               title: Text(AppLanguage.getString('group_test_lobby'), style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               backgroundColor: Colors.transparent,
               elevation: 0,
-              iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+              iconTheme: IconThemeData(
+                color: isDark ? Colors.white : Colors.black,
+                size: AppTheme.getScaledIconSize(24),
+              ),
               actions: [
                 if (roomExists)
                   IconButton(
-                    icon: const Icon(Icons.share_rounded),
+                    icon: const AppIcon(AppIcons.share),
                     onPressed: _shareRoomCode,
                   )
               ],
@@ -994,7 +998,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.access_time_rounded, size: 14, color: isDark ? Colors.white60 : Colors.black45),
+                                AppIcon(Icons.access_time_rounded, size: 14, color: isDark ? Colors.white60 : Colors.black45),
                                 const SizedBox(width: 4),
                                 Text(
                                   "${DateFormat('hh:mm a').format(_roomStartTime!)} - ${DateFormat('hh:mm a').format(_roomEndTime!)}",
@@ -1002,7 +1006,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                                 ),
                                 if (isCurrentUserHost)
                                   IconButton(
-                                    icon: const Icon(Icons.edit, size: 14),
+                                    icon: const AppIcon(AppIcons.edit, size: 14),
                                     onPressed: _editRoomTime,
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
@@ -1094,7 +1098,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                                         leading: CircleAvatar(
                                           radius: 18,
                                           backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
-                                          child: const Icon(Icons.person, color: Colors.white70, size: 20),
+                                          child: const AppIcon(AppIcons.person, color: Colors.white70, size: 20),
                                         ),
                                         title: Text(
                                           pData['name'] ?? 'Player',
@@ -1110,7 +1114,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                                                 child: Row(
                                                   mainAxisSize: MainAxisSize.min,
                                                   children: [
-                                                    const Icon(Icons.star, color: Colors.amber, size: 14),
+                                                    const AppIcon(AppIcons.star, color: Colors.amber, size: 14),
                                                     const SizedBox(width: 4),
                                                     Text(
                                                       AppLanguage.languageNotifier.value == 'ta' ? "நிர்வாகி" : "Host",

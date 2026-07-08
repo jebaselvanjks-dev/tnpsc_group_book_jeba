@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:tnpsc_group_book/utils/app_icons.dart';
 import '../services/hive_service.dart';
 import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
@@ -93,19 +94,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.keyboard_arrow_left,color: Colors.transparent,),
+                    icon: const AppIcon(AppIcons.back, color: Colors.transparent),
                     onPressed: () {},
                   ),
                   Text(
                     AppLanguage.getString('profile'),
                     style: AppTheme.getStyle(
                       fontWeight: FontWeight.w800,
-                      fontSize: 18,
+                      fontSize: 20,
                       color: isDark ? Colors.white : AppTheme.textMainColor,
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.settings_rounded),
+                    icon: const AppIcon(AppIcons.settings),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -172,8 +173,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ? NetworkImage(user!.photoURL!)
                                         : null,
                                     child: user?.photoURL == null
-                                        ? const Icon(
-                                            Icons.person_rounded,
+                                        ? const AppIcon(
+                                            AppIcons.person,
                                             size: 40,
                                             color: AppTheme.primaryColor,
                                           )
@@ -279,7 +280,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       color: Colors.blue.withOpacity(0.1),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(
+                                    child: const AppIcon(
                                       Icons.language_rounded,
                                       color: Colors.blue,
                                     ),
@@ -333,7 +334,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       color: Colors.purple.withOpacity(0.1),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(
+                                    child: const AppIcon(
                                       Icons.dark_mode_rounded,
                                       color: Colors.purple,
                                     ),
@@ -362,7 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           color: Colors.orange.withOpacity(0.1),
                                           shape: BoxShape.circle,
                                         ),
-                                        child: const Icon(
+                                        child: const AppIcon(
                                           Icons.format_size_rounded,
                                           color: Colors.orange,
                                         ),
@@ -375,14 +376,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           IconButton(
-                                            icon: const Icon(
-                                              Icons.remove_circle_outline_rounded,
-                                            ),
                                             onPressed: fontSizeFactor > 0.81
                                                 ? () => AppTheme.setFontSizeFactor(
                                                     fontSizeFactor - 0.1,
                                                   )
                                                 : null,
+                                            icon: const AppIcon(Icons.remove_circle_outline_rounded),
                                           ),
                                           Text(
                                             "${(fontSizeFactor * 100).round()}%",
@@ -392,14 +391,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           IconButton(
-                                            icon: const Icon(
-                                              Icons.add_circle_outline_rounded,
-                                            ),
                                             onPressed: fontSizeFactor < 1.39
                                                 ? () => AppTheme.setFontSizeFactor(
                                                     fontSizeFactor + 0.1,
                                                   )
                                                 : null,
+                                            icon: const AppIcon(Icons.add_circle_outline_rounded),
                                           ),
                                         ],
                                       ),
@@ -433,14 +430,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               children: [
                                 if (_isAdmin) ...[
                                   ListTile(
-                                    leading: const Icon(
+                                    leading: const AppIcon(
                                       Icons.admin_panel_settings_rounded,
                                       color: Colors.blueGrey,
                                     ),
                                     title: Text(
                                       AppLanguage.getString('admin_panel'),
                                     ),
-                                    trailing: const Icon(
+                                    trailing: const AppIcon(
                                       Icons.chevron_right_rounded,
                                       color: Colors.grey,
                                     ),
@@ -457,7 +454,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const Divider(height: 1),
                                 ],
                                 ListTile(
-                                  leading: const Icon(
+                                  leading: const AppIcon(
                                     Icons.update,
                                     color: Colors.grey,
                                   ),
@@ -473,12 +470,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 const Divider(height: 1),
                                 ListTile(
-                                  leading: const Icon(
+                                  leading: const AppIcon(
                                     Icons.info_outline_rounded,
                                     color: Colors.grey,
                                   ),
                                   title: Text(AppLanguage.getString('about_app')),
-                                  trailing: const Icon(
+                                  trailing: const AppIcon(
                                     Icons.chevron_right_rounded,
                                     color: Colors.grey,
                                   ),
@@ -488,14 +485,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 const Divider(height: 1),
                                 ListTile(
-                                  leading: const Icon(
+                                  leading: const AppIcon(
                                     Icons.privacy_tip_outlined,
                                     color: Colors.grey,
                                   ),
                                   title: Text(
                                     AppLanguage.getString('privacy_policy'),
                                   ),
-                                  trailing: const Icon(
+                                  trailing: const AppIcon(
                                     Icons.chevron_right_rounded,
                                     color: Colors.grey,
                                   ),
@@ -505,8 +502,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 const Divider(height: 1),
                                 ListTile(
-                                  leading: const Icon(
-                                    Icons.logout_rounded,
+                                  leading: AppIcon(
+                                    AppIcons.logout_rounded ?? Icons.logout_rounded, // fallback if not defined
                                     color: Colors.redAccent,
                                   ),
                                   title: Text(

@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../models/subject.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_icons.dart';
 import 'package:tnpsc_group_book/utils/app_language.dart';
 import '../services/notification_service.dart';
 import '../services/firestore_service.dart';
@@ -441,7 +442,7 @@ class _SubjectCard extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.close_rounded, color: isDark ? Colors.white : Colors.black),
+                        icon: AppIcon(AppIcons.close, color: isDark ? Colors.white : Colors.black),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
@@ -521,7 +522,7 @@ class _SubjectCard extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              Icon(Icons.arrow_forward_ios_rounded, color: subject.color, size: 18),
+                              AppIcon(AppIcons.forward, color: subject.color, size: 18),
                             ],
                           ),
                         ),
