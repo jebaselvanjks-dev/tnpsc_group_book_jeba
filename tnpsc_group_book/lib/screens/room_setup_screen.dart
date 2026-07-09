@@ -403,6 +403,9 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         context,
         MaterialPageRoute(builder: (context) => WaitingRoomScreen(roomCode: code, isHost: false)),
       );
+    } else if (result == 'finished') {
+      final isTamil = AppLanguage.languageNotifier.value == 'ta';
+      _showError(isTamil ? "இந்த தேர்வு ஏற்கனவே முடிந்துவிட்டது" : "This test has already finished");
     } else if (result == 'already_started') {
       _showError(AppLanguage.getString('room_already_started'));
     } else if (result == 'room_full') {

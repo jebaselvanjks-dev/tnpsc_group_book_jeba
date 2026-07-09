@@ -1,0 +1,8 @@
+- [x] Research missing "Saved Quiz" in `HomeScreen`
+- [x] Create implementation plan for restoring features
+- [x] Update implementation plan based on user feedback (Order & Row count)
+- [x] Implement quick action row changes in `home_screen.dart`
+- [x] Verify changes and clean up unused imports
+- [x] Implement quiz info bottom sheet for Mock Quiz in `SubjectScreen`
+- [x] Restore Mock Quiz schedule and tooltip in `SubjectScreen`
+- [x] Create walkthrough documentation

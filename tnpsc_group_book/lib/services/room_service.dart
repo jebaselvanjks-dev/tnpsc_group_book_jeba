@@ -417,16 +417,25 @@ class RoomService {
     }
   }
 
+  /// Force finish a room (Admin action)
+  Future<void> finishRoom(String roomCode) async {
+    try {
+      await _getRoomRef(roomCode).update({
+        'status': 'finished',
+        'manualFinishedAt': FieldValue.serverTimestamp(),
+      });
+      AppLog.d("AI_DEBUG: Room $roomCode manually finished by host");
+    } catch (e) {
+      AppLog.e("Error finishing room", e);
+    }
+  }
+
   // Join a room
   Future<String?> joinRoom(String roomCode) async {
     String? uid = _auth.currentUser?.uid;
     if (uid == null) return 'auth_error';
 
     try {
-      // AI_DEBUG: Unlimited joining allowed via code - removing daily attempt check
-      // bool canPlay = await canPlayToday();
-      // if (!canPlay) return 'limit_reached';
-
       String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
       currentRoomDate = today;
       DocumentReference roomRef = _getRoomRef(roomCode);
@@ -438,7 +447,8 @@ class RoomService {
       
       Room room = Room.fromMap(roomDoc.data() as Map<String, dynamic>, roomCode);
       
-      if (room.status != 'waiting') return 'already_started';
+      if (room.status == 'finished') return 'finished';
+      if (room.status == 'active') return 'already_started';
       
       // Check players count
       QuerySnapshot players = await roomRef.collection('players').get();

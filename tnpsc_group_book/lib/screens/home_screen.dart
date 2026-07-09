@@ -14,10 +14,8 @@ import '../services/firestore_service.dart';
 import '../services/hive_service.dart';
 import 'quiz_screen.dart';
 import 'sub_topic_screen.dart';
-import 'mock_test_screen.dart';
 import 'mistake_bank_screen.dart';
 import 'bookmark_screen.dart';
-import 'history_screen.dart';
 import 'ai_smart_prep_screen.dart';
 import 'ai_tutor_screen.dart';
 import 'topic_detail_screen.dart';
@@ -217,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   children: [
                                     _buildQuickActionCard(context, title: AppLanguage.getString('mistake_bank'), icon: "📝", color: Colors.orange, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MistakeBankScreen()))),
                                     const SizedBox(width: 12),
-                                    _buildQuickActionCard(context, title: AppLanguage.getString('mock_quiz_title'), icon: "🏆", color: Colors.purple, onTap: () => _showQuizInfoBottomSheet(context, AppLanguage.getString('mock_quiz'), isDark)),
+                                    _buildQuickActionCard(context, title: AppLanguage.getString('saved_quizzes'), icon: "🔖", color: Colors.blue, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BookmarkScreen()))),
                                     const SizedBox(width: 12),
                                     _buildQuickActionCard(context, title: AppLanguage.getString('group_test_lobby'), icon: "👥", color: Colors.green, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RoomSetupScreen()))),
                                   ],

@@ -14,6 +14,7 @@ import '../services/room_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
 import 'multiplayer_quiz_screen.dart';
+import 'room_leaderboard_screen.dart';
 import '../utils/app_language.dart';
 
 class WaitingRoomScreen extends StatefulWidget {
@@ -885,14 +886,48 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
           _roomStartTime = (roomData['startTime'] as Timestamp?)?.toDate();
           _roomEndTime = (roomData['endTime'] as Timestamp?)?.toDate();
           
-          if (roomData['status'] == 'active') {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MultiplayerQuizScreen(roomCode: widget.roomCode, roomData: roomData!),
-                ),
-              );
+          if (roomData['status'] == 'active' || roomData['status'] == 'finished') {
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              final uid = FirebaseAuth.instance.currentUser?.uid;
+              if (uid == null) return;
+
+              // Check if user has already finished
+              final playerSnap = await FirebaseFirestore.instance
+                  .collection('rooms')
+                  .doc('daily_${DateFormat('yyyy-MM-dd').format(DateTime.now())}')
+                  .collection('matches')
+                  .doc(widget.roomCode)
+                  .collection('players')
+                  .doc(uid)
+                  .get();
+              
+              if (!mounted) return;
+
+              if (playerSnap.exists && (playerSnap.data()?['hasFinished'] == true)) {
+                // Already finished, go to leaderboard
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RoomLeaderboardScreen(roomCode: widget.roomCode),
+                  ),
+                );
+              } else if (roomData!['status'] == 'active') {
+                // Not finished and room is active, go to quiz
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MultiplayerQuizScreen(roomCode: widget.roomCode, roomData: roomData!),
+                  ),
+                );
+              } else if (roomData!['status'] == 'finished') {
+                // Room finished and user hasn't played, go to leaderboard
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RoomLeaderboardScreen(roomCode: widget.roomCode),
+                  ),
+                );
+              }
             });
           }
         }

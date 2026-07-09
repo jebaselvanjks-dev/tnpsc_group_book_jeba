@@ -41,6 +41,25 @@ class _MultiplayerQuizScreenState extends State<MultiplayerQuizScreen> {
   }
 
   void _loadQuestions() {
+    // Check if room is already finished before starting
+    if (widget.roomData['status'] == 'finished') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLanguage.languageNotifier.value == 'ta' 
+              ? "இந்த தேர்வு ஏற்கனவே முடிந்துவிட்டது." 
+              : "This test has already finished."),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => RoomLeaderboardScreen(roomCode: widget.roomCode)),
+        );
+      });
+      return;
+    }
+
     // Log the play attempt immediately at the start of the match
     _roomService.logAttempt();
     // Clear host room cache since it's now played

@@ -160,15 +160,46 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
                             style: AppTheme.getStyle(
                                 fontSize: 12, color: Colors.grey)),
                       const SizedBox(height: 8),
-                      if (status != 'finished')
+                      if (status != 'finished') ...[
                         Text(
                           ta
                               ? 'அனைவரும் முடிக்கும் வரை காத்திருக்கவும்...'
                               : 'Waiting for all players to finish...',
                           style: AppTheme.getStyle(
                               fontSize: 13, color: Colors.orange),
-                        )
-                      else if (_claimingReward)
+                        ),
+                        if (FirebaseAuth.instance.currentUser?.uid == roomData['hostId'])
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12.0),
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: Text(ta ? "தேர்வை முடிக்கவா?" : "Finish Test?"),
+                                    content: Text(ta 
+                                      ? "இதை அழுத்தினால் தேர்வு முடிந்து வெற்றியாளர் பட்டியல் காட்டப்படும். புதியவர்கள் யாரும் சேர முடியாது." 
+                                      : "This will end the test and show winners. No new users can join."),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ta ? "இல்லை" : "Cancel")),
+                                      ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(ta ? "ஆம், முடி" : "Yes, Finish")),
+                                    ],
+                                  )
+                                );
+                                if (confirm == true) {
+                                  await _roomService.finishRoom(widget.roomCode);
+                                }
+                              },
+                              icon: const AppIcon(Icons.check_circle_outline, color: Colors.white, size: 18),
+                              label: Text(ta ? "தேர்வை முடி (Complete Test)" : "Complete Test"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                      ] else if (_claimingReward)
                         const SizedBox(
                           height: 20,
                           width: 20,

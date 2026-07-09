@@ -42,12 +42,143 @@ class _SubjectScreenState extends State<SubjectScreen> {
     super.initState();
   }
 
-  bool get _isQuizDay {
-    final now = DateTime.now();
-    return now.weekday == DateTime.sunday ||
-           now.weekday == DateTime.tuesday ||
-           now.weekday == DateTime.thursday ||
-           now.weekday == DateTime.saturday;
+  void _showQuizInfoBottomSheet(BuildContext context, String quizTitle, bool isDark) {
+    int bonusPoints = 20;
+    int adPoints = 15;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 50,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : Colors.black12,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                quizTitle,
+                style: AppTheme.getStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : AppTheme.textMainColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                AppLanguage.languageNotifier.value == 'ta' 
+                  ? "இந்தத் தேர்வில் நீங்கள் எவ்வளவு பாயிண்ட்டுகள் எடுக்கலாம்?"
+                  : "How many points can you earn in this quiz?",
+                style: AppTheme.getStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
+                ),
+              ),
+              const SizedBox(height: 32),
+              _buildInfoRow(
+                icon: Icons.check_circle_rounded,
+                color: Colors.green,
+                label: AppLanguage.languageNotifier.value == 'ta' ? "சரியான பதில்" : "Correct Answer",
+                value: "+2 pts",
+              ),
+              const Divider(height: 32),
+              _buildInfoRow(
+                icon: Icons.auto_awesome_rounded,
+                color: Colors.orange,
+                label: AppLanguage.languageNotifier.value == 'ta' ? "முழுமை செய்தற்கான போனஸ்" : "Completion Bonus",
+                value: "+$bonusPoints pts",
+              ),
+              const Divider(height: 32),
+              _buildInfoRow(
+                icon: Icons.play_circle_fill_rounded,
+                color: Colors.blue,
+                label: AppLanguage.languageNotifier.value == 'ta' ? "விளம்பரம் பார்த்தால்" : "With Reward Ad",
+                value: "+$adPoints pts",
+              ),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    if (await VersionService.isUpdateRequired()) {
+                      if (context.mounted) VersionService.showUpdateDialogIfNeeded(context);
+                      return;
+                    }
+                    if (context.mounted) {
+                      Navigator.push(
+                        context, 
+                        MaterialPageRoute(
+                          builder: (context) => QuizScreen(subjectTitle: quizTitle)
+                        )
+                      ).then((_) => setState(() {}));
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: Text(
+                    AppLanguage.getString('start_quiz'),
+                    style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoRow({required IconData icon, required Color color, required String label, required String value}) {
+    bool isDark = AppTheme.themeNotifier.value == ThemeMode.dark;
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTheme.getStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : AppTheme.textMainColor,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: AppTheme.getStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -302,7 +433,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
             child: ElevatedButton(
               onPressed: !_isQuizDay || HiveService.isMockQuizDone()
                   ? null
-                  : () => Navigator.push(context, MaterialPageRoute(builder: (context) => QuizScreen(subjectTitle: AppLanguage.getString('mock_quiz')))).then((_) => setState(() {})),
+                  : () => _showQuizInfoBottomSheet(context, AppLanguage.getString('mock_quiz'), isDark),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: AppTheme.primaryColor,
