@@ -289,8 +289,16 @@ class _QuizScreenState extends State<QuizScreen> {
       }
     }
 
-    // Increment reward points ONLY for correct answers (+2 points)
-    if (isCorrect) {
+    // AI_DEBUG: Points are no longer added immediately for Daily/Mock quizzes
+    // They are calculated and claimed on the result screen instead.
+    bool isDailyOrMock = widget.subjectTitle == AppLanguage.getString('daily_quiz') ||
+        widget.subjectTitle == "Daily Quiz" ||
+        widget.subjectTitle == AppLanguage.getString('mock_quiz') ||
+        widget.subjectTitle == AppLanguage.getString('mock_quiz_title') ||
+        widget.subjectTitle == "Mock Quiz" ||
+        widget.isMockTest;
+
+    if (!isDailyOrMock && isCorrect) {
       await RewardService.addPoints(2);
     }
 
@@ -465,12 +473,8 @@ class _QuizScreenState extends State<QuizScreen> {
 
       if (isDaily) {
         HiveService.setDailyQuizDone();
-        // Award 20 points guaranteed for Daily Quiz completion
-        RewardService.addPoints(20, syncToCloud: true);
       } else if (isMock) {
         HiveService.setMockQuizDone();
-        // Award 20 points guaranteed for Mock Quiz completion
-        RewardService.addPoints(20, syncToCloud: true);
       }
     }
 

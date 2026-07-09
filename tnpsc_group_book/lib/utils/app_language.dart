@@ -162,6 +162,10 @@ class AppLanguage {
         return ta ? 'நிர்வாக குழு' : 'Admin Panel';
       case 'logout':
         return ta ? 'வெளியேறு' : 'Logout';
+      case 'logout_confirm_title':
+        return ta ? 'வெளியேற வேண்டுமா?' : 'Logout?';
+      case 'logout_confirm_desc':
+        return ta ? 'நீங்கள் கணக்கிலிருந்து வெளியேற விரும்புகிறீர்களா?' : 'Are you sure you want to log out?';
       case 'leaderboard':
         return ta ? 'தரவரிசைப் பட்டியல்' : 'Leaderboard';
       case 'time_up':

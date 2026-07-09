@@ -132,7 +132,96 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     (Hive.box(HiveService.userBoxName).get('totalScore', defaultValue: 0) as int) >= _requiredRoomPoints();
 
   void _showNeedPointsMessage() {
-    _showError(AppLanguage.getString('insufficient_points_create').replaceAll('{points}', '${_requiredRoomPoints()}'));
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    bool isTamil = AppLanguage.languageNotifier.value == 'ta';
+    bool canWatch = HiveService.canWatchRewardAdToday();
+    int watchCount = HiveService.getRewardAdWatchCountToday();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            const Icon(Icons.stars_rounded, color: Colors.orange, size: 28),
+            const SizedBox(width: 12),
+            Text(
+              isTamil ? "பாயிண்ட்டுகள் தேவை" : "Points Required",
+              style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              AppLanguage.getString('insufficient_points_create').replaceAll('{points}', '${_requiredRoomPoints()}'),
+              style: AppTheme.getStyle(fontSize: 15, color: isDark ? Colors.white70 : AppTheme.textSecondaryColor),
+            ),
+            if (canWatch) ...[
+              const SizedBox(height: 16),
+              Text(
+                isTamil 
+                  ? "விளம்பரம் பார்த்து 50 பாயிண்ட்டுகளை உடனே பெறுங்கள்."
+                  : "Watch an ad to get 50 points instantly.",
+                style: AppTheme.getStyle(fontSize: 13, color: Colors.orange, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                isTamil ? "மீதமுள்ளது: ${3 - watchCount}/3" : "Remaining: ${3 - watchCount}/3",
+                style: AppTheme.getStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ] else ...[
+              const SizedBox(height: 16),
+              Text(
+                isTamil ? "இன்றைய இலவச பாயிண்ட் வரம்பு முடிந்தது. நாளை மீண்டும் முயலவும்." : "Daily free points limit reached. Try again tomorrow.",
+                style: AppTheme.getStyle(fontSize: 13, color: Colors.redAccent),
+              ),
+            ]
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(isTamil ? "தவிர்" : "Cancel", style: AppTheme.getStyle(color: Colors.grey, fontSize: 14)),
+          ),
+          if (canWatch)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _earnPointsForRoom();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(
+                isTamil ? "50 பாயிண்ட்ஸ் பெற" : "Earn 50 Points",
+                style: AppTheme.getStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _earnPointsForRoom() {
+    RewardService.showRewardAdIfAllowed(
+      fixedRewardAmount: 50,
+      useLimit: true,
+      onRewardEarned: () {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLanguage.languageNotifier.value == 'ta' ? "50 பாயிண்ட்டுகள் சேர்க்கப்பட்டன!" : "50 Points added!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+          setState(() {}); // Refresh UI to show new points
+        }
+      },
+    );
   }
 
   void _startSpinnerTimer() {
@@ -181,7 +270,8 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
     // 4. Check Points
     if (!_hasEnoughPointsForRoom()) {
-      _showError(AppLanguage.getString('insufficient_points_create').replaceAll('{points}', '${_requiredRoomPoints()}'));
+      setState(() => _isCreatingProcess = false);
+      _showNeedPointsMessage();
       return;
     }
 

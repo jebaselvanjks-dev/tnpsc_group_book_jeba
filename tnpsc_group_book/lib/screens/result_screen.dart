@@ -47,6 +47,8 @@ class ResultScreen extends StatefulWidget {
 
 class _ResultScreenState extends State<ResultScreen> {
   final ScreenshotController _screenshotController = ScreenshotController();
+  bool _pointsClaimed = false;
+  bool _isClaiming = false;
 
   bool get _isDailyOrMock {
     final title = widget.subjectTitle;
@@ -446,6 +448,12 @@ class _ResultScreenState extends State<ResultScreen> {
                     ],
                     // Action Buttons
                     const SizedBox(height: 20),
+                    if (_isDailyOrMock && !_pointsClaimed)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 15),
+                        child: _buildClaimPointsSection(isDark),
+                      ),
+                    const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
                       // height: 55,
@@ -544,6 +552,130 @@ class _ResultScreenState extends State<ResultScreen> {
           ),
         ));
       },
+    );
+  }
+
+  Widget _buildClaimPointsSection(bool isDark) {
+    int correctPoints = widget.score * 2;
+    int bonusPoints = 20;
+    int watchCount = HiveService.getQuizAdWatchCountToday();
+    int adBonus = 0;
+    if (watchCount == 0) adBonus = 15;
+    else if (watchCount == 1) adBonus = 10;
+    else if (watchCount == 2) adBonus = 5;
+
+    int totalEarned = correctPoints + bonusPoints + adBonus;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark 
+              ? [const Color(0xFF1E1E2E), const Color(0xFF2A2A3E)]
+              : [Colors.blue.shade50, Colors.blue.shade100],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.stars_rounded, color: Colors.amber, size: 32),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLanguage.languageNotifier.value == 'ta' 
+                        ? "$totalEarned பாயிண்ட்டுகளைப் பெறுங்கள்!"
+                        : "Claim $totalEarned Points!",
+                      style: AppTheme.getStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : AppTheme.textMainColor,
+                      ),
+                    ),
+                    Text(
+                      AppLanguage.languageNotifier.value == 'ta'
+                        ? "விளம்பரம் பார்த்து பாயிண்ட்டுகளை ஏத்துங்கள்"
+                        : "Watch an ad to add points to leaderboard",
+                      style: AppTheme.getStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _isClaiming 
+            ? const CircularProgressIndicator()
+            : Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _claimPoints,
+                      icon: const Icon(Icons.play_circle_fill_rounded, color: Colors.white),
+                      label: Text(
+                        AppLanguage.languageNotifier.value == 'ta' ? "Claim பாயிண்ட்ஸ்" : "Claim Points",
+                        style: AppTheme.getStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _pointsClaimed = true;
+                      });
+                    },
+                    child: Text(
+                      AppLanguage.languageNotifier.value == 'ta' ? "தவிர் (Skip)" : "Skip",
+                      style: AppTheme.getStyle(color: Colors.grey, fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _claimPoints() async {
+    setState(() => _isClaiming = true);
+    
+    int correctPoints = widget.score * 2;
+    int bonusPoints = 20;
+
+    // Show Reward Ad and award points on completion
+    RewardService.showRewardAdIfAllowed(
+      onRewardEarned: () async {
+        // Points awarded inside showRewardAdIfAllowed already (ad bonus)
+        // We need to add the base correctPoints + completion bonus here
+        await RewardService.addPoints(correctPoints + bonusPoints, syncToCloud: true);
+        
+        if (mounted) {
+          setState(() {
+            _pointsClaimed = true;
+            _isClaiming = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLanguage.languageNotifier.value == 'ta' ? "பாயிண்ட்டுகள் வெற்றிகரமாக சேர்க்கப்பட்டன!" : "Points added successfully!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
     );
   }
 

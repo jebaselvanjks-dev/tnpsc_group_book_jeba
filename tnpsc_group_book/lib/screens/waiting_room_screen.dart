@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'dart:ui';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import '../services/room_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
@@ -201,8 +202,15 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
 
     try {
       final image = await _screenshotController.captureFromWidget(
-        _buildShareCard(roomData),
+        Material(
+          child: Directionality(
+            textDirection: ui.TextDirection.ltr,
+            child: _buildShareCard(roomData),
+          ),
+        ),
+        pixelRatio: 3.0,
         delay: const Duration(milliseconds: 100),
+        targetSize: const Size(400, 600),
       );
       if (mounted) Navigator.pop(context); // Dismiss loading
 
@@ -233,6 +241,10 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   Widget _buildShareCard(Map<String, dynamic> roomData) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     
+    // Deterministic background image based on day of week
+    int dayIndex = DateTime.now().weekday; // 1 (Mon) to 7 (Sun)
+    String backgroundImage = 'asset/images/roomCode_share$dayIndex.png';
+
     // Use custom time if selected, otherwise now
     final now = DateTime.now();
     DateTime displayDate = now;
@@ -253,7 +265,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
           // Background Image
           Positioned.fill(
             child: Image.asset(
-              'asset/images/roomCode_share.png',
+              backgroundImage,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 // Fallback to gradient if image fails to load
@@ -332,7 +344,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                       Text(
                         "TNPSC LIVE BATTLE",
                         style: AppTheme.getStyle(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -341,9 +353,9 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                       Text(
                         AppLanguage.getString(_subject),
                         style: AppTheme.getStyle(
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
+                          color: AppTheme.secondaryColor,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -373,15 +385,15 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
-                              ).copyWith(letterSpacing: 3),
+                              ).copyWith(letterSpacing: 2),
                             ),
-                            const SizedBox(height: 5),
+                            const SizedBox(height: 8),
                             Text(
                               widget.roomCode,
                               style: AppTheme.getStyle(
-                                fontSize: 28,
+                                fontSize: 30,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.darkBgColor,
+                                color: AppTheme.primaryColor,
                               ).copyWith(letterSpacing: 6),
                             ),
                           ],
@@ -393,11 +405,11 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const AppIcon(Icons.calendar_today_rounded, size: 18, color: Colors.white),
+                          const AppIcon(Icons.calendar_today_rounded, size: 20, color: Colors.white),
                           const SizedBox(width: 8),
                           Text(
                             formattedDateTime,
-                            style: AppTheme.getStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                            style: AppTheme.getStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -405,11 +417,11 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const AppIcon(AppIcons.group, size: 18, color: Colors.white),
+                          const AppIcon(AppIcons.group, size: 20, color: Colors.white),
                           const SizedBox(width: 8),
                           Text(
                             AppLanguage.getString('lobby_max_players').replaceAll('{max}', '${roomData['maxPlayers']}'),
-                            style: AppTheme.getStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                            style: AppTheme.getStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),

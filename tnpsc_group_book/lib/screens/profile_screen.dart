@@ -1,10 +1,21 @@
+import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart' hide TextDirection;
+import 'package:path_provider/path_provider.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:tnpsc_group_book/utils/app_icons.dart';
+import '../models/subject.dart';
+import '../models/question.dart';
 import '../services/hive_service.dart';
 import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
@@ -25,6 +36,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final ScreenshotController _screenshotController = ScreenshotController();
   final FirestoreService _firestoreService = FirestoreService();
   final user = FirebaseAuth.instance.currentUser;
   String _appVersion = "1.0.0";
@@ -502,6 +514,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 const Divider(height: 1),
                                 ListTile(
+                                  leading: const AppIcon(
+                                    Icons.share_rounded,
+                                    color: Colors.blueAccent,
+                                  ),
+                                  title: Text(
+                                    AppLanguage.languageNotifier.value == 'ta' ? 'நண்பர்களுடன் பகிர்க' : 'Share with Friends',
+                                    style: AppTheme.getStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blueAccent,
+                                    ),
+                                  ),
+                                  trailing: const AppIcon(
+                                    Icons.chevron_right_rounded,
+                                    color: Colors.grey,
+                                  ),
+                                  onTap: _shareAppWithRandomQuiz,
+                                ),
+                                const Divider(height: 1),
+                                ListTile(
                                   leading: AppIcon(
                                     AppIcons.logout_rounded ?? Icons.logout_rounded, // fallback if not defined
                                     color: Colors.redAccent,
@@ -515,8 +547,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   ),
                                   onTap: () async {
-                                    final email =
-                                        FirebaseAuth.instance.currentUser?.email;
+                                    bool? confirmed = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: Text(AppLanguage.getString('logout_confirm_title')),
+                                        content: Text(AppLanguage.getString('logout_confirm_desc')),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, false),
+                                            child: Text(AppLanguage.getString('cancel')),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, true),
+                                            child: Text(
+                                              AppLanguage.getString('logout'),
+                                              style: AppTheme.getStyle(fontSize: 15,
+                                                color: Colors.redAccent,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (confirmed != true) return;
+
+                                    final email = FirebaseAuth.instance.currentUser?.email;
                                     if (email != null) {
                                       await CredentialStorage.clearPassword(email);
                                     }
@@ -586,6 +643,226 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _shareAppWithRandomQuiz() async {
+    try {
+      // 1. Pick a deterministic question based on the current date
+      final now = DateTime.now();
+      final seed = now.year * 10000 + now.month * 100 + now.day;
+      final random = Random(seed);
+      final question = defaultRoomQuestions[random.nextInt(defaultRoomQuestions.length)];
+
+      // 2. Find a matching subject for the question (fallback to random if not found)
+      Subject subject = tnpscSubjects[random.nextInt(tnpscSubjects.length)];
+      if (question.subject != null) {
+        try {
+          subject = tnpscSubjects.firstWhere(
+            (s) => s.titleEn.toLowerCase().contains(question.subject!.toLowerCase()) ||
+                   s.titleTa.toLowerCase().contains(question.subject!.toLowerCase())
+          );
+        } catch (_) {}
+      }
+
+      // 3. Capture the poster
+      final Uint8List? imageBytes = await _screenshotController.captureFromWidget(
+        Material(
+          child: Directionality(
+            textDirection: ui.TextDirection.ltr,
+            child: _buildSharePoster(question, subject, dayIndex: now.weekday),
+          ),
+        ),
+        pixelRatio: 3.0,
+        delay: const Duration(milliseconds: 100),
+        targetSize: const Size(400, 700),
+      );
+
+      if (imageBytes != null) {
+        final directory = await getTemporaryDirectory();
+        final imagePath = await File('${directory.path}/share_quiz.png').create();
+        await imagePath.writeAsBytes(imageBytes);
+
+        String shareText = AppLanguage.languageNotifier.value == 'ta'
+            ? "இந்தக் கேள்வியை உங்களால் தீர்க்க முடியுமா? TNPSC தேர்வுகளுக்குத் தயாராக இந்த ஆப்பை உடனே பதிவிறக்கம் செய்யுங்கள்! 📚\n\nபதிவிறக்கம்: https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book"
+            : "Can you solve this? Download the app now to prepare for TNPSC exams! 📚\n\nDownload: https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book";
+
+        await Share.shareXFiles([XFile(imagePath.path)], text: shareText);
+      }
+    } catch (e) {
+      AppLog.e("Error sharing app: $e");
+    }
+  }
+
+  Widget _buildSharePoster(Question question, Subject subject, {required int dayIndex}) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Deterministic background image based on day of week
+    String backgroundImage = 'asset/images/sharequiz$dayIndex.png';
+
+    return Container(
+      width: 400,
+      height: 700, // Increased height to accommodate options
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF101F42) : Colors.white,
+      ),
+      child: Stack(
+        children: [
+          // Background Image
+          Positioned.fill(
+            child: Image.asset(
+              backgroundImage,
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // Content Overlay
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // App Logo
+                Row(
+                  children: [
+                    Container(
+                      width: 70,
+                      height: 70,
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 3,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'asset/images/logo.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const AppIcon(Icons.school, size: 40, color: AppTheme.primaryColor),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 25),
+                    Icon(subject.icon, color: subject.color, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        subject.title,
+                        style: AppTheme.getStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 25),
+
+                // Question Container
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Row(
+                      //   children: [
+                      //     Icon(subject.icon, color: subject.color, size: 24),
+                      //     const SizedBox(width: 10),
+                      //     Expanded(
+                      //       child: Text(
+                      //         subject.title,
+                      //         style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white70),
+                      //       ),
+                      //     ),
+                      //   ],
+                      // ),
+                      // const Divider(color: Colors.white24, height: 20),
+                      Text(
+                        question.displayQuestion,
+                        style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 20),
+                      ...question.displayOptions.asMap().entries.map((entry) {
+                        int idx = entry.key;
+                        String option = entry.value;
+                        bool isCorrect = idx == question.correctOptionIndex;
+                        String label = String.fromCharCode(65 + idx); // A, B, C, D
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: isCorrect ? Colors.green : Colors.amber,
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  label,
+                                  style: AppTheme.getStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: isCorrect ? Colors.white : Colors.black,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  option,
+                                  style: AppTheme.getStyle(
+                                    fontSize: 15,
+                                    color: isCorrect ? Colors.greenAccent : Colors.white,
+                                    fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                              if (isCorrect) ...[
+                                const SizedBox(width: 8),
+                                const Icon(Icons.check_circle, color: Colors.greenAccent, size: 20),
+                              ]
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ),
+
+                Spacer()
+                // const SizedBox(height: 30),
+                //
+                // // Download Prompt
+                // Text(
+                //   isTamil ? "ஆப்பை பதிவிறக்கம் செய்து விளையாடுங்கள்!" : "Download the app and start playing!",
+                //   textAlign: TextAlign.center,
+                //   style: AppTheme.getStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold),
+                // ),
+                // const SizedBox(height: 10),
+                // Text(
+                //   "TNPSC GROUP BOOK",
+                //   style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white).copyWith(letterSpacing: 2),
+                // ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
