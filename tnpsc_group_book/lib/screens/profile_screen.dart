@@ -725,7 +725,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 // App Logo
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(subject.icon, color: subject.color, size: 24),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              subject.title,
+                              style: AppTheme.getStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 25),
+                        ],
+                      ),
+                    ),
                     Container(
                       width: 70,
                       height: 70,
@@ -746,19 +766,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           'asset/images/logo.png',
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) => const AppIcon(Icons.school, size: 40, color: AppTheme.primaryColor),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 25),
-                    Icon(subject.icon, color: subject.color, size: 24),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        subject.title,
-                        style: AppTheme.getStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber,
                         ),
                       ),
                     ),
