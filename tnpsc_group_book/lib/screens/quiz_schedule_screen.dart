@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:tnpsc_group_book/utils/app_theme.dart';
+import '../utils/app_date.dart';
 import 'package:tnpsc_group_book/utils/app_icons.dart';
 
 class QuizScheduleScreen extends StatelessWidget {
   const QuizScheduleScreen({Key? key}) : super(key: key);
 
   Future<List<Map<String, dynamic>>> _fetchUpcomingQuizzes() async {
-    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final todayStr = AppDate.getTodayString();
     final snapshot = await FirebaseFirestore.instance
         .collection('quizzes')
         .where('date', isGreaterThanOrEqualTo: todayStr)

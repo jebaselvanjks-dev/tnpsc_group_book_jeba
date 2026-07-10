@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/question.dart';
 import '../services/ai_service.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_date.dart';
 import '../utils/app_icons.dart';
 import '../widgets/bilingual_text.dart';
 
@@ -15,7 +16,7 @@ class AdminQuizManageScreen extends StatefulWidget {
 }
 
 class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
-  DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
+  DateTime _selectedDate = AppDate.getISTNow().add(const Duration(days: 1));
   String _quizType = 'daily_quiz'; // 'daily_quiz', 'mock_quiz', 'room_quiz'
   String _selectedSubject = 'general_tamil';
   bool _isLoading = false;
@@ -54,7 +55,7 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
           });
         }
       } else {
-        String dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+        String dateStr = DateFormat('yyyy-MM-dd', 'en_US').format(_selectedDate);
         String collection = _quizType == 'daily_quiz' ? 'quizzes' : 'mock_tests';
         String typeFilter = 'daily_quiz';
 
@@ -269,13 +270,13 @@ class _AdminQuizManageScreenState extends State<AdminQuizManageScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           icon: const AppIcon(AppIcons.calendar),
-                          label: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
+                          label: Text(DateFormat('yyyy-MM-dd', 'en_US').format(_selectedDate)),
                           onPressed: () async {
                             final picked = await showDatePicker(
                               context: context,
                               initialDate: _selectedDate,
-                              firstDate: DateTime.now().subtract(const Duration(days: 30)),
-                              lastDate: DateTime.now().add(const Duration(days: 90)),
+                              firstDate: AppDate.getISTNow().subtract(const Duration(days: 30)),
+                              lastDate: AppDate.getISTNow().add(const Duration(days: 90)),
                             );
                             if (picked != null) {
                               setState(() => _selectedDate = picked);

@@ -320,11 +320,18 @@ class AiService {
     return context;
   }
 
+  static DateTime _getISTNow() {
+    return DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
+  }
+
   // -----------------------------------------------------------------
   // Daily quiz (10 Tamil, 6 GS, 4 Aptitude) generation
   // -----------------------------------------------------------------
   static Future<bool> generateAndSaveDailyQuiz(DateTime date) async {
-    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    // If we're generating for 'today' or 'tomorrow', we should ensure the input date is interpreted correctly.
+    // However, the caller usually passes DateTime.now() or .add(1 day).
+    // To be safe, we format the passed date object using en_US.
+    final dateStr = DateFormat('yyyy-MM-dd', 'en_US').format(date);
 
     // Get topics from last 30 days to avoid repeats
     String recentContext = await _getRecentQuizContext('quizzes', 30);
@@ -536,7 +543,7 @@ $commonRules
   // Mock quiz (25 Tamil, 15 GS, 10 Aptitude) generation
   // -----------------------------------------------------------------
   static Future<bool> generateAndSaveMockQuiz(DateTime date) async {
-    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    final dateStr = DateFormat('yyyy-MM-dd', 'en_US').format(date);
 
     // Get topics from last 30 days to avoid repeats in mock tests
     String recentContext = await _getRecentQuizContext('mock_tests', 30);
@@ -885,7 +892,7 @@ Only return the raw JSON array, no other text or markdown formatting.
     int count = 20,
     int? setIndex,
   }) async {
-    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    final dateStr = DateFormat('yyyy-MM-dd', 'en_US').format(date);
     String subjectTitle = "";
     String syllabusPrompt = "";
 

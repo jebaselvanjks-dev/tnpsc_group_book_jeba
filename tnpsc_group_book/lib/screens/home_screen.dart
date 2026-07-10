@@ -8,6 +8,7 @@ import 'package:tnpsc_group_book/services/deep_link_service.dart';
 import '../models/subject.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
+import '../utils/app_date.dart';
 import 'package:tnpsc_group_book/utils/app_language.dart';
 import '../services/notification_service.dart';
 import '../services/firestore_service.dart';
@@ -75,13 +76,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   streak = data['streak'] ?? 0;
                   totalPoints = data['totalScore'] ?? 0;
 
-                  // Broken streak check
                   String lastActive = data['lastActiveDate'] ?? "";
-                  String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                  String today = AppDate.getTodayString();
                   if (lastActive != "" && lastActive != today) {
                     try {
-                      DateTime lastDate = DateFormat('yyyy-MM-dd').parse(lastActive);
-                      int diff = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day).difference(lastDate).inDays;
+                      DateTime lastDate = AppDate.parse(lastActive);
+                      DateTime istNow = AppDate.getISTNow();
+                      int diff = DateTime(istNow.year, istNow.month, istNow.day).difference(lastDate).inDays;
                       if (diff > 1) streak = 0;
                     } catch (_) {}
                   }
@@ -92,13 +93,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     streak = cachedData['streak'] ?? 0;
                     totalPoints = cachedData['totalScore'] ?? 0;
 
-                    // Broken streak check for offline cache
                     String lastActive = cachedData['lastActiveDate'] ?? "";
-                    String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                    String today = AppDate.getTodayString();
                     if (lastActive != "" && lastActive != today) {
                       try {
-                        DateTime lastDate = DateFormat('yyyy-MM-dd').parse(lastActive);
-                        int diff = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day).difference(lastDate).inDays;
+                        DateTime lastDate = AppDate.parse(lastActive);
+                        DateTime istNow = AppDate.getISTNow();
+                        int diff = DateTime(istNow.year, istNow.month, istNow.day).difference(lastDate).inDays;
                         if (diff > 1) streak = 0;
                       } catch (_) {}
                     }
@@ -150,11 +151,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                     int s = box.get('streak', defaultValue: streak) as int;
                                     // Broken streak check for real-time Hive listener
                                     String lastActive = box.get('lastActiveDate', defaultValue: "") as String;
-                                    String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                                    String today = AppDate.getTodayString();
                                     if (lastActive != "" && lastActive != today) {
                                       try {
-                                        DateTime lastDate = DateFormat('yyyy-MM-dd').parse(lastActive);
-                                        int diff = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day).difference(lastDate).inDays;
+                                        DateTime lastDate = AppDate.parse(lastActive);
+                                        DateTime istNow = AppDate.getISTNow();
+                                        int diff = DateTime(istNow.year, istNow.month, istNow.day).difference(lastDate).inDays;
                                         if (diff > 1) s = 0;
                                       } catch (_) {}
                                     }

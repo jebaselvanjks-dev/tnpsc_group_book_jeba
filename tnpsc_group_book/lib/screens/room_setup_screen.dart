@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:tnpsc_group_book/screens/room_leaderboard_screen.dart';
 import '../services/room_service.dart';
 import '../utils/app_language.dart';
+import '../utils/app_date.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
 import '../models/subject.dart';
@@ -117,7 +118,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
   // Compute required points based on daily attempts and selected max players
   int _requiredRoomPoints() {
-    String today = DateTime.now().toString().split(' ')[0];
+    String today = AppDate.getTodayString();
     var box = Hive.box(HiveService.userBoxName);
     int attempts = box.get('room_create_attempts_$today', defaultValue: 0) as int;
     
@@ -679,7 +680,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
         final history = snapshot.data!;
         // Filter history to show only today's rooms
-        final today = DateTime.now().toString().split(' ')[0];
+        final today = AppDate.getTodayString();
         final filteredHistory = history.where((room) => room['date'] == today).toList();
 
         if (filteredHistory.isEmpty) {
@@ -819,7 +820,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     int balance = currentPoints - totalCost;
     bool hasEnough = currentPoints >= totalCost;
     
-    String today = DateTime.now().toString().split(' ')[0];
+    String today = AppDate.getTodayString();
     int attempts = Hive.box(HiveService.userBoxName).get('room_create_attempts_$today', defaultValue: 0) as int;
     
     // Logic matching _requiredRoomPoints()

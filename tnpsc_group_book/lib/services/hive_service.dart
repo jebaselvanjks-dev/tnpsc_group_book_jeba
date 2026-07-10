@@ -4,6 +4,7 @@ import '../models/question.dart';
 import 'dart:convert';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../utils/app_log.dart';
+import '../utils/app_date.dart';
 
 class HiveService {
   static const String questionsBoxName = 'offline_questions';
@@ -162,7 +163,7 @@ class HiveService {
   // Track Daily AI Usage
   static bool canUseAi() {
     var box = Hive.box(userBoxName);
-    String today = DateTime.now().toString().split(' ')[0];
+    String today = _todayDate();
     int usage = box.get('ai_usage_$today', defaultValue: 0);
     AppLog.d("AI_DEBUG: Daily usage for $today is $usage / 50");
     return usage < 50; // Increased limit to 50 messages per day
@@ -170,7 +171,7 @@ class HiveService {
 
   static Future<void> incrementAiUsage() async {
     var box = Hive.box(userBoxName);
-    String today = DateTime.now().toString().split(' ')[0];
+    String today = _todayDate();
     int usage = box.get('ai_usage_$today', defaultValue: 0);
     await box.put('ai_usage_$today', usage + 1);
   }
@@ -178,28 +179,28 @@ class HiveService {
   // Daily Quiz Limit
   static bool isDailyQuizDone() {
     final box = Hive.box(userBoxName);
-    final today = DateTime.now().toString().split(' ')[0];
+    final today = _todayDate();
     String? lastDone = box.get('dailyquiz_last_completed_date') as String?;
     return lastDone == today;
   }
 
   static Future<void> setDailyQuizDone() async {
     final box = Hive.box(userBoxName);
-    final today = DateTime.now().toString().split(' ')[0];
+    final today = _todayDate();
     await box.put('dailyquiz_last_completed_date', today);
   }
 
   // Mock Quiz Limit
   static bool isMockQuizDone() {
     final box = Hive.box(userBoxName);
-    final today = DateTime.now().toString().split(' ')[0];
+    final today = _todayDate();
     String? lastDone = box.get('mockquiz_last_completed_date') as String?;
     return lastDone == today;
   }
 
   static Future<void> setMockQuizDone() async {
     var box = Hive.box(userBoxName);
-    final today = DateTime.now().toString().split(' ')[0];
+    final today = _todayDate();
     await box.put('mockquiz_last_completed_date', today);
   }
 
@@ -223,7 +224,7 @@ class HiveService {
   static bool hasRoomMatchBoost() => true;
 
   static String _todayDate() {
-    return DateTime.now().toString().split(' ')[0];
+    return AppDate.getTodayString();
   }
 
   // ------------------- Reward Points Management -------------------
@@ -313,7 +314,7 @@ class HiveService {
   static String? getHostRoomCode() {
     var box = Hive.box(userBoxName);
     String? date = box.get('host_room_date') as String?;
-    String today = DateTime.now().toString().split(' ')[0];
+    String today = _todayDate();
     if (date == today) {
       return box.get('host_room_code') as String?;
     }
@@ -382,7 +383,7 @@ class HiveService {
   static Future<void> setLastLeaderboardFetch(bool isDaily) async {
     final box = Hive.box(userBoxName);
     final key = isDaily ? 'last_leaderboard_fetch_daily' : 'last_leaderboard_fetch_mock';
-    await box.put(key, DateTime.now().toString().split(' ')[0]);
+    await box.put(key, _todayDate());
   }
 
   static bool shouldFetchLeaderboard(bool isDaily) {
@@ -397,7 +398,7 @@ class HiveService {
     bool sessionFetched = box.get('session_leaderboard_fetched', defaultValue: false) as bool;
 
     // Fetch if never fetched today OR if cache was explicitly cleared (after a quiz)
-    bool shouldFetch = lastFetch != DateTime.now().toString().split(' ')[0] || cachedData == null || cachedData == "[]";
+    bool shouldFetch = lastFetch != _todayDate() || cachedData == null || cachedData == "[]";
     
     // If it's a "login/app start" fresh fetch, we allow it once per session regardless of date
     if (!shouldFetch && !sessionFetched) {
@@ -542,26 +543,26 @@ class HiveService {
 
   static int getRewardAdWatchCountToday() {
     var box = Hive.box(userBoxName);
-    String today = DateTime.now().toString().split(' ')[0];
+    String today = _todayDate();
     return box.get('reward_ad_watches_$today', defaultValue: 0) as int;
   }
 
   static Future<void> incrementRewardAdWatchCountToday() async {
     var box = Hive.box(userBoxName);
-    String today = DateTime.now().toString().split(' ')[0];
+    String today = _todayDate();
     int current = box.get('reward_ad_watches_$today', defaultValue: 0) as int;
     await box.put('reward_ad_watches_$today', current + 1);
   }
 
   static int getQuizAdWatchCountToday() {
     var box = Hive.box(userBoxName);
-    String today = DateTime.now().toString().split(' ')[0];
+    String today = _todayDate();
     return box.get('quiz_ad_watches_$today', defaultValue: 0) as int;
   }
 
   static Future<void> incrementQuizAdWatchCountToday() async {
     var box = Hive.box(userBoxName);
-    String today = DateTime.now().toString().split(' ')[0];
+    String today = _todayDate();
     int current = box.get('quiz_ad_watches_$today', defaultValue: 0) as int;
     await box.put('quiz_ad_watches_$today', current + 1);
   }

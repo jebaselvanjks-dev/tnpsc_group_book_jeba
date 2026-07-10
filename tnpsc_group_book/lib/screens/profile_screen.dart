@@ -19,6 +19,7 @@ import '../models/question.dart';
 import '../services/hive_service.dart';
 import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_date.dart';
 import '../utils/app_language.dart';
 import '../services/firestore_service.dart';
 import 'settings_screen.dart';
@@ -650,7 +651,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _shareAppWithRandomQuiz() async {
     try {
       // 1. Pick a deterministic question based on the current date
-      final now = DateTime.now();
+      final now = AppDate.getISTNow();
       final seed = now.year * 10000 + now.month * 100 + now.day;
       final random = Random(seed);
       final question = defaultRoomQuestions[random.nextInt(defaultRoomQuestions.length)];

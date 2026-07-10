@@ -8,6 +8,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../models/subject.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
+import '../utils/app_date.dart';
 import 'package:tnpsc_group_book/utils/app_language.dart';
 import '../services/notification_service.dart';
 import '../services/firestore_service.dart';
@@ -359,7 +360,8 @@ class _SubjectScreenState extends State<SubjectScreen> {
   Widget _buildMockCard(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    bool _isQuizDay = const [2, 4, 6, 7].contains(DateTime.now().weekday);
+    DateTime istNow = AppDate.getISTNow();
+    bool _isQuizDay = const [2, 4, 6, 7].contains(istNow.weekday);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),

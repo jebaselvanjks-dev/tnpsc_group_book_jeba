@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../services/ai_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
+import '../utils/app_date.dart';
 import '../utils/app_icons.dart';
 import '../utils/app_log.dart';
 
@@ -61,7 +62,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   ElevatedButton.icon(
                     onPressed: () async {
                       var box = Hive.box('user_data');
-                      String today = DateTime.now().toString().split(' ')[0];
+                      String today = AppDate.getTodayString();
                       await box.put('ai_usage_$today', 0);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("AI Usage Reset for Today!")),
@@ -226,8 +227,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       try {
         int successCount = 0;
         for (int i = 0; i < 7; i++) {
-          DateTime targetDate = DateTime.now().add(Duration(days: i));
-          String dateStr = DateFormat('yyyy-MM-dd').format(targetDate);
+          DateTime targetDate = DateTime.now().toUtc().add(Duration(hours: 5, minutes: 30, days: i));
+          String dateStr = DateFormat('yyyy-MM-dd', 'en_US').format(targetDate);
 
           final db = FirebaseFirestore.instance;
           final existing = await db.collection('quizzes')
@@ -427,7 +428,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       // Process each date
       for (int i = 0; i < nextDates.length; i++) {
         DateTime date = nextDates[i];
-        String dateStr = DateFormat('yyyy-MM-dd').format(date);
+        String dateStr = DateFormat('yyyy-MM-dd', 'en_US').format(date);
         
         // 1. Check if quiz exists and has at least 50 questions
         final querySnap = await FirebaseFirestore.instance

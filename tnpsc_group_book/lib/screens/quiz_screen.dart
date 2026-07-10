@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../models/question.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
+import '../utils/app_date.dart';
 import '../utils/app_language.dart';
 import '../services/firestore_service.dart';
 import 'result_screen.dart';
@@ -404,11 +405,11 @@ class _QuizScreenState extends State<QuizScreen> {
     setState(() => _isGenerating = true);
     
     if (widget.isMockTest) {
-      await AiService.generateAndSaveMockQuiz(DateTime.now());
+      await AiService.generateAndSaveMockQuiz(AppDate.getISTNow());
     } else if (widget.subjectTitle == "Daily Quiz" || widget.subjectTitle == AppLanguage.getString('daily_quiz')) {
-      await AiService.generateAndSaveDailyQuiz(DateTime.now());
+      await AiService.generateAndSaveDailyQuiz(AppDate.getISTNow());
     } else if (widget.subjectTitle == "Mock Quiz" || widget.subjectTitle == AppLanguage.getString('mock_quiz')) {
-      await AiService.generateAndSaveMockQuiz(DateTime.now());
+      await AiService.generateAndSaveMockQuiz(AppDate.getISTNow());
     } else {
       await AiService.generateSubjectQuestions(
         widget.topicKey ?? widget.subjectTitle,

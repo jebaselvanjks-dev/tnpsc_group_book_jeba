@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
+import '../utils/app_date.dart';
 import '../utils/app_language.dart';
 import '../services/hive_service.dart';
 import 'quiz_screen.dart';
@@ -68,7 +69,7 @@ class MockTestScreen extends StatelessWidget {
               }
 
               final tests = snapshot.data!.docs;
-              final now = DateTime.now();
+              final now = AppDate.getISTNow();
 
               return ListView.builder(
                 padding: const EdgeInsets.all(24.0),
@@ -128,7 +129,8 @@ class MockTestScreen extends StatelessWidget {
     bool isLocked,
     bool isExpired
   ) {
-bool isAllowedDay = const [2, 4, 6, 7].contains(DateTime.now().weekday);
+    DateTime istNow = AppDate.getISTNow();
+    bool isAllowedDay = const [2, 4, 6, 7].contains(istNow.weekday);
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(

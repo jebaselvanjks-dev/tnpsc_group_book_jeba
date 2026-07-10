@@ -12,6 +12,7 @@ import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../services/room_service.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_date.dart';
 import '../utils/app_icons.dart';
 import 'multiplayer_quiz_screen.dart';
 import 'room_leaderboard_screen.dart';
@@ -243,7 +244,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Deterministic background image based on day of week
-    int dayIndex = DateTime.now().weekday; // 1 (Mon) to 7 (Sun)
+    int dayIndex = AppDate.getISTNow().weekday; // 1 (Mon) to 7 (Sun)
     String backgroundImage = 'asset/images/roomCode_share$dayIndex.png';
 
     // Use custom time if selected, otherwise now
@@ -894,7 +895,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
               // Check if user has already finished
               final playerSnap = await FirebaseFirestore.instance
                   .collection('rooms')
-                  .doc('daily_${DateFormat('yyyy-MM-dd').format(DateTime.now())}')
+                  .doc('daily_${AppDate.getTodayString()}')
                   .collection('matches')
                   .doc(widget.roomCode)
                   .collection('players')
