@@ -650,223 +650,702 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _shareAppWithRandomQuiz() async {
     try {
-      // 1. Pick a deterministic question based on the current date
+      // 1. Determine the scheduled subject for the current day
       final now = AppDate.getISTNow();
-      final seed = now.year * 10000 + now.month * 100 + now.day;
-      final random = Random(seed);
-      final question = defaultRoomQuestions[random.nextInt(defaultRoomQuestions.length)];
-
-      // 2. Find a matching subject for the question (fallback to random if not found)
-      Subject subject = tnpscSubjects[random.nextInt(tnpscSubjects.length)];
-      if (question.subject != null) {
-        try {
-          subject = tnpscSubjects.firstWhere(
-            (s) => s.titleEn.toLowerCase().contains(question.subject!.toLowerCase()) ||
-                   s.titleTa.toLowerCase().contains(question.subject!.toLowerCase())
-          );
-        } catch (_) {}
+      String targetSubjectTitle;
+      switch (now.weekday) {
+        case 1: // Monday
+        case 5: // Friday
+          targetSubjectTitle = "General Tamil";
+          break;
+        case 2: // Tuesday
+        case 6: // Saturday
+          targetSubjectTitle = "General Studies";
+          break;
+        case 3: // Wednesday
+        case 7: // Sunday
+          targetSubjectTitle = "Aptitude";
+          break;
+        case 4: // Thursday
+          targetSubjectTitle = "Current Affairs";
+          break;
+        default:
+          targetSubjectTitle = "General Tamil";
       }
 
-      // 3. Capture the poster
+      // 2. Filter questions matching the scheduled subject
+      List<Question> filteredQuestions = defaultRoomQuestions.where((q) {
+        if (q.subject == null) return false;
+        return q.subject!.toLowerCase().contains(targetSubjectTitle.toLowerCase());
+      }).toList();
+
+      // Fallback if no questions found for the specific subject
+      if (filteredQuestions.isEmpty) {
+        filteredQuestions = defaultRoomQuestions;
+      }
+
+      // 3. Pick a deterministic question from the filtered list based on the date
+      final seed = now.year * 10000 + now.month * 100 + now.day;
+      final random = Random(seed);
+      final question = filteredQuestions[random.nextInt(filteredQuestions.length)];
+
+      // 4. Find the actual Subject object for the poster header
+      Subject subject = tnpscSubjects[0]; // fallback
+      try {
+        subject = tnpscSubjects.firstWhere(
+          (s) => s.titleEn.toLowerCase().contains(targetSubjectTitle.toLowerCase())
+        );
+      } catch (_) {
+        if (question.subject != null) {
+          try {
+            subject = tnpscSubjects.firstWhere(
+              (s) => s.titleEn.toLowerCase().contains(question.subject!.toLowerCase()) ||
+                     s.titleTa.toLowerCase().contains(question.subject!.toLowerCase())
+            );
+          } catch (_) {}
+        }
+      }
+
+      // 5. Capture the poster with high quality settings
       final Uint8List? imageBytes = await _screenshotController.captureFromWidget(
         Material(
+          color: Colors.black, // Dark base to match poster theme
           child: Directionality(
             textDirection: ui.TextDirection.ltr,
             child: _buildSharePoster(question, subject, dayIndex: now.weekday),
           ),
         ),
-        pixelRatio: 3.0,
-        delay: const Duration(milliseconds: 100),
+        pixelRatio: 4.0, // High density for sharp text and graphics (400 * 4 = 1600px width)
+        delay: const Duration(milliseconds: 500), // More time to ensure all assets/fonts are fully loaded
         targetSize: const Size(400, 700),
       );
 
       if (imageBytes != null) {
-        final directory = await getTemporaryDirectory();
-        final imagePath = await File('${directory.path}/share_quiz.png').create();
-        await imagePath.writeAsBytes(imageBytes);
-
-        String shareText = AppLanguage.languageNotifier.value == 'ta'
-            ? "இந்தக் கேள்வியை உங்களால் தீர்க்க முடியுமா? TNPSC தேர்வுகளுக்குத் தயாராக இந்த ஆப்பை உடனே பதிவிறக்கம் செய்யுங்கள்! 📚\n\nபதிவிறக்கம்: https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book"
-            : "Can you solve this? Download the app now to prepare for TNPSC exams! 📚\n\nDownload: https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book";
-
-        await Share.shareXFiles([XFile(imagePath.path)], text: shareText);
+        if (mounted) {
+          _showSharePreviewDialog(imageBytes);
+        }
       }
     } catch (e) {
       AppLog.e("Error sharing app: $e");
     }
   }
 
-  Widget _buildSharePoster(Question question, Subject subject, {required int dayIndex}) {
+  Future<void> _showSharePreviewDialog(Uint8List imageBytes) async {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
+    String shareText = AppLanguage.languageNotifier.value == 'ta'
+        ? "இந்தக் கேள்வியை உங்களால் தீர்க்க முடியுமா? TNPSC தேர்வுகளுக்குத் தயாராக இந்த ஆப்பை உடனே பதிவிறக்கம் செய்யுங்கள்! 📚\n\nபதிவிறக்கம்: https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book"
+        : "Can you solve this? Download the app now to prepare for TNPSC exams! 📚\n\nDownload: https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book";
 
-    // Deterministic background image based on day of week
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.darkSurfaceColor : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  )
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          AppLanguage.languageNotifier.value == 'ta' ? "முன்னோட்டம்" : "Share Preview",
+                          style: AppTheme.getStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : AppTheme.textMainColor,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Image Preview
+                  Flexible(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? Colors.white10 : Colors.black12,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(11),
+                        child: Image.memory(
+                          imageBytes,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Footer
+                  Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          try {
+                            final directory = await getTemporaryDirectory();
+                            final imagePath = await File('${directory.path}/share_quiz.png').create();
+                            await imagePath.writeAsBytes(imageBytes);
+                            await Share.shareXFiles([XFile(imagePath.path)], text: shareText);
+                          } catch (e) {
+                            AppLog.e("Error sharing from dialog: $e");
+                          }
+                        },
+                        icon: const Icon(Icons.share_rounded, size: 20),
+                        label: Text(
+                          AppLanguage.languageNotifier.value == 'ta' ? "இப்போதே பகிர்க" : "Share Now",
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSharePoster(Question question, Subject subject, {required int dayIndex}) {
     String backgroundImage = 'asset/images/sharequiz$dayIndex.png';
+    const Color goldColor = Color(0xFFFFD700);
 
     return Container(
       width: 400,
-      height: 700, // Increased height to accommodate options
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF101F42) : Colors.white,
-      ),
+      height: 700,
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(color: Colors.black),
       child: Stack(
         children: [
-          // Background Image
-          Positioned.fill(
-            child: Image.asset(
-              backgroundImage,
-              fit: BoxFit.cover,
+          _buildPosterBackground(backgroundImage),
+          _buildPosterHeader(subject, goldColor),
+          _buildPosterQuestionSection(question, goldColor),
+          _buildPosterSidebar(),
+          _buildPosterMockup(),
+          _buildPosterMainBranding(goldColor),
+          _buildPosterBattleSection(goldColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPosterBackground(String imagePath) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset(imagePath, fit: BoxFit.cover),
+        ),
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.7),
+                  Colors.black.withOpacity(0.3),
+                  Colors.black.withOpacity(0.9),
+                ],
+              ),
             ),
           ),
+        ),
+        // Additional glow effects
+        Positioned(
+          top: -100,
+          right: -100,
+          child: Container(
+            width: 300,
+            height: 300,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.blue.withOpacity(0.15),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-          // Content Overlay
-          Padding(
-            padding: const EdgeInsets.all(24.0),
+  Widget _buildPosterHeader(Subject subject, Color goldColor) {
+    return Positioned(
+      top: 20,
+      left: 20,
+      right: 20,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // App Logo
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    Icon(Icons.menu_book_rounded, color: goldColor, size: 32),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Row(
-                        children: [
-                          Icon(subject.icon, color: subject.color, size: 24),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              subject.title,
-                              style: AppTheme.getStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.amber,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 25),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      width: 70,
-                      height: 70,
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 3,
-                            offset: const Offset(0, 4),
-                          )
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'asset/images/logo.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => const AppIcon(Icons.school, size: 40, color: AppTheme.primaryColor),
+                      child: Text(
+                        subject.titleTa,
+                        style: AppTheme.getStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
                         ),
                       ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 25),
-
-                // Question Container
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.4),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white24),
+                Padding(
+                  padding: const EdgeInsets.only(left: 44),
+                  child: Text(
+                    "தினமும் படி, வெற்றியை வெல்லு!",
+                    style: AppTheme.getStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white70,
+                    ),
                   ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 75,
+            height: 75,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: goldColor, width: 2.5),
+              boxShadow: [
+                BoxShadow(
+                  color: goldColor.withOpacity(0.3),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                )
+              ],
+              gradient: const RadialGradient(
+                colors: [Color(0xFF2A2A2A), Color(0xFF000000)],
+              ),
+            ),
+            child: ClipOval(
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Image.asset(
+                  'asset/images/logo.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPosterQuestionSection(Question question, Color goldColor) {
+    return Positioned(
+      top: 90,
+      left: 15,
+      right: 120,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF030611).withOpacity(0.6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.blue.withOpacity(0.3), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: Colors.blue.withOpacity(0.1), blurRadius: 10)
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text("Q.", style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Row(
-                      //   children: [
-                      //     Icon(subject.icon, color: subject.color, size: 24),
-                      //     const SizedBox(width: 10),
-                      //     Expanded(
-                      //       child: Text(
-                      //         subject.title,
-                      //         style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white70),
-                      //       ),
-                      //     ),
-                      //   ],
-                      // ),
-                      // const Divider(color: Colors.white24, height: 20),
                       Text(
-                        question.displayQuestion,
-                        style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                        question.questionEn ?? question.question,
+                        style: AppTheme.getStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          height: 1.3,
+                        ),
                       ),
-                      const SizedBox(height: 20),
-                      ...question.displayOptions.asMap().entries.map((entry) {
-                        int idx = entry.key;
-                        String option = entry.value;
-                        bool isCorrect = idx == question.correctOptionIndex;
-                        String label = String.fromCharCode(65 + idx); // A, B, C, D
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: isCorrect ? Colors.green : Colors.amber,
-                                  shape: BoxShape.circle,
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  label,
-                                  style: AppTheme.getStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: isCorrect ? Colors.white : Colors.black,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  option,
-                                  style: AppTheme.getStyle(
-                                    fontSize: 15,
-                                    color: isCorrect ? Colors.greenAccent : Colors.white,
-                                    fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
-                                  ),
-                                ),
-                              ),
-                              if (isCorrect) ...[
-                                const SizedBox(width: 8),
-                                const Icon(Icons.check_circle, color: Colors.greenAccent, size: 20),
-                              ]
-                            ],
+                      if (question.questionTa != null && question.questionTa!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            question.questionTa!,
+                            style: AppTheme.getStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white70,
+                              height: 1.3,
+                            ),
                           ),
-                        );
-                      }).toList(),
+                        ),
                     ],
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...question.displayOptions.asMap().entries.map((entry) {
+              int idx = entry.key;
+              String label = String.fromCharCode(65 + idx);
+              bool isCorrect = idx == question.correctOptionIndex;
 
-                Spacer()
-                // const SizedBox(height: 30),
-                //
-                // // Download Prompt
-                // Text(
-                //   isTamil ? "ஆப்பை பதிவிறக்கம் செய்து விளையாடுங்கள்!" : "Download the app and start playing!",
-                //   textAlign: TextAlign.center,
-                //   style: AppTheme.getStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold),
-                // ),
-                // const SizedBox(height: 10),
-                // Text(
-                //   "TNPSC GROUP BOOK",
-                //   style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white).copyWith(letterSpacing: 2),
-                // ),
+              String optEn = "";
+              String optTa = "";
+
+              if (question.optionsEn != null && idx < question.optionsEn!.length && question.optionsEn![idx].isNotEmpty) {
+                optEn = question.optionsEn![idx];
+              }
+              if (question.optionsTa != null && idx < question.optionsTa!.length && question.optionsTa![idx].isNotEmpty) {
+                optTa = question.optionsTa![idx];
+              }
+              if (optEn.isEmpty && optTa.isEmpty) {
+                optEn = question.options[idx];
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isCorrect ? Colors.green.withOpacity(0.5) : Colors.white10,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: isCorrect ? Colors.green : goldColor,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          label,
+                          style: AppTheme.getStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Wrap(
+                          children: [
+                            if (optEn.isNotEmpty)
+                              Text(
+                                optTa.isNotEmpty ? "$optEn / " : optEn,
+                                style: AppTheme.getStyle(
+                                  fontSize: 11,
+                                  color: isCorrect ? Colors.greenAccent : Colors.white,
+                                  fontWeight: isCorrect ? FontWeight.bold : FontWeight.w500,
+                                ),
+                              ),
+                            if (optTa.isNotEmpty)
+                              Text(
+                                optTa,
+                                style: AppTheme.getStyle(
+                                  fontSize: 10,
+                                  color: isCorrect ? Colors.greenAccent : Colors.white70,
+                                  fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (isCorrect)
+                        const Icon(Icons.verified_rounded, color: Colors.green, size: 16),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPosterSidebar() {
+    return Positioned(
+      top: 110,
+      right: 15,
+      width: 95,
+      child: Column(
+        children: [
+          _buildSidebarItem(Icons.people_alt_rounded, "LIVE QUIZ", "DAILY\nLIVE BATTLES", const Color(0xFF9C27B0)),
+          _buildSidebarItem(Icons.emoji_events_rounded, "RANK", "ON LIVE\nLEADERBOARD", const Color(0xFF03A9F4)),
+          _buildSidebarItem(Icons.card_giftcard_rounded, "WIN POINTS", "& EXCITING\nREWARDS", const Color(0xFFFF9800)),
+          _buildSidebarItem(Icons.verified_user_rounded, "100% FREE", "TO PLAY", const Color(0xFF4CAF50)),
+          SizedBox(height: 15,),
+          Column(
+            children: [
+              Image.network(
+                'https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png',
+                height: 35,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPosterMockup() {
+    return Positioned(
+      bottom: 0,
+      left: 20,
+      child: Container(
+        width: 130,
+        height: 250,
+        decoration: BoxDecoration(
+          color: const Color(0xFF030611),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white24, width: 4),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.8),
+              blurRadius: 30,
+              offset: const Offset(0, 15),
+            )
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Image.asset(
+            'asset/images/homeScreenLayout.jpg',
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPosterMainBranding(Color goldColor) {
+    return Positioned(
+      bottom: 180,
+      left: 170,
+      right: 15,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.school_rounded, color: Colors.white70, size: 40),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "TNPSC",
+                    style: AppTheme.getStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      height: 0.9,
+                    ),
+                  ),
+                  Text(
+                    "MASTER",
+                    style: AppTheme.getStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      height: 0.9,
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              const Icon(Icons.emoji_events_rounded, color: Color(0xFFE5BA73), size: 40),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [goldColor, const Color(0xFFE5BA73)]),
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [BoxShadow(color: goldColor.withOpacity(0.3), blurRadius: 10)],
+            ),
+            child: Text(
+              "Group 1 | Group 2 | Group 4 | VAO",
+              textAlign: TextAlign.center,
+              style: AppTheme.getStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: Colors.black,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPosterBattleSection(Color goldColor) {
+    return Positioned(
+      bottom: 0,
+      left: 170,
+      right: 15,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.4),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 6)],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.sensors, color: Colors.white, size: 10),
+                      const SizedBox(width: 4),
+                      Text("LIVE", style: AppTheme.getStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  "LIVE GROUP BATTLE",
+                  style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white),
+                ),
+              ],
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Divider(color: Colors.white24, thickness: 1, height: 1),
+            ),
+            _buildBattleFeature(Icons.groups_rounded, "REAL-TIME MULTIPLAYER QUIZ", "நண்பர்களுடன் நேரடி வினாடி வினா"),
+            _buildBattleFeature(Icons.leaderboard_rounded, "LIVE LEADERBOARD", "நேரடி தரவரிசை"),
+            _buildBattleFeature(Icons.psychology_rounded, "DAILY TNPSC PRACTICE", "தினசரி TNPSC பயிற்சி"),
+            _buildBattleFeature(Icons.bolt_rounded, "IMPROVE SPEED & ACCURACY", "வேகம் மற்றும் துல்லியத்தை மேம்படுத்துங்கள்"),
+            _buildBattleFeature(Icons.stars_rounded, "LEARN & COMPETE", "கற்றலும் போட்டியும் ஒன்றாக!"),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebarItem(IconData icon, String title, String sub, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: Container(
+        width: 85,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: AppTheme.getStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      Text(
+                        sub,
+                        style: AppTheme.getStyle(fontSize: 8, color: Colors.white70, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBattleFeature(IconData icon, String title, String sub) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6.0),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFFFFD700), size: 14),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTheme.getStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                Text(
+                  sub,
+                  style: AppTheme.getStyle(fontSize: 8, color: Colors.greenAccent, fontWeight: FontWeight.w600),
+                ),
               ],
             ),
           ),

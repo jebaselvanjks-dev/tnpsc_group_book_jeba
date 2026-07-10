@@ -239,6 +239,7 @@ class AppTheme {
     FontWeight fontWeight = FontWeight.normal,
     Color? color,
     double? height,
+    double? letterSpacing,
   }) {
     bool isTamil = AppLanguage.languageNotifier.value == 'ta';
     
@@ -255,6 +256,7 @@ class AppTheme {
         fontWeight: fontWeight,
         color: color,
         height: height ?? 1.4, // Tamil needs slightly more line height
+        letterSpacing: letterSpacing,
       );
     } else {
       return GoogleFonts.outfit(
@@ -262,6 +264,7 @@ class AppTheme {
         fontWeight: fontWeight,
         color: color,
         height: height ?? 1.2,
+        letterSpacing: letterSpacing,
       );
     }
   }
