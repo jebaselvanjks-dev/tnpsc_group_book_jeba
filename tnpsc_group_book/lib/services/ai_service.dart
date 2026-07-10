@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:http/http.dart' as http;
 import '../utils/app_log.dart';
+import 'hive_service.dart';
 
 class AiService {
   static List<String>? _cachedApiKeys;
@@ -95,6 +96,23 @@ class AiService {
   // Core request helper – discovers models, falls back, and returns raw text
   // -----------------------------------------------------------------
   static Future<String?> _generateWithFallback(String prompt) async {
+    // 0. Check Sticky Config First
+    final sticky = HiveService.getStickyAiConfig();
+    if (sticky != null) {
+      String sKey = sticky['key'] ?? "";
+      String sModel = sticky['model'] ?? "";
+      String sVersion = sticky['version'] ?? "";
+      
+      if (sKey.isNotEmpty && sModel.isNotEmpty && sVersion.isNotEmpty) {
+        AppLog.d("AI_DEBUG: Using Sticky Config - Model: $sModel, Version: $sVersion");
+        final res = await _tryModelRequest(sKey, sModel, sVersion, prompt);
+        if (res != null) return res;
+        
+        AppLog.d("AI_DEBUG: Sticky Config failed. Clearing and proceeding to discovery.");
+        await HiveService.clearStickyAiConfig();
+      }
+    }
+
     final apiKeys = await _getApiKeys();
     if (apiKeys.isEmpty) return null;
 
@@ -155,110 +173,120 @@ class AiService {
       for (String version in ['v1beta', 'v1']) { // Try v1beta first for newer models
         if (keyFailed) break;
         for (String modelName in finalModelsToTry) {
-          int retries = 0;
-          const int maxRetries = 2;
-
-          while (retries <= maxRetries) {
-            try {
-              AppLog.d("AI_DEBUG: REST Call - Trying $modelName on $version (Attempt ${retries + 1})...");
-              final url = Uri.parse(
-                'https://generativelanguage.googleapis.com/$version/models/$modelName:generateContent?key=$apiKey',
-              );
-
-              final response = await http
-                  .post(
-                    url,
-                    headers: {'Content-Type': 'application/json'},
-                    body: jsonEncode({
-                      'contents': [
-                        {
-                          'parts': [
-                            {'text': prompt},
-                          ],
-                        },
-                      ],
-                      'safetySettings': [
-                        {
-                          'category': 'HARM_CATEGORY_HARASSMENT',
-                          'threshold': 'BLOCK_NONE',
-                        },
-                        {
-                          'category': 'HARM_CATEGORY_HATE_SPEECH',
-                          'threshold': 'BLOCK_NONE',
-                        },
-                        {
-                          'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                          'threshold': 'BLOCK_NONE',
-                        },
-                        {
-                          'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                          'threshold': 'BLOCK_NONE',
-                        },
-                      ],
-                      'generationConfig': {
-                        'responseMimeType': 'application/json',
-                        'temperature': 0.9,
-                        'topP': 0.95,
-                        'topK': 40,
-                        'maxOutputTokens': 8192,
-                      },
-                    }),
-                  )
-                  .timeout(const Duration(seconds: 90));
-
-              if (response.statusCode == 200) {
-                final data = jsonDecode(response.body);
-                final candidate = data['candidates'][0];
-                if (candidate['finishReason'] != 'STOP') {
-                   AppLog.d("AI_DEBUG: Model finished with reason: ${candidate['finishReason']}");
-                   break; // Try next model
-                }
-
-                String? text = candidate['content']['parts'][0]['text'];
-                if (text != null) {
-                  text = text.trim();
-                  // Improved JSON extraction using regex to handle potential markdown or extra text
-                  final jsonRegex = RegExp(r'\[.*\]|\{.*\}', dotAll: true);
-                  final match = jsonRegex.stringMatch(text);
-                  if (match != null) {
-                    text = match.trim();
-                  }
-
-                  try {
-                    jsonDecode(text);
-                    return text;
-                  } catch (e) {
-                    AppLog.d("AI_DEBUG: JSON Decode failed for: ${text.substring(0, text.length > 50 ? 50 : text.length)}...");
-                    break; // Try next model
-                  }
-                }
-              } else if (response.statusCode == 429) {
-                AppLog.d("AI_DEBUG: Rate limit reached (429). Retrying after backoff...");
-                await Future.delayed(Duration(seconds: 2 * (retries + 1)));
-                retries++;
-                continue; 
-              } else if (response.statusCode == 403) {
-                AppLog.d("AI_DEBUG: Key invalid or permission denied (403). Switching key...");
-                keyFailed = true;
-                break;
-              } else if (response.statusCode == 503 || response.statusCode == 500) {
-                AppLog.d("AI_DEBUG: Server error (${response.statusCode}). Retrying...");
-                await Future.delayed(Duration(seconds: 1 * (retries + 1)));
-                retries++;
-                continue;
-              } else {
-                AppLog.d("AI_DEBUG: REST FAIL - Status: ${response.statusCode}");
-                break; // Try next model
-              }
-            } catch (e) {
-              AppLog.d("AI_DEBUG: REST Error: $e");
-              break; // Try next model
-            }
+          final res = await _tryModelRequest(apiKey, modelName, version, prompt, onKeyInvalid: () => keyFailed = true);
+          if (res != null) {
+            // SUCCESS! Save this as the sticky config for the rest of the day
+            AppLog.d("AI_DEBUG: Saving new Sticky Config: $modelName on $version");
+            await HiveService.saveStickyAiConfig(apiKey, modelName, version);
+            return res;
           }
           if (keyFailed) break;
         }
       }
       // If we reach here and keyFailed is true, the outer loop continues to next API key
+    }
+    return null;
+  }
+
+  static Future<String?> _tryModelRequest(String apiKey, String modelName, String version, String prompt, {Function? onKeyInvalid}) async {
+    int retries = 0;
+    const int maxRetries = 2;
+
+    while (retries <= maxRetries) {
+      try {
+        AppLog.d("AI_DEBUG: REST Call - Trying $modelName on $version (Attempt ${retries + 1})...");
+        final url = Uri.parse(
+          'https://generativelanguage.googleapis.com/$version/models/$modelName:generateContent?key=$apiKey',
+        );
+
+        final response = await http
+            .post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'contents': [
+                  {
+                    'parts': [
+                      {'text': prompt},
+                    ],
+                  },
+                ],
+                'safetySettings': [
+                  {
+                    'category': 'HARM_CATEGORY_HARASSMENT',
+                    'threshold': 'BLOCK_NONE',
+                  },
+                  {
+                    'category': 'HARM_CATEGORY_HATE_SPEECH',
+                    'threshold': 'BLOCK_NONE',
+                  },
+                  {
+                    'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                    'threshold': 'BLOCK_NONE',
+                  },
+                  {
+                    'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                    'threshold': 'BLOCK_NONE',
+                  },
+                ],
+                'generationConfig': {
+                  'responseMimeType': 'application/json',
+                  'temperature': 0.9,
+                  'topP': 0.95,
+                  'topK': 40,
+                  'maxOutputTokens': 8192,
+                },
+              }),
+            )
+            .timeout(const Duration(seconds: 90));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final candidate = data['candidates'][0];
+          if (candidate['finishReason'] != 'STOP') {
+            AppLog.d("AI_DEBUG: Model finished with reason: ${candidate['finishReason']}");
+            return null; // Try next model
+          }
+
+          String? text = candidate['content']['parts'][0]['text'];
+          if (text != null) {
+            text = text.trim();
+            final jsonRegex = RegExp(r'\[.*\]|\{.*\}', dotAll: true);
+            final match = jsonRegex.stringMatch(text);
+            if (match != null) {
+              text = match.trim();
+            }
+
+            try {
+              jsonDecode(text);
+              return text;
+            } catch (e) {
+              AppLog.d("AI_DEBUG: JSON Decode failed for: ${text.substring(0, text.length > 50 ? 50 : text.length)}...");
+              return null; // Try next model
+            }
+          }
+        } else if (response.statusCode == 429) {
+          AppLog.d("AI_DEBUG: Rate limit reached (429). Retrying after backoff...");
+          await Future.delayed(Duration(seconds: 2 * (retries + 1)));
+          retries++;
+          continue; 
+        } else if (response.statusCode == 403) {
+          AppLog.d("AI_DEBUG: Key invalid or permission denied (403). Switching key...");
+          if (onKeyInvalid != null) onKeyInvalid();
+          return null;
+        } else if (response.statusCode == 503 || response.statusCode == 500) {
+          AppLog.d("AI_DEBUG: Server error (${response.statusCode}). Retrying...");
+          await Future.delayed(Duration(seconds: 1 * (retries + 1)));
+          retries++;
+          continue;
+        } else {
+          AppLog.d("AI_DEBUG: REST FAIL - Status: ${response.statusCode}");
+          return null; // Try next model
+        }
+      } catch (e) {
+        AppLog.d("AI_DEBUG: REST Error: $e");
+        return null; // Try next model
+      }
     }
     return null;
   }
@@ -648,58 +676,41 @@ $commonRules
     // --------------------------------------------------------------------
     List<dynamic> allQuestions = [];
 
-    // 1️⃣ Tamil questions
-    AppLog.d("AI_DEBUG: Generating 25 Tamil Questions...");
-    final resTamil = await _generateWithFallback(promptTamil);
-    if (resTamil != null) {
-      try {
-        List<dynamic> tamilQuestions = jsonDecode(resTamil);
-        if (tamilQuestions.length > 25)
-          tamilQuestions = tamilQuestions.sublist(0, 25);
-        if (tamilQuestions.length == 25) {
-          allQuestions.addAll(
-            tamilQuestions.map((q) => {...q, 'quiz_type': 'general_tamil'}),
-          );
+    // Helper for batched generation
+    Future<bool> fetchBatch(String prompt, String quizType, int expectedCount) async {
+      AppLog.d("AI_DEBUG: Generating $expectedCount $quizType Questions...");
+      final res = await _generateWithFallback(prompt);
+      if (res != null) {
+        try {
+          List<dynamic> batch = jsonDecode(res);
+          if (batch.length > expectedCount) batch = batch.sublist(0, expectedCount);
+          if (batch.length == expectedCount) {
+            allQuestions.addAll(
+              batch.map((q) => {...q, 'quiz_type': quizType}),
+            );
+            return true;
+          } else {
+            AppLog.d("AI_DEBUG: $quizType batch count mismatch. Got ${batch.length}, expected $expectedCount");
+          }
+        } catch (e) {
+          AppLog.d("AI_DEBUG: $quizType JSON Parse Error: $e");
         }
-      } catch (e) {
-        AppLog.d("AI_DEBUG: Tamil JSON Parse Error: $e");
       }
+      return false;
     }
 
-    // 2️⃣ General Studies
-    AppLog.d("AI_DEBUG: Generating 15 GS Questions...");
-    final resGS = await _generateWithFallback(promptGS);
-    if (resGS != null) {
-      try {
-        List<dynamic> gsQuestions = jsonDecode(resGS);
-        if (gsQuestions.length > 15) gsQuestions = gsQuestions.sublist(0, 15);
-        if (gsQuestions.length == 15) {
-          allQuestions.addAll(
-            gsQuestions.map((q) => {...q, 'quiz_type': 'general_studies'}),
-          );
-        }
-      } catch (e) {
-        AppLog.d("AI_DEBUG: GS JSON Parse Error: $e");
-      }
-    }
+    // 1️⃣ Tamil questions - Split into 2 batches to prevent timeout
+    final promptTamil1 = promptTamil.replaceFirst("exactly 25", "exactly 13");
+    final promptTamil2 = promptTamil.replaceFirst("exactly 25", "exactly 12");
 
-    // 3️⃣ Aptitude
-    AppLog.d("AI_DEBUG: Generating 10 Aptitude Questions...");
-    final resAptitude = await _generateWithFallback(promptAptitude);
-    if (resAptitude != null) {
-      try {
-        List<dynamic> aptitudeQuestions = jsonDecode(resAptitude);
-        if (aptitudeQuestions.length > 10)
-          aptitudeQuestions = aptitudeQuestions.sublist(0, 10);
-        if (aptitudeQuestions.length == 10) {
-          allQuestions.addAll(
-            aptitudeQuestions.map((q) => {...q, 'quiz_type': 'aptitude'}),
-          );
-        }
-      } catch (e) {
-        AppLog.d("AI_DEBUG: Aptitude JSON Parse Error: $e");
-      }
-    }
+    if (!await fetchBatch(promptTamil1, 'general_tamil', 13)) return false;
+    if (!await fetchBatch(promptTamil2, 'general_tamil', 12)) return false;
+
+    // 2️⃣ General Studies - 1 batch
+    if (!await fetchBatch(promptGS, 'general_studies', 15)) return false;
+
+    // 3️⃣ Aptitude - 1 batch
+    if (!await fetchBatch(promptAptitude, 'aptitude', 10)) return false;
 
     // --------------------------------------------------------------------
     if (allQuestions.length == 50) {

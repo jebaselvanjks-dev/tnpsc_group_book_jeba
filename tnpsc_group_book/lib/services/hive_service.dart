@@ -45,7 +45,8 @@ class HiveService {
             key.startsWith('room_ad_watches_') ||
             key.startsWith('reward_ad_watches_') ||
             key.startsWith('quiz_ad_watches_') ||
-            key.startsWith('room_create_attempts_')
+            key.startsWith('room_create_attempts_') ||
+            key.startsWith('sticky_ai_config_')
         )) {
           // If the key belongs to a different date, add to delete list
           if (!key.endsWith(today)) {
@@ -511,6 +512,34 @@ class HiveService {
     // Check if at least 30 days have passed
     return DateTime.now().difference(lastUpdate).inDays >= 30;
   }
+
+  // ------------------- Sticky AI Config -------------------
+  static Future<void> saveStickyAiConfig(String key, String model, String version) async {
+    var box = Hive.box(userBoxName);
+    String today = _todayDate();
+    await box.put('sticky_ai_config_$today', {
+      'key': key,
+      'model': model,
+      'version': version,
+    });
+  }
+
+  static Map<String, String>? getStickyAiConfig() {
+    var box = Hive.box(userBoxName);
+    String today = _todayDate();
+    var data = box.get('sticky_ai_config_$today');
+    if (data != null && data is Map) {
+      return Map<String, String>.from(data);
+    }
+    return null;
+  }
+
+  static Future<void> clearStickyAiConfig() async {
+    var box = Hive.box(userBoxName);
+    String today = _todayDate();
+    await box.delete('sticky_ai_config_$today');
+  }
+
   static int getRewardAdWatchCountToday() {
     var box = Hive.box(userBoxName);
     String today = DateTime.now().toString().split(' ')[0];
