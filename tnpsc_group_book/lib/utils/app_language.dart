@@ -298,6 +298,18 @@ class AppLanguage {
         return ta ? 'கிடைக்கிறது' : 'AVAILABLE';
       case 'unlocks_in':
         return ta ? '{days} நாட்களில் திறக்கும்' : 'UNLOCKS IN {days} DAYS';
+      case 'lobby_share_cta':
+        return ta ? 'குழு விளையாட வாரிசேருங்கள்!' : 'Join the Group Battle!';
+      case 'real_time_comp':
+        return ta ? 'நேரடி போட்டி' : 'REAL-TIME COMPETITION';
+      case 'performance_analytics':
+        return ta ? 'செயல்திறன் பகுப்பாய்வு' : 'PERFORMANCE ANALYTICS';
+      case 'improve_succeed':
+        return ta ? 'மேம்படுத்தி வெற்றி!' : 'IMPROVE & SUCCEED!';
+      case 'max_players_label':
+        return ta ? 'அதிகபட்ச வீரர்கள்' : 'Max Players';
+      case 'download_to_join':
+        return ta ? 'சேர செயலியைப் பதிவிறக்கவும்' : 'Download App to Join!';
       case 'previous_test':
         return ta ? 'முந்தையத் தேர்வு' : 'PREVIOUS TEST';
       case 'active_now':

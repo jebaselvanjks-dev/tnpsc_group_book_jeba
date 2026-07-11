@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:ui';
 
@@ -205,19 +206,115 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
     try {
       final image = await _screenshotController.captureFromWidget(
         Material(
+          color: Colors.black,
           child: Directionality(
             textDirection: ui.TextDirection.ltr,
-            child: _buildShareCard(roomData),
+            child: MediaQuery(
+              data: const MediaQueryData(),
+              child: _buildShareCard(roomData),
+            ),
           ),
         ),
-        pixelRatio: 3.0,
-        delay: const Duration(milliseconds: 100),
-        targetSize: const Size(400, 600),
+        pixelRatio: 4.0,
+        delay: const Duration(milliseconds: 500),
+        targetSize: const Size(400, 750),
       );
       if (mounted) Navigator.pop(context); // Dismiss loading
 
       if (image == null) return;
 
+      if (mounted) {
+        _showSharePreviewDialog(image, roomData);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to prepare invitation card.')),
+        );
+      }
+    }
+  }
+
+  void _showSharePreviewDialog(Uint8List imageBytes, Map<String, dynamic> roomData) {
+    final isTamil = AppLanguage.languageNotifier.value == 'ta';
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: isDark ? const Color(0xFF101F42) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      isTamil ? "அழைப்பிதழ் முன்னோட்டம்" : "Invitation Preview",
+                      style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.memory(imageBytes, fit: BoxFit.contain),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    _executeShare(imageBytes);
+                  },
+                  icon: const Icon(Icons.share_rounded, color: Colors.white),
+                  label: Text(
+                    isTamil ? "இப்போதே பகிர்க" : "Share Now",
+                    style: AppTheme.getStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.secondaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _executeShare(Uint8List image) async {
+    try {
       final directory = await getTemporaryDirectory();
       final imagePath = File('${directory.path}/invitation_${widget.roomCode}.png');
       await imagePath.writeAsBytes(image);
@@ -232,7 +329,6 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
       );
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to share invitation card.')),
         );
@@ -241,232 +337,449 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   }
 
   Widget _buildShareCard(Map<String, dynamic> roomData) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    // Deterministic background image based on day of week
-    int dayIndex = AppDate.getISTNow().weekday; // 1 (Mon) to 7 (Sun)
-    String backgroundImage = 'asset/images/roomCode_share$dayIndex.png';
+    const Color goldColor = Color(0xFFFFD700);
+    int dayIndex = AppDate.getISTNow().weekday;
+    String backgroundImage = 'asset/images/sharequiz$dayIndex.png';
 
-    // Use custom time if selected, otherwise now
     final now = DateTime.now();
     DateTime displayDate = now;
     if (_customTime != null) {
       displayDate = DateTime(now.year, now.month, now.day, _customTime!.hour, _customTime!.minute);
     }
-    
-    String formattedDateTime = DateFormat('dd MMM yyyy, hh:mm a').format(displayDate);
 
     return Container(
       width: 400,
-      height: 600, // Fixed height to ensure aspect ratio matches typical social shares
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF101F42) : Colors.white,
-      ),
+      height: 750,
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(color: Colors.black),
       child: Stack(
         children: [
-          // Background Image
-          Positioned.fill(
-            child: Image.asset(
-              backgroundImage,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                // Fallback to gradient if image fails to load
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: isDark
-                        ? [const Color(0xFF101F42), const Color(0xFF1A2E5A)]
-                        : [Colors.white, Colors.blue.shade50],
-                    ),
-                  ),
-                );
-              },
+          _buildPosterBackground(backgroundImage),
+          _buildPosterHeader(goldColor, roomData),
+          _buildPosterRoomCodeSection(goldColor, displayDate, roomData),
+          _buildPosterCTA(goldColor),
+          _buildPosterDownloadSection(),
+          // _buildPosterFeatures(goldColor),
+          _buildPosterMockups(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPosterBackground(String imagePath) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset(
+            imagePath,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFF030611)),
+          ),
+        ),
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.9),
+                  Colors.black.withOpacity(0.5),
+                  Colors.black.withOpacity(0.95),
+                ],
+              ),
             ),
           ),
+        ),
+        // Glow effect
+        Positioned(
+          top: -50,
+          left: -50,
+          child: Container(
+            width: 250,
+            height: 250,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.secondaryColor.withOpacity(0.15),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-          // Content Overlay
-          Padding(
-            padding: const EdgeInsets.all(14.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // const SizedBox(height: 10),
-                // App Logo in Round Container
-                Container(
-                  width: 70,
-                  height: 70,
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 3,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'asset/images/logo.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const AppIcon(Icons.school, size: 40, color: AppTheme.primaryColor),
+  Widget _buildPosterHeader(Color goldColor, Map<String, dynamic> roomData) {
+    return Positioned(
+      top: 30,
+      left: 0,
+      right: 0,
+      child: Column(
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 85,
+                    height: 85,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: goldColor, width: 2),
+                      boxShadow: [BoxShadow(color: goldColor.withOpacity(0.3), blurRadius: 20)],
+                      gradient: const RadialGradient(colors: [Color(0xFF2A2A2A), Color(0xFF000000)]),
+                    ),
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Image.asset('asset/images/logo.png', fit: BoxFit.contain),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                // Top Header
-                // const SizedBox(height: 15),
-
-                // Main Centered Container
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.textMainColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 18,
-                        offset: const Offset(0, 10),
-                      )
-                    ],
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                  const SizedBox(width: 60),
+                  Column(
                     children: [
                       Text(
-                        "TNPSC LIVE BATTLE",
-                        style: AppTheme.getStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      // const SizedBox(height: 5),
-                      Text(
-                        AppLanguage.getString(_subject),
-                        style: AppTheme.getStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.secondaryColor,
-                        ),
-                        textAlign: TextAlign.center,
+                        "TNPSC",
+                        style: AppTheme.getStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, height: 1.0, letterSpacing: 2),
                       ),
                       const SizedBox(height: 5),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 18,
-                              offset: const Offset(0, 10),
-                            )
-                          ],
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 2,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              "Room Code",
-                              style: AppTheme.getStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ).copyWith(letterSpacing: 2),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              widget.roomCode,
-                              style: AppTheme.getStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryColor,
-                              ).copyWith(letterSpacing: 6),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // const SizedBox(height: 24),
-                      // Divider(color: AppTheme.primaryColor.withOpacity(0.2), thickness: 1.5),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const AppIcon(Icons.calendar_today_rounded, size: 20, color: Colors.white),
-                          const SizedBox(width: 8),
-                          Text(
-                            formattedDateTime,
-                            style: AppTheme.getStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const AppIcon(AppIcons.group, size: 20, color: Colors.white),
-                          const SizedBox(width: 8),
-                          Text(
-                            AppLanguage.getString('lobby_max_players').replaceAll('{max}', '${roomData['maxPlayers']}'),
-                            style: AppTheme.getStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                      Text(
+                        "LIVE BATTLE",
+                        style: AppTheme.getStyle(fontSize: 32, fontWeight: FontWeight.w900, color: goldColor, height: 1.0, letterSpacing: 1),
                       ),
                     ],
                   ),
-                ),
-                const Spacer(),
-
-                // Footer Info
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        AppLanguage.getString('welcome_group_quiz'),
-                        style: AppTheme.getStyle(
-                          fontSize: 14,
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Download TNPSC Master App to Join!",
-                        style: AppTheme.getStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.yellow,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
+              // Simulated dots decoration
+              Positioned(
+                left: 30,
+                child: Opacity(opacity: 0.2, child: _buildDotsPattern()),
+              ),
+              Positioned(
+                right: 30,
+                child: Opacity(opacity: 0.2, child: _buildDotsPattern()),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+            decoration: const BoxDecoration(
+              border: Border(
+                top: BorderSide(color: Colors.white24, width: 0.5),
+                bottom: BorderSide(color: Colors.white24, width: 0.5),
+              ),
+            ),
+            child: Text(
+              AppLanguage.getString(roomData['subject'] ?? 'General'),
+              style: AppTheme.getStyle(fontSize: 25, fontWeight: FontWeight.bold, color: Colors.white70),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildDotsPattern() {
+    return Column(
+      children: List.generate(6, (i) => Row(
+        children: List.generate(4, (j) => Container(
+          width: 2,
+          height: 2,
+          margin: const EdgeInsets.all(3),
+          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+        )),
+      )),
+    );
+  }
+
+  Widget _buildPosterRoomCodeSection(Color goldColor, DateTime date, Map<String, dynamic> roomData) {
+    return Positioned(
+      top: 180,
+      left: 20,
+      right: 20,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0A1931).withOpacity(0.8),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 30, spreadRadius: 5)],
+        ),
+        child: Column(
+          children: [
+            Text(
+              "ROOM CODE",
+              style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white70, letterSpacing: 3),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Text(
+                widget.roomCode,
+                textAlign: TextAlign.center,
+                style: AppTheme.getStyle(fontSize: 30, fontWeight: FontWeight.w900, color: const Color(0xFF030611), letterSpacing: 8),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Row(
+                children: [
+                  Expanded(child: _buildInfoItem(Icons.calendar_month_rounded, DateFormat('dd MMM yyyy').format(date), DateFormat('hh:mm a').format(date))),
+                  Container(width: 1, height: 35, color: Colors.white10),
+                  Expanded(child: _buildInfoItem(Icons.groups_rounded, "அதிகபட்ச வீரர்கள்", "${roomData['maxPlayers'] ?? 100}")),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(IconData icon, String top, String bottom) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: const Color(0xFFE5BA73), size: 18),
+            const SizedBox(width: 8),
+            Text(top, style: AppTheme.getStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(bottom, style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
+      ],
+    );
+  }
+
+  Widget _buildPosterCTA(Color goldColor) {
+    return Positioned(
+      top: 400,
+      left: 40,
+      right: 40,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: goldColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: goldColor.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: goldColor.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: goldColor.withOpacity(0.2),
+              ),
+              child: Icon(Icons.emoji_events_rounded, color: goldColor, size: 24),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Join Battle",
+                    style: AppTheme.getStyle(fontSize: 10, color: Colors.white70),
+                  ),
+                  Text(
+                    "குழு வினாடி வினா",
+                    style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPosterDownloadSection() {
+    return Positioned(
+      top: 460,
+      left: 40,
+      right: 40,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.network(
+            'https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png',
+            height: 50,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPosterFeatures(Color goldColor) {
+    return Positioned(
+      bottom: 195,
+      left: 20,
+      right: 20,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildFeatureItem(Icons.people_rounded, "REAL-TIME\nCOMPETITION", "நேரடி போட்டி"),
+          _buildFeatureItem(Icons.emoji_events_outlined, "LEADERBOARD", "முன்னிலை பட்டியல்"),
+          _buildFeatureItem(Icons.bar_chart_rounded, "PERFORMANCE\nANALYTICS", "செயல்திறன் பகுப்பாய்வு"),
+          _buildFeatureItem(Icons.ads_click_rounded, "IMPROVE &\nSUCCEED", "மேம்படுத்தி வெற்றி!"),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(IconData icon, String enLabel, String taLabel) {
+    return SizedBox(
+      width: 85,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [const Color(0xFF1A2E5A), const Color(0xFF030611)]
+              ),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
+            child: Icon(icon, color: const Color(0xFFE5BA73), size: 22),
+          ),
+          const SizedBox(height: 8),
+          Text(enLabel, textAlign: TextAlign.center, style: AppTheme.getStyle(fontSize: 7, fontWeight: FontWeight.bold, color: Colors.white70)),
+          Text(taLabel, textAlign: TextAlign.center, style: AppTheme.getStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white.withOpacity(0.6))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPosterMockups() {
+    return Positioned(
+      bottom: -15,
+      left: 0,
+      right: 0,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildPhoneMockup('asset/images/homeScreenLayout.jpg', rotation: -0.15),
+              const SizedBox(width: 40),
+              _buildPhoneMockup('asset/images/groupScreenLayout.jpg', rotation: 0.15),
+            ],
+          ),
+          // Decorative Wreath Text
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.star_rounded, color: Color(0xFFE5BA73), size: 16),
+              const SizedBox(height: 4),
+              Text("PREPARE", style: AppTheme.getStyle(fontSize: 7, fontWeight: FontWeight.w900, color: const Color(0xFFE5BA73), letterSpacing: 1)),
+              Text("PRACTICE", style: AppTheme.getStyle(fontSize: 7, fontWeight: FontWeight.w900, color: const Color(0xFFE5BA73), letterSpacing: 1)),
+              Text("SUCCEED", style: AppTheme.getStyle(fontSize: 7, fontWeight: FontWeight.w900, color: const Color(0xFFE5BA73), letterSpacing: 1)),
+              const SizedBox(height: 4),
+              const Icon(Icons.star_rounded, color: Color(0xFFE5BA73), size: 16),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhoneMockup(String imagePath, {required double rotation}) {
+    return Transform.rotate(
+      angle: rotation,
+      child: Container(
+        width: 140,
+        height: 250,
+        decoration: BoxDecoration(
+          color: const Color(0xFF030611),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white24, width: 3),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, 10))],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(17),
+          child: Image.asset(imagePath, fit: BoxFit.fill),
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _showStartConfirmation(int playerCount) async {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    bool isTamil = AppLanguage.languageNotifier.value == 'ta';
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF101F42) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          isTamil ? 'தேர்வைத் தொடங்கவா?' : 'Start Group Test?',
+          style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          isTamil 
+            ? 'மொத்தம் $playerCount வீரர்கள் இணைந்துள்ளனர். தேர்வை இப்போதே தொடங்க விரும்புகிறீர்களா?' 
+            : 'Total $playerCount players joined. Are you sure you want to start the test now?',
+          style: AppTheme.getStyle(
+              fontSize: 15,
+              color: isDark ? Colors.white70 : AppTheme.textSecondaryColor
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppLanguage.getString('no'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.secondaryColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(
+              isTamil ? 'தொடங்கு' : 'Start',
+              style: AppTheme.getStyle(fontSize: 14, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   void _startExam() async {
@@ -1228,7 +1541,12 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton(
-                                    onPressed: canStart ? _startExam : null,
+                                    onPressed: canStart ? () async {
+                                      final confirmed = await _showStartConfirmation(count);
+                                      if (confirmed) {
+                                        _startExam();
+                                      }
+                                    } : null,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppTheme.secondaryColor,
                                       padding: const EdgeInsets.symmetric(vertical: 16),
