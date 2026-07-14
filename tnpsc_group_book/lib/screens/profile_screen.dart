@@ -650,63 +650,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _shareAppWithRandomQuiz() async {
     try {
-      // 1. Determine the scheduled subject for the current day
       final now = AppDate.getISTNow();
-      String targetSubjectTitle;
-      switch (now.weekday) {
-        case 1: // Monday
-        case 5: // Friday
-          targetSubjectTitle = "General Tamil";
-          break;
-        case 2: // Tuesday
-        case 6: // Saturday
-          targetSubjectTitle = "General Studies";
-          break;
-        case 3: // Wednesday
-        case 7: // Sunday
-          targetSubjectTitle = "Aptitude";
-          break;
-        case 4: // Thursday
-          targetSubjectTitle = "Current Affairs";
-          break;
-        default:
-          targetSubjectTitle = "General Tamil";
-      }
+      List<Question> pool = [];
 
-      // 2. Filter questions matching the scheduled subject
-      List<Question> filteredQuestions = defaultRoomQuestions.where((q) {
-        if (q.subject == null) return false;
-        return q.subject!.toLowerCase().contains(targetSubjectTitle.toLowerCase());
-      }).toList();
-
-      // Fallback if no questions found for the specific subject
-      if (filteredQuestions.isEmpty) {
-        filteredQuestions = defaultRoomQuestions;
-      }
-
-      // 3. Pick a deterministic question from the filtered list based on the date
-      final seed = now.year * 10000 + now.month * 100 + now.day;
-      final random = Random(seed);
-      final question = filteredQuestions[random.nextInt(filteredQuestions.length)];
-
-      // 4. Find the actual Subject object for the poster header
-      Subject subject = tnpscSubjects[0]; // fallback
+      // 1. Try to fetch from a daily rotating quiz (General Tamil -> Studies -> Aptitude)
       try {
-        subject = tnpscSubjects.firstWhere(
-          (s) => s.titleEn.toLowerCase().contains(targetSubjectTitle.toLowerCase())
-        );
-      } catch (_) {
-        if (question.subject != null) {
+        pool = await _firestoreService.getDailyRotatingQuiz();
+      } catch (e) {
+        AppLog.e("Error fetching daily rotating quiz for share: $e");
+      }
+
+      // 2. Fallback to today's Daily Quiz from Firestore
+      if (pool.isEmpty) {
+        try {
+          List<Question> dailyQuiz = await _firestoreService.getDailyQuiz();
+          if (dailyQuiz.isNotEmpty) {
+            pool = dailyQuiz;
+          }
+        } catch (e) {
+          AppLog.e("Error fetching daily quiz for share: $e");
+        }
+      }
+
+      // 3. Final fallback to Random Table (defaultRoomQuestions) if pool is still empty
+      if (pool.isEmpty) {
+        pool = defaultRoomQuestions;
+      }
+
+      // 4. Use the specific question from the pool (now deterministic)
+      final question = pool.first;
+
+      // 5. Find the actual Subject object for the poster header
+      Subject subject = tnpscSubjects[0]; // fallback
+      if (question.subject != null) {
+        try {
+          subject = tnpscSubjects.firstWhere(
+            (s) => s.titleEn.toLowerCase().contains(question.subject!.toLowerCase()) ||
+                   s.titleTa.toLowerCase().contains(question.subject!.toLowerCase())
+          );
+        } catch (_) {
+          // Attempt fuzzy match or stay with fallback
           try {
-            subject = tnpscSubjects.firstWhere(
-              (s) => s.titleEn.toLowerCase().contains(question.subject!.toLowerCase()) ||
-                     s.titleTa.toLowerCase().contains(question.subject!.toLowerCase())
+             subject = tnpscSubjects.firstWhere(
+              (s) => question.subject!.toLowerCase().contains(s.titleEn.toLowerCase()) ||
+                     question.subject!.toLowerCase().contains(s.titleTa.toLowerCase())
             );
           } catch (_) {}
         }
       }
 
-      // 5. Capture the poster with high quality settings
+      // 6. Capture the poster with high quality settings
       final Uint8List? imageBytes = await _screenshotController.captureFromWidget(
         Material(
           color: Colors.black, // Dark base to match poster theme
@@ -715,8 +708,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: _buildSharePoster(question, subject, dayIndex: now.weekday),
           ),
         ),
-        pixelRatio: 4.0, // High density for sharp text and graphics (400 * 4 = 1600px width)
-        delay: const Duration(milliseconds: 500), // More time to ensure all assets/fonts are fully loaded
+        pixelRatio: 4.0, // High density for sharp text and graphics
+        delay: const Duration(milliseconds: 500),
         targetSize: const Size(400, 700),
       );
 
@@ -845,7 +838,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Stack(
         children: [
           _buildPosterBackground(backgroundImage),
-          _buildPosterHeader(subject, goldColor),
+          _buildPosterHeader(question, subject, goldColor),
           _buildPosterQuestionSection(question, goldColor),
           _buildPosterSidebar(),
           _buildPosterMockup(),
@@ -894,7 +887,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPosterHeader(Subject subject, Color goldColor) {
+  Widget _buildPosterHeader(Question question, Subject subject, Color goldColor) {
+    String displayTitle = subject.titleTa; // Default to the subject's Tamil title
+    AppLog.d("Topic: ${question.quizType}");
+    
+    // Determine the rotating type based on date (Gives us a reliable fallback if quizType is null)
+    final now = AppDate.getISTNow();
+    List<String> types = ['general_tamil', 'general_studies', 'aptitude'];
+    int daysSinceEpoch = now.difference(DateTime(1970, 1, 1)).inDays;
+    String expectedType = types[daysSinceEpoch % types.length];
+
+    // Use question.quizType if available, otherwise use expectedType
+    String activeType = question.quizType ?? expectedType;
+
+    // Check for rotating quiz types and apply Tamil translations (PRIORITY)
+    if (activeType == "general_tamil") {
+      displayTitle = "பொது தமிழ்";
+    } else if (activeType == "general_studies") {
+      displayTitle = "பொது அறிவு";
+    } else if (activeType == "aptitude") {
+      displayTitle = "கணிதத் திறன்";
+    } else if (question.subject != null && question.subject!.isNotEmpty) {
+      // Fallback to question subject if it's not a rotating type and not generic
+      String qSub = question.subject!.toLowerCase();
+      if (qSub != "general" && qSub != "daily quiz" && qSub != "daily_quiz") {
+        displayTitle = question.subject!;
+      }
+    }
+
     return Positioned(
       top: 20,
       left: 20,
@@ -908,13 +928,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.menu_book_rounded, color: goldColor, size: 32),
+                    Icon(subject.icon, color: goldColor, size: 32),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        subject.titleTa,
+                        displayTitle,
                         style: AppTheme.getStyle(
-                          fontSize: 30,
+                          fontSize: 25,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                         ),

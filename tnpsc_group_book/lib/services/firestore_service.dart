@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive/hive.dart';
@@ -15,17 +16,21 @@ class FirestoreService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   /// Helper to retry Firestore operations
-  Future<T> _retry<T>(Future<T> Function() operation, {int maxAttempts = 3}) async {
+  Future<T> _retry<T>(Future<T> Function() operation,
+      {int maxAttempts = 3}) async {
     int attempt = 0;
     while (true) {
       attempt++;
       try {
         return await operation();
       } catch (e) {
-        if (attempt >= maxAttempts || e.toString().contains('permission-denied')) {
+        if (attempt >= maxAttempts ||
+            e.toString().contains('permission-denied')) {
           rethrow;
         }
-        AppLog.d("AI_DEBUG: Firestore Operation failed (Attempt $attempt/$maxAttempts). Retrying in ${attempt * 2}s...");
+        AppLog.d(
+            "AI_DEBUG: Firestore Operation failed (Attempt $attempt/$maxAttempts). Retrying in ${attempt *
+                2}s...");
         await Future.delayed(Duration(seconds: attempt * 2));
       }
     }
@@ -41,7 +46,7 @@ class FirestoreService {
         'lastNameUpdateDate': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       AppLog.d("AI_DEBUG: User profile name updated in Firestore: $name");
-      
+
       // Refresh user data immediately after save
       await getUserData(forceRefresh: true);
     } catch (e) {
@@ -56,26 +61,34 @@ class FirestoreService {
       query = query.toLowerCase();
 
       // 1. Search in subject study materials
-      final studyDocs = await _db.collection('subject_study_material').limit(10).get();
+      final studyDocs = await _db
+          .collection('subject_study_material')
+          .limit(10)
+          .get();
       for (var doc in studyDocs.docs) {
         String subject = (doc.get('subject') ?? "").toString().toLowerCase();
         if (query.contains(subject) || subject.contains(query)) {
           List material = doc.get('material') ?? [];
           for (var item in material.take(5)) {
-            context += "Topic: ${item['english']}\nContent (Tamil): ${item['tamil']}\n\n";
+            context +=
+            "Topic: ${item['english']}\nContent (Tamil): ${item['tamil']}\n\n";
           }
         }
       }
 
       // 2. Search in subject questions (to understand the style and depth)
       if (context.length < 500) {
-        final questionDocs = await _db.collection('subject_questions').limit(5).get();
+        final questionDocs = await _db
+            .collection('subject_questions')
+            .limit(5)
+            .get();
         for (var doc in questionDocs.docs) {
           String subject = (doc.get('subject') ?? "").toString().toLowerCase();
           if (query.contains(subject) || subject.contains(query)) {
             List questions = doc.get('questions') ?? [];
             for (var q in questions.take(3)) {
-              context += "Question: ${q['question']}\nExplanation: ${q['explanation']}\n\n";
+              context +=
+              "Question: ${q['question']}\nExplanation: ${q['explanation']}\n\n";
             }
           }
         }
@@ -99,7 +112,8 @@ class FirestoreService {
         await box.put('dailyquiz_last_completed_date', completed);
       } else if (completed is List && completed.isNotEmpty) {
         // Migration: Take the last date from the array
-        await box.put('dailyquiz_last_completed_date', completed.last.toString());
+        await box.put(
+            'dailyquiz_last_completed_date', completed.last.toString());
       }
     }
 
@@ -109,7 +123,8 @@ class FirestoreService {
         await box.put('mockquiz_last_completed_date', completed);
       } else if (completed is List && completed.isNotEmpty) {
         // Migration: Take the last date from the array
-        await box.put('mockquiz_last_completed_date', completed.last.toString());
+        await box.put(
+            'mockquiz_last_completed_date', completed.last.toString());
       }
     }
   }
@@ -134,9 +149,11 @@ class FirestoreService {
     // 1. First, always try to get from Cache for immediate UI response if not forcing refresh
     if (!forceRefresh) {
       try {
-        DocumentSnapshot cachedDoc = await _db.collection('users').doc(uid).get(const GetOptions(source: Source.cache));
+        DocumentSnapshot cachedDoc = await _db.collection('users').doc(uid).get(
+            const GetOptions(source: Source.cache));
         if (cachedDoc.exists) {
-          AppLog.d("AI_DEBUG: User data fetched from FIRESTORE CACHE (Initial)");
+          AppLog.d(
+              "AI_DEBUG: User data fetched from FIRESTORE CACHE (Initial)");
           var data = cachedDoc.data() as Map<String, dynamic>;
           await _syncCompletedQuizzesToHive(data);
           return cachedDoc;
@@ -147,39 +164,50 @@ class FirestoreService {
     try {
       // 2. Try server fetch with retry logic
       AppLog.d("AI_DEBUG: Fetching user data from SERVER...");
-      DocumentSnapshot doc = await _retry(() => _db.collection('users').doc(uid).get(const GetOptions(source: Source.serverAndCache)));
-      
+      DocumentSnapshot doc = await _retry(() =>
+          _db.collection('users').doc(uid).get(
+              const GetOptions(source: Source.serverAndCache)));
+
       if (doc.exists) {
         var data = doc.data() as Map<String, dynamic>;
-        
+
         // AI_DEBUG: Sanitize data for Hive (Recursive Timestamp conversion)
-        Map<String, dynamic> sanitizedData = _sanitizeForHive(data) as Map<String, dynamic>;
-        
+        Map<String, dynamic> sanitizedData = _sanitizeForHive(data) as Map<
+            String,
+            dynamic>;
+
         // Cache to Hive for offline
         await HiveService.cacheUserData(sanitizedData);
         await _syncCompletedQuizzesToHive(data);
-        
+
         // Sync stats to Hive
         final userBox = Hive.box(HiveService.userBoxName);
-        if (data.containsKey('totalScore')) await userBox.put('totalScore', data['totalScore']);
-        if (data.containsKey('quizzesCompleted')) await userBox.put('quizzesCompleted', data['quizzesCompleted']);
-        if (data.containsKey('streak')) await userBox.put('streak', data['streak']);
-        if (data.containsKey('lastActiveDate')) await userBox.put('lastActiveDate', data['lastActiveDate']);
-        
+        if (data.containsKey('totalScore')) await userBox.put(
+            'totalScore', data['totalScore']);
+        if (data.containsKey('quizzesCompleted')) await userBox.put(
+            'quizzesCompleted', data['quizzesCompleted']);
+        if (data.containsKey('streak')) await userBox.put(
+            'streak', data['streak']);
+        if (data.containsKey('lastActiveDate')) await userBox.put(
+            'lastActiveDate', data['lastActiveDate']);
+
         return doc;
       }
       return doc;
     } catch (e) {
-      AppLog.d("AI_DEBUG: Server fetch failed after retries, falling back to cache: $e");
+      AppLog.d(
+          "AI_DEBUG: Server fetch failed after retries, falling back to cache: $e");
       try {
-        DocumentSnapshot doc = await _db.collection('users').doc(uid).get(const GetOptions(source: Source.cache));
+        DocumentSnapshot doc = await _db.collection('users').doc(uid).get(
+            const GetOptions(source: Source.cache));
         if (doc.exists) {
           var data = doc.data() as Map<String, dynamic>;
           await _syncCompletedQuizzesToHive(data);
         }
         return doc;
       } catch (ce) {
-        AppLog.d("AI_DEBUG: Firestore cache failed, app will use HiveService fallback");
+        AppLog.d(
+            "AI_DEBUG: Firestore cache failed, app will use HiveService fallback");
         return null;
       }
     }
@@ -194,7 +222,7 @@ class FirestoreService {
         'totalScore': FieldValue.increment(points),
       }, SetOptions(merge: true));
       AppLog.d("AI_DEBUG: User points incremented in Firestore by $points");
-      
+
       // Refresh user data immediately after save
       await getUserData(forceRefresh: true);
     } catch (e) {
@@ -210,11 +238,13 @@ class FirestoreService {
   Future<List<Question>> getDailyQuiz() async {
     try {
       String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
-      String tomorrow = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow().add(const Duration(days: 1)));
-      
+      String tomorrow = DateFormat('yyyy-MM-dd', 'en_US').format(
+          _getISTNow().add(const Duration(days: 1)));
+
       // AI_DEBUG: Check Hive first for today's quiz
       List<Question> cachedToday = HiveService.getQuestions("Daily Quiz");
-      String? lastActiveDate = Hive.box(HiveService.userBoxName).get('last_active_quiz_date') as String?;
+      String? lastActiveDate = Hive.box(HiveService.userBoxName).get(
+          'last_active_quiz_date') as String?;
       if (cachedToday.isNotEmpty && lastActiveDate == today) {
         AppLog.d("AI_DEBUG: Today's Daily quiz fetched from HIVE");
         return cachedToday;
@@ -234,9 +264,11 @@ class FirestoreService {
         AppLog.d("AI_DEBUG: Today's Daily quiz found in Firestore");
       } else {
         // 2. Not found, try generating via AI (with timeout to prevent delay)
-        AppLog.d("AI_DEBUG: Today's Daily quiz not found. Generating via AI...");
+        AppLog.d(
+            "AI_DEBUG: Today's Daily quiz not found. Generating via AI...");
         try {
-          bool generated = await AiService.generateAndSaveDailyQuiz(_getISTNow())
+          bool generated = await AiService.generateAndSaveDailyQuiz(
+              _getISTNow())
               .timeout(const Duration(seconds: 30));
           if (generated) {
             QuerySnapshot newTodaySnap = await _db
@@ -247,31 +279,36 @@ class FirestoreService {
                 .get();
             if (newTodaySnap.docs.isNotEmpty) {
               resolvedDoc = newTodaySnap.docs.first;
-              AppLog.d("AI_DEBUG: AI Generated Daily quiz for today fetched successfully");
+              AppLog.d(
+                  "AI_DEBUG: AI Generated Daily quiz for today fetched successfully");
             }
           }
         } catch (e) {
-          AppLog.d("AI_DEBUG: Daily quiz generation timed out or failed: $e. Falling back...");
+          AppLog.d(
+              "AI_DEBUG: Daily quiz generation timed out or failed: $e. Falling back...");
         }
       }
 
       // --- OPTIMIZATION: Prefetch tomorrow's quiz if not present ---
       try {
-         QuerySnapshot tomorrowSnap = await _db
+        QuerySnapshot tomorrowSnap = await _db
             .collection('quizzes')
             .where('type', isEqualTo: 'daily_quiz')
             .where('date', isEqualTo: tomorrow)
             .limit(1)
             .get();
-         if (tomorrowSnap.docs.isEmpty) {
-           AppLog.d("AI_DEBUG: Tomorrow's quiz not found. Generating in background...");
-           AiService.generateAndSaveDailyQuiz(_getISTNow().add(const Duration(days: 1)));
-         }
+        if (tomorrowSnap.docs.isEmpty) {
+          AppLog.d(
+              "AI_DEBUG: Tomorrow's quiz not found. Generating in background...");
+          AiService.generateAndSaveDailyQuiz(
+              _getISTNow().add(const Duration(days: 1)));
+        }
       } catch (_) {}
 
       // 3. Fallback: If AI fails or today's quiz still missing, fetch older quiz
       if (resolvedDoc == null) {
-        AppLog.d("AI_DEBUG: Daily quiz generation failed or missing today. Fetching older quiz as fallback...");
+        AppLog.d(
+            "AI_DEBUG: Daily quiz generation failed or missing today. Fetching older quiz as fallback...");
         QuerySnapshot fallbackSnap = await _db
             .collection('quizzes')
             .where('type', isEqualTo: 'daily_quiz')
@@ -279,24 +316,28 @@ class FirestoreService {
             .orderBy('date', descending: true)
             .limit(20)
             .get();
-            
+
         if (fallbackSnap.docs.isNotEmpty) {
           final docsList = List<DocumentSnapshot>.from(fallbackSnap.docs);
           docsList.shuffle(); // Pick one at random for variety
           resolvedDoc = docsList.first;
-          AppLog.d("AI_DEBUG: Fallback to a random older Daily quiz from date: ${resolvedDoc.get('date')}");
+          AppLog.d(
+              "AI_DEBUG: Fallback to a random older Daily quiz from date: ${resolvedDoc
+                  .get('date')}");
         }
       }
 
       if (resolvedDoc != null) {
         String activeDate = resolvedDoc.get('date');
-        
+
         // Save the active quiz date to Hive
-        await Hive.box(HiveService.userBoxName).put('last_active_quiz_date', activeDate);
+        await Hive.box(HiveService.userBoxName).put(
+            'last_active_quiz_date', activeDate);
 
         List<dynamic> questionsData = resolvedDoc.get('questions');
-        List<Question> questions = questionsData.map((q) => Question.fromMap(q as Map<String, dynamic>)).toList();
-        
+        List<Question> questions = questionsData.map((q) =>
+            Question.fromMap(q as Map<String, dynamic>)).toList();
+
         // Save to Hive for Offline Mode
         await HiveService.saveQuestions("Daily Quiz", questions);
         return questions;
@@ -304,10 +345,124 @@ class FirestoreService {
     } catch (e) {
       AppLog.e("Error fetching daily quiz", e);
     }
-    
+
     // 4. Guaranteed non-empty: Final fallback to Hive
     AppLog.d("AI_DEBUG: Fetching daily quiz from HIVE (Offline Fallback)");
     return HiveService.getQuestions("Daily Quiz");
+  }
+
+  // Fetch a deterministic rotating quiz based on the current day
+  // Rotation: General Tamil -> General Studies -> Aptitude
+  // The question returned is also deterministic based on the date to stay "sticky" for 24 hours
+  Future<List<Question>> getDailyRotatingQuiz() async {
+    try {
+      DateTime now = _getISTNow();
+      // These types match the 'quiz_type' field in the 'quizzes' collection
+      List<String> types = ['general_tamil', 'general_studies', 'aptitude'];
+      
+      // Days since epoch to determine rotation index
+      int daysSinceEpoch = now.difference(DateTime(1970, 1, 1)).inDays;
+      String targetType = types[daysSinceEpoch % types.length];
+      
+      AppLog.d("FirestoreService: Today's rotating quiz type: $targetType");
+
+      // 1. Try to find a quiz of this quiz_type from the last 30 days
+      QuerySnapshot snap = await _db
+          .collection('quizzes')
+          .where('quiz_type', isEqualTo: targetType)
+          .orderBy('date', descending: true)
+          .limit(15)
+          .get();
+
+      if (snap.docs.isNotEmpty) {
+        final docsList = List<DocumentSnapshot>.from(snap.docs);
+        
+        // DETERMINISTIC SELECTION: Use daysSinceEpoch to pick the same doc and question for everyone all day
+        int docIndex = daysSinceEpoch % docsList.length;
+        var doc = docsList[docIndex];
+        
+        AppLog.d("FirestoreService: Found deterministic rotating quiz ($targetType) for date: ${doc.get('date')}");
+        List<dynamic> questionsData = doc.get('questions');
+        
+        if (questionsData.isNotEmpty) {
+          // Pick one specific question from the list deterministically
+          int qIndex = daysSinceEpoch % questionsData.length;
+          var selectedQ = Map<String, dynamic>.from(questionsData[qIndex] as Map);
+
+          // IMPORTANT: Force the quiz_type at the map level before fromMap
+          selectedQ['quiz_type'] = targetType;
+
+          return [Question.fromMap(selectedQ)];
+        }
+      }
+
+      // 2. Fallback: If no quiz of that type found, try any recent daily quiz
+      AppLog.d("FirestoreService: No quiz of quiz_type $targetType found. Falling back to type=daily_quiz...");
+      QuerySnapshot fallbackSnap = await _db
+          .collection('quizzes')
+          .where('type', isEqualTo: 'daily_quiz')
+          .orderBy('date', descending: true)
+          .limit(10)
+          .get();
+
+      if (fallbackSnap.docs.isNotEmpty) {
+        final docsList = List<DocumentSnapshot>.from(fallbackSnap.docs);
+        int docIndex = daysSinceEpoch % docsList.length;
+        var doc = docsList[docIndex];
+        List<dynamic> questionsData = doc.get('questions');
+        
+        if (questionsData.isNotEmpty) {
+          int qIndex = daysSinceEpoch % questionsData.length;
+          var selectedQMap = Map<String, dynamic>.from(questionsData[qIndex] as Map);
+          
+          // Try to get quiz_type from doc or fallback to targetType
+          String qType = targetType;
+          try { 
+            qType = doc.get('quiz_type') ?? targetType; 
+          } catch (_) {}
+
+          selectedQMap['quiz_type'] = qType;
+          AppLog.d("FirestoreService: Fallback question selected with type: $qType");
+
+          return [Question.fromMap(selectedQMap)];
+        }
+      }
+    } catch (e) {
+      AppLog.e("Error fetching daily rotating quiz: $e");
+    }
+
+    // 3. Final Fallback to today's standard daily quiz
+    AppLog.d("FirestoreService: All specific queries failed. Fetching standard Daily Quiz...");
+    try {
+      List<Question> dailyQuiz = await getDailyQuiz();
+      if (dailyQuiz.isNotEmpty) {
+        // Deterministically pick one question
+        int daysSinceEpoch = DateTime.now().difference(DateTime(1970, 1, 1)).inDays;
+        int qIndex = daysSinceEpoch % dailyQuiz.length;
+        Question q = dailyQuiz[qIndex];
+        
+        // Manual override for display
+        return [Question(
+          id: q.id,
+          question: q.question,
+          options: q.options,
+          correctOptionIndex: q.correctOptionIndex,
+          explanation: q.explanation,
+          subject: q.subject,
+          quizType: 'general_tamil', // Default fallback type
+          questionEn: q.questionEn,
+          questionTa: q.questionTa,
+          optionsEn: q.optionsEn,
+          optionsTa: q.optionsTa,
+          explanationEn: q.explanationEn,
+          explanationTa: q.explanationTa,
+        )];
+      }
+    } catch (e) {
+      AppLog.e("Final fallback error: $e");
+    }
+
+    return [];
   }
 
   // Fetch Mock Quiz Questions with Caching
