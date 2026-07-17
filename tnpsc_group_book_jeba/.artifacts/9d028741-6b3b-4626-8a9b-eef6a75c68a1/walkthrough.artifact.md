@@ -12,6 +12,12 @@ I have fixed the share functionality and refined the generated poster to match t
     - Verified the sidebar items (Live Quiz, Rank, etc.) and Google Play badge alignment.
     - All poster elements now use `ignoreScale: true` for a "constant" look.
 
+### 📏 Dynamic Poster Height
+- **Flexible Layout**: Refactored the poster from absolute positioning (`Stack` with `Positioned`) to a flexible flow (`Column` and `Row`).
+- **Push-to-Bottom Branding**: Used `Flexible` and `Spacer` logic to ensure the branding, mockup, and battle sections stay at the bottom, while the Quiz section expands downwards if the question is long.
+- **Minimum Height**: Set a `minHeight: 700` so that short questions still result in a standard-sized, balanced poster.
+- **High-Quality Capture**: Updated the screenshot capture settings to automatically adjust to the poster's dynamic height while maintaining a fixed width of 400px.
+
 ### 🛠️ Share Functionality Fix
 - **Corrected API Usage**: Replaced the non-functional `SharePlus.instance.share` with the correct `Share.shareXFiles` from the `share_plus` package.
 - **Improved Reward Logic**: Added a check for `ShareResultStatus.success` before awarding the 50 points, ensuring users actually complete the share action.

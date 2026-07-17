@@ -1,4 +1,9 @@
 - [x] Fix Share API in `profile_screen.dart` (Replace `SharePlus` with `Share`)
 - [x] Implement fixed-scale font helper for poster generation
 - [x] Refine `_buildSharePoster` layout and styles to match design
-- [x] Verify poster preview and share flow
+- [x] Refactor `_buildSharePoster` for dynamic height
+    - [x] Update `_shareAppWithRandomQuiz` to handle variable height capture
+    - [x] Remove fixed height from `_buildSharePoster` and add `BoxConstraints`
+    - [x] Convert sub-widgets from `Positioned` to standard widgets
+    - [x] Organize layout using `Column` and `Row` to allow sections to push each other
+- [x] Verify poster preview and share flow for different question lengths

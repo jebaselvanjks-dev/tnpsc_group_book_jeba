@@ -709,12 +709,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: Colors.black, // Dark base to match poster theme
           child: Directionality(
             textDirection: ui.TextDirection.ltr,
-            child: _buildSharePoster(question, subject, dayIndex: now.weekday),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: _buildSharePoster(question, subject, dayIndex: now.weekday),
+            ),
           ),
         ),
         pixelRatio: 4.0, // High density for sharp text and graphics
         delay: const Duration(milliseconds: 500),
-        targetSize: const Size(400, 700),
       );
 
       if (imageBytes != null) {
@@ -862,19 +864,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
     const Color goldColor = Color(0xFFFFD700);
 
     return Container(
-      width: 400,
-      height: 700,
+      width: 450,
+      constraints: const BoxConstraints(minHeight: 700),
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(color: Colors.black),
       child: Stack(
         children: [
           _buildPosterBackground(backgroundImage),
-          _buildPosterHeader(question, subject, goldColor),
-          _buildPosterQuestionSection(question, goldColor),
-          _buildPosterSidebar(),
-          _buildPosterMockup(),
-          _buildPosterMainBranding(goldColor),
-          _buildPosterBattleSection(goldColor),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 20),
+              _buildPosterHeader(question, subject, goldColor),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _buildPosterQuestionSection(question, goldColor)),
+                    const SizedBox(width: 10),
+                    _buildPosterSidebar(),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Dynamic space to push footer to bottom if height is large
+              Flexible(child: Container()), 
+              Padding(
+                padding: const EdgeInsets.only(left: 20, right: 15, bottom: 20),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _buildPosterMockup(),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildPosterMainBranding(goldColor),
+                          const SizedBox(height: 10),
+                          _buildPosterBattleSection(goldColor),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -938,10 +976,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     }
 
-    return Positioned(
-      top: 20,
-      left: 20,
-      right: 20,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -977,7 +1013,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Text(
                         "TNPSC Master: Group 1, 2, 4",
                         style: AppTheme.getStyle(
-                          fontSize: 17,
+                          fontSize: 16,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                           ignoreScale: true,
@@ -1034,161 +1070,154 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildPosterQuestionSection(Question question, Color goldColor) {
-    return Positioned(
-      top: 90,
-      left: 15,
-      right: 120,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF030611).withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.blue.withValues(alpha: 0.3), width: 1.5),
-          boxShadow: [
-            BoxShadow(color: Colors.blue.withValues(alpha: 0.1), blurRadius: 10)
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text("Q.", style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true)),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF030611).withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(color: Colors.blue.withValues(alpha: 0.1), blurRadius: 10)
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        question.questionEn ?? question.question,
-                        style: AppTheme.getStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          height: 1.3,
-                          ignoreScale: true,
-                        ),
+                child: Text("Q.", style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      question.questionEn ?? question.question,
+                      style: AppTheme.getStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.3,
+                        ignoreScale: true,
                       ),
-                      if (question.questionTa != null && question.questionTa!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(
-                            question.questionTa!,
-                            style: AppTheme.getStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.tealAccent,
-                              height: 1.3,
-                              ignoreScale: true,
-                            ),
+                    ),
+                    if (question.questionTa != null && question.questionTa!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          question.questionTa!,
+                          style: AppTheme.getStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.tealAccent,
+                            height: 1.3,
+                            ignoreScale: true,
                           ),
                         ),
-                    ],
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...question.displayOptions.asMap().entries.map((entry) {
+            int idx = entry.key;
+            String label = String.fromCharCode(65 + idx);
+            // bool isCorrect = idx == question.correctOptionIndex;
+
+            String optEn = "";
+            String optTa = "";
+
+            if (question.optionsEn != null && idx < question.optionsEn!.length && question.optionsEn![idx].isNotEmpty) {
+              optEn = question.optionsEn![idx];
+            }
+            if (question.optionsTa != null && idx < question.optionsTa!.length && question.optionsTa![idx].isNotEmpty) {
+              optTa = question.optionsTa![idx];
+            }
+            if (optEn.isEmpty && optTa.isEmpty) {
+              optEn = question.options[idx];
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: Colors.white60,
+                    // color: isCorrect ? Colors.green.withValues(alpha: 0.5) : Colors.white10,
+                    width: 1,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ...question.displayOptions.asMap().entries.map((entry) {
-              int idx = entry.key;
-              String label = String.fromCharCode(65 + idx);
-              // bool isCorrect = idx == question.correctOptionIndex;
-
-              String optEn = "";
-              String optTa = "";
-
-              if (question.optionsEn != null && idx < question.optionsEn!.length && question.optionsEn![idx].isNotEmpty) {
-                optEn = question.optionsEn![idx];
-              }
-              if (question.optionsTa != null && idx < question.optionsTa!.length && question.optionsTa![idx].isNotEmpty) {
-                optTa = question.optionsTa![idx];
-              }
-              if (optEn.isEmpty && optTa.isEmpty) {
-                optEn = question.options[idx];
-              }
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: Colors.white60,
-                      // color: isCorrect ? Colors.green.withValues(alpha: 0.5) : Colors.white10,
-                      width: 1,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: goldColor,
+                        // color: isCorrect ? Colors.green : goldColor,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        label,
+                        style: AppTheme.getStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, ignoreScale: true),
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: goldColor,
-                          // color: isCorrect ? Colors.green : goldColor,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          label,
-                          style: AppTheme.getStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, ignoreScale: true),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Wrap(
-                          children: [
-                            if (optEn.isNotEmpty)
-                              Text(
-                                optTa.isNotEmpty ? "$optEn / " : optEn,
-                                style: AppTheme.getStyle(
-                                  fontSize: 11,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                  ignoreScale: true,
-                                ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Wrap(
+                        children: [
+                          if (optEn.isNotEmpty)
+                            Text(
+                              optTa.isNotEmpty ? "$optEn / " : optEn,
+                              style: AppTheme.getStyle(
+                                fontSize: 11,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                                ignoreScale: true,
                               ),
-                            if (optTa.isNotEmpty)
-                              Text(
-                                optTa,
-                                style: AppTheme.getStyle(
-                                  fontSize: 10,
-                                  color: Colors.tealAccent,
-                                  fontWeight: FontWeight.w500,
-                                  ignoreScale: true,
-                                ),
+                            ),
+                          if (optTa.isNotEmpty)
+                            Text(
+                              optTa,
+                              style: AppTheme.getStyle(
+                                fontSize: 10,
+                                color: Colors.tealAccent,
+                                fontWeight: FontWeight.w500,
+                                ignoreScale: true,
                               ),
-                          ],
-                        ),
+                            ),
+                        ],
                       ),
-                      // if (isCorrect)
-                      //   const Icon(Icons.verified_rounded, color: Colors.green, size: 16),
-                    ],
-                  ),
+                    ),
+                    // if (isCorrect)
+                    //   const Icon(Icons.verified_rounded, color: Colors.green, size: 16),
+                  ],
                 ),
-              );
-            }).toList(),
-          ],
-        ),
+              ),
+            );
+          }).toList(),
+        ],
       ),
     );
   }
 
   Widget _buildPosterSidebar() {
-    return Positioned(
-      top: 110,
-      right: 15,
+    return SizedBox(
       width: 95,
       child: Column(
         children: [
@@ -1196,7 +1225,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildSidebarItem(Icons.emoji_events_rounded, "RANK", "ON LIVE\nLEADERBOARD", const Color(0xFF03A9F4)),
           _buildSidebarItem(Icons.card_giftcard_rounded, "WIN POINTS", "& EXCITING\nREWARDS", const Color(0xFFFF9800)),
           _buildSidebarItem(Icons.verified_user_rounded, "100% FREE", "TO PLAY", const Color(0xFF4CAF50)),
-          SizedBox(height: 15,),
+          const SizedBox(height: 15,),
           Column(
             children: [
               Image.network(
@@ -1211,142 +1240,128 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildPosterMockup() {
-    return Positioned(
-      bottom: 0,
-      left: 20,
-      child: Container(
-        width: 130,
-        height: 250,
-        decoration: BoxDecoration(
-          color: const Color(0xFF030611),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white24, width: 4),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.8),
-              blurRadius: 30,
-              offset: const Offset(0, 15),
-            )
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Image.asset(
-            'asset/images/homeScreenLayout.jpg',
-            fit: BoxFit.cover,
-          ),
+    return Container(
+      width: 130,
+      height: 250,
+      decoration: BoxDecoration(
+        color: const Color(0xFF030611),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white24, width: 4),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.8),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          )
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Image.asset(
+          'asset/images/homeScreenLayout.jpg',
+          fit: BoxFit.cover,
         ),
       ),
     );
   }
 
   Widget _buildPosterMainBranding(Color goldColor) {
-    return Positioned(
-      bottom: 195,
-      left: 170,
-      right: 15,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.school_rounded, color: Colors.white70, size: 20),
+            const SizedBox(width: 6),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "TNPSC Master",
+                  style: AppTheme.getStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 0.9,
+                    ignoreScale: true,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            const Icon(Icons.emoji_events_rounded, color: Color(0xFFE5BA73), size: 20),
+          ],
+        ),
+        const SizedBox(height: 5),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [goldColor, const Color(0xFFE5BA73)]),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [BoxShadow(color: goldColor.withValues(alpha: 0.3), blurRadius: 10)],
+          ),
+          child: Text(
+            "Group 1 | Group 2 | Group 4 | VAO",
+            textAlign: TextAlign.center,
+            style: AppTheme.getStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: Colors.black,
+              letterSpacing: 1,
+              ignoreScale: true,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPosterBattleSection(Color goldColor) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.school_rounded, color: Colors.white70, size: 25),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "TNPSC MASTER",
-                    style: AppTheme.getStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      height: 0.9,
-                      ignoreScale: true,
-                    ),
-                  ),
-                ],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(4),
+                  boxShadow: [BoxShadow(color: Colors.red.withValues(alpha: 0.4), blurRadius: 6)],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.sensors, color: Colors.white, size: 10),
+                    const SizedBox(width: 4),
+                    Text("LIVE", style: AppTheme.getStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true)),
+                  ],
+                ),
               ),
-              const Spacer(),
-              const Icon(Icons.emoji_events_rounded, color: Color(0xFFE5BA73), size: 25),
+              const SizedBox(width: 6),
+              Text(
+                "LIVE GROUP BATTLE",
+                style: AppTheme.getStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white, ignoreScale: true),
+              ),
             ],
           ),
-          const SizedBox(height: 5),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [goldColor, const Color(0xFFE5BA73)]),
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [BoxShadow(color: goldColor.withValues(alpha: 0.3), blurRadius: 10)],
-            ),
-            child: Text(
-              "Group 1 | Group 2 | Group 4 | VAO",
-              textAlign: TextAlign.center,
-              style: AppTheme.getStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                color: Colors.black,
-                letterSpacing: 1,
-                ignoreScale: true,
-              ),
-            ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: Divider(color: Colors.white24, thickness: 1, height: 1),
           ),
+          _buildBattleFeature(Icons.groups_rounded, "REAL-TIME MULTIPLAYER QUIZ", "நண்பர்களுடன் நேரடி வினாடி வினா"),
+          _buildBattleFeature(Icons.leaderboard_rounded, "LIVE LEADERBOARD", "நேரடி தரவரிசை"),
+          _buildBattleFeature(Icons.psychology_rounded, "DAILY TNPSC PRACTICE", "தினசரி TNPSC பயிற்சி"),
+          _buildBattleFeature(Icons.bolt_rounded, "IMPROVE SPEED & ACCURACY", "வேகம் மற்றும் துல்லியத்தை மேம்படுத்துங்கள்"),
+          _buildBattleFeature(Icons.stars_rounded, "LEARN & COMPETE", "கற்றலும் போட்டியும் ஒன்றாக!"),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPosterBattleSection(Color goldColor) {
-    return Positioned(
-      bottom: 0,
-      left: 170,
-      right: 15,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(4),
-                    boxShadow: [BoxShadow(color: Colors.red.withValues(alpha: 0.4), blurRadius: 6)],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.sensors, color: Colors.white, size: 10),
-                      const SizedBox(width: 4),
-                      Text("LIVE", style: AppTheme.getStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  "LIVE GROUP BATTLE",
-                  style: AppTheme.getStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white, ignoreScale: true),
-                ),
-              ],
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: Divider(color: Colors.white24, thickness: 1, height: 1),
-            ),
-            _buildBattleFeature(Icons.groups_rounded, "REAL-TIME MULTIPLAYER QUIZ", "நண்பர்களுடன் நேரடி வினாடி வினா"),
-            _buildBattleFeature(Icons.leaderboard_rounded, "LIVE LEADERBOARD", "நேரடி தரவரிசை"),
-            _buildBattleFeature(Icons.psychology_rounded, "DAILY TNPSC PRACTICE", "தினசரி TNPSC பயிற்சி"),
-            _buildBattleFeature(Icons.bolt_rounded, "IMPROVE SPEED & ACCURACY", "வேகம் மற்றும் துல்லியத்தை மேம்படுத்துங்கள்"),
-            _buildBattleFeature(Icons.stars_rounded, "LEARN & COMPETE", "கற்றலும் போட்டியும் ஒன்றாக!"),
-          ],
-        ),
       ),
     );
   }
