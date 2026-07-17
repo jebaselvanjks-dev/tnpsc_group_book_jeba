@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive/hive.dart';
@@ -134,7 +133,9 @@ class FirestoreService {
     if (data is Timestamp) {
       return data.toDate().toIso8601String();
     } else if (data is Map) {
-      return data.map((key, value) => MapEntry(key, _sanitizeForHive(value)));
+      return Map<String, dynamic>.from(
+        data.map((key, value) => MapEntry(key.toString(), _sanitizeForHive(value))),
+      );
     } else if (data is List) {
       return data.map((e) => _sanitizeForHive(e)).toList();
     }
@@ -142,28 +143,30 @@ class FirestoreService {
   }
 
   // Get user data with Offline Cache support (Cache-first optimization)
-  Future<DocumentSnapshot?> getUserData({bool forceRefresh = true}) async {
+  Future<DocumentSnapshot?> getUserData({bool forceRefresh = false}) async {
     String? uid = _auth.currentUser?.uid;
     if (uid == null) return null;
 
-    // 1. First, always try to get from Cache for immediate UI response if not forcing refresh
+    // 1. Try Cache First for immediate UI response
     if (!forceRefresh) {
       try {
         DocumentSnapshot cachedDoc = await _db.collection('users').doc(uid).get(
             const GetOptions(source: Source.cache));
         if (cachedDoc.exists) {
-          AppLog.d(
-              "AI_DEBUG: User data fetched from FIRESTORE CACHE (Initial)");
+          AppLog.d("AI_DEBUG: User data fetched from FIRESTORE CACHE (Initial)");
           var data = cachedDoc.data() as Map<String, dynamic>;
-          await _syncCompletedQuizzesToHive(data);
+          // Sync to Hive in background to not block return
+          _syncCompletedQuizzesToHive(data);
           return cachedDoc;
         }
-      } catch (_) {}
+      } catch (_) {
+        AppLog.d("AI_DEBUG: No User Data in Firestore Cache");
+      }
     }
 
     try {
       // 2. Try server fetch with retry logic
-      AppLog.d("AI_DEBUG: Fetching user data from SERVER...");
+      AppLog.d("AI_DEBUG: Fetching user data from SERVER (forceRefresh: $forceRefresh)...");
       DocumentSnapshot doc = await _retry(() =>
           _db.collection('users').doc(uid).get(
               const GetOptions(source: Source.serverAndCache)));
@@ -213,18 +216,24 @@ class FirestoreService {
     }
   }
 
-  /// Increments user points in Firestore
+  /// Increments user points in Firestore and local Hive cache
   Future<void> incrementUserPoints(int points) async {
     String? uid = _auth.currentUser?.uid;
     if (uid == null) return;
     try {
+      // 1. Update local Hive first for immediate UI feedback
+      final userBox = Hive.box(HiveService.userBoxName);
+      int currentPoints = userBox.get('totalScore', defaultValue: 0) as int;
+      await userBox.put('totalScore', currentPoints + points);
+      
+      // 2. Update Firestore
       await _db.collection('users').doc(uid).set({
         'totalScore': FieldValue.increment(points),
       }, SetOptions(merge: true));
       AppLog.d("AI_DEBUG: User points incremented in Firestore by $points");
 
-      // Refresh user data immediately after save
-      await getUserData(forceRefresh: true);
+      // Refresh user data in background
+      getUserData(forceRefresh: true);
     } catch (e) {
       AppLog.e("Error incrementing user points", e);
     }
@@ -354,59 +363,63 @@ class FirestoreService {
   // Fetch a deterministic rotating quiz based on the current day
   // Rotation: General Tamil -> General Studies -> Aptitude
   // The question returned is also deterministic based on the date to stay "sticky" for 24 hours
-  Future<List<Question>> getDailyRotatingQuiz() async {
+  Future<List<Question>> getDailyRotatingQuiz({bool isAdmin = false}) async {
     try {
       DateTime now = _getISTNow();
-      // These types match the 'quiz_type' field in the 'quizzes' collection
       List<String> types = ['general_tamil', 'general_studies', 'aptitude'];
-      
-      // Days since epoch to determine rotation index
       int daysSinceEpoch = now.difference(DateTime(1970, 1, 1)).inDays;
+
+      // Regular User & Admin: Deterministic rotation based on date
       String targetType = types[daysSinceEpoch % types.length];
-      
       AppLog.d("FirestoreService: Today's rotating quiz type: $targetType");
 
-      // 1. Try to find a quiz of this quiz_type from the last 30 days
       QuerySnapshot snap = await _db
           .collection('quizzes')
           .where('quiz_type', isEqualTo: targetType)
-          .orderBy('date', descending: true)
-          .limit(15)
+          .limit(20)
           .get();
 
       if (snap.docs.isNotEmpty) {
         final docsList = List<DocumentSnapshot>.from(snap.docs);
         
-        // DETERMINISTIC SELECTION: Use daysSinceEpoch to pick the same doc and question for everyone all day
+        // Sort locally to ensure consistency across users
+        docsList.sort((a, b) {
+          String dateA = a.get('date') ?? "";
+          String dateB = b.get('date') ?? "";
+          return dateB.compareTo(dateA); 
+        });
+        
         int docIndex = daysSinceEpoch % docsList.length;
         var doc = docsList[docIndex];
-        
-        AppLog.d("FirestoreService: Found deterministic rotating quiz ($targetType) for date: ${doc.get('date')}");
         List<dynamic> questionsData = doc.get('questions');
         
         if (questionsData.isNotEmpty) {
-          // Pick one specific question from the list deterministically
           int qIndex = daysSinceEpoch % questionsData.length;
-          var selectedQ = Map<String, dynamic>.from(questionsData[qIndex] as Map);
-
-          // IMPORTANT: Force the quiz_type at the map level before fromMap
-          selectedQ['quiz_type'] = targetType;
-
-          return [Question.fromMap(selectedQ)];
+          var selectedQMap = Map<String, dynamic>.from(questionsData[qIndex] as Map);
+          selectedQMap['quiz_type'] = targetType;
+          selectedQMap['subject'] = targetType; 
+          return [Question.fromMap(selectedQMap)];
         }
       }
 
       // 2. Fallback: If no quiz of that type found, try any recent daily quiz
-      AppLog.d("FirestoreService: No quiz of quiz_type $targetType found. Falling back to type=daily_quiz...");
+      String targetTypeFallback = types[daysSinceEpoch % types.length];
+      AppLog.d("FirestoreService: No quiz found for rotation. Falling back to type=daily_quiz...");
       QuerySnapshot fallbackSnap = await _db
           .collection('quizzes')
           .where('type', isEqualTo: 'daily_quiz')
-          .orderBy('date', descending: true)
-          .limit(10)
+          .limit(20)
           .get();
 
       if (fallbackSnap.docs.isNotEmpty) {
         final docsList = List<DocumentSnapshot>.from(fallbackSnap.docs);
+        
+        // Sort locally
+        docsList.sort((a, b) {
+          String dateA = a.get('date') ?? "";
+          String dateB = b.get('date') ?? "";
+          return dateB.compareTo(dateA); // Descending
+        });
         int docIndex = daysSinceEpoch % docsList.length;
         var doc = docsList[docIndex];
         List<dynamic> questionsData = doc.get('questions');
@@ -416,9 +429,9 @@ class FirestoreService {
           var selectedQMap = Map<String, dynamic>.from(questionsData[qIndex] as Map);
           
           // Try to get quiz_type from doc or fallback to targetType
-          String qType = targetType;
+          String qType = targetTypeFallback;
           try { 
-            qType = doc.get('quiz_type') ?? targetType; 
+            qType = doc.get('quiz_type') ?? targetTypeFallback;
           } catch (_) {}
 
           selectedQMap['quiz_type'] = qType;
@@ -841,7 +854,17 @@ class FirestoreService {
 
     try {
       DocumentReference userRef = _db.collection('users').doc(uid);
-      DocumentSnapshot userDoc = await userRef.get();
+      
+      // Try cache first for streak logic to speed up startup
+      DocumentSnapshot userDoc;
+      try {
+        userDoc = await userRef.get(const GetOptions(source: Source.cache));
+        if (!userDoc.exists) {
+          userDoc = await userRef.get();
+        }
+      } catch (_) {
+        userDoc = await userRef.get();
+      }
 
       if (!userDoc.exists) {
         await userRef.set({

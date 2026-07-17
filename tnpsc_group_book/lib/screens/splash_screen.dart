@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
 import '../widgets/app_logo.dart';
@@ -21,36 +22,58 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _navigateToHome();
+    // AI_DEBUG: Wait for first frame to show logo before starting heavy init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _navigateToHome();
+    });
   }
 
   Future<void> _navigateToHome() async {
-    // 1. Run all critical services in background while splash is showing
-    final initFuture = initializeServices();
-    
-    // 2. Wait for a minimum time for the animation (1.5s)
-    final delayFuture = Future.delayed(const Duration(milliseconds: 1500));
-    
-    // AI_DEBUG: Await both. This ensures services are ready AND the user sees the logo.
-    await Future.wait([initFuture, delayFuture]);
+    try {
+      // AI_DEBUG: Brief pause to ensure logo is painted smoothly
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // 1. Run all critical services in background while splash is showing
+      // Using a timeout to ensure splash doesn't hang forever
+      final initFuture = initializeServices().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => AppLog.e("AI_DEBUG: Service initialization timed out!"),
+      );
+      
+      // 2. Wait for a minimum time for the animation (1.0s)
+      final delayFuture = Future.delayed(const Duration(milliseconds: 1000));
+      
+      // AI_DEBUG: Await both. This ensures services are ready AND the user sees the logo.
+      await Future.wait([initFuture, delayFuture]);
+    } catch (e) {
+      AppLog.e("AI_DEBUG: Error during splash initialization: $e");
+    }
 
     if (!mounted) return;
     
-    User? user = FirebaseAuth.instance.currentUser;
-    
-    if (user != null) {
-      // AI_DEBUG: FCM token saving is already handled in NotificationService.init() 
-      // which runs in background. No need to await it here.
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainWrapper()),
-      );
-    } else {
-      // User is not logged in, go to Login
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      
+      if (user != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainWrapper()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
+    } catch (e) {
+      AppLog.e("AI_DEBUG: Navigation error in SplashScreen: $e");
+      // Fallback: If Firebase fails, try to go to Login anyway
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
     }
   }
 

@@ -1,0 +1,4 @@
+- [x] Fix Share API in `profile_screen.dart` (Replace `SharePlus` with `Share`)
+- [x] Implement fixed-scale font helper for poster generation
+- [x] Refine `_buildSharePoster` layout and styles to match design
+- [x] Verify poster preview and share flow

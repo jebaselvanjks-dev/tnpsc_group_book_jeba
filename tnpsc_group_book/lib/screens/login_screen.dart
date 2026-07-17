@@ -75,6 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _navigateToHome() {
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const MainWrapper()),

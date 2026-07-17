@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:tnpsc_group_book/screens/subject_screen.dart';
 import 'screens/splash_screen.dart';
@@ -25,19 +26,32 @@ import 'services/firestore_service.dart';
 import 'services/version_service.dart';
 import 'services/deep_link_service.dart';
 import 'utils/app_log.dart';
+import 'widgets/lazy_indexed_stack.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 void main() {
   // 1. Core Flutter initialization (Instant)
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // 2. Start UI immediately
+
+  // 2. Global Error Handling (Crash Prevention)
+  FlutterError.onError = (FlutterErrorDetails details) {
+    AppLog.e("GLOBAL_FLUTTER_ERROR: ${details.exception}", details.exception, details.stack);
+  };
+
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    AppLog.e("GLOBAL_PLATFORM_ERROR: $error", error, stack);
+    return true; // Prevent app from terminating
+  };
+
+  // 3. Start UI immediately
   runApp(const TNPSCPrepApp());
 }
 
 // Background initializations triggered by SplashScreen
 Future<void> initializeServices() async {
+  // AI_DEBUG: Yield to let UI render first frame
+  await Future.delayed(Duration.zero);
   AppLog.d("AI_DEBUG: initializeServices started");
   
   // Lock orientation to portrait
@@ -96,6 +110,49 @@ class TNPSCPrepApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Global Error UI (Prevents Grey Screen of Death)
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      return ValueListenableBuilder<String>(
+        valueListenable: AppLanguage.languageNotifier,
+        builder: (context, lang, _) {
+          final ta = lang == 'ta';
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            home: Scaffold(
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline_rounded, color: Colors.red, size: 60),
+                      const SizedBox(height: 16),
+                      Text(
+                        AppLanguage.getString('error_generic'),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        ta ? "செயலியை மீண்டும் தொடங்கவும். நாங்கள் இதைச் சரிசெய்கிறோம்." : "Please restart the app. We've logged this issue for fixing.",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () => SystemNavigator.pop(),
+                        child: Text(ta ? "வெளியேறு" : "Exit App"),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      );
+    };
+
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: AppTheme.themeNotifier,
       builder: (_, ThemeMode currentMode, __) {
@@ -130,18 +187,40 @@ class MainWrapper extends StatefulWidget {
   State<MainWrapper> createState() => _MainWrapperState();
 }
 
-class _MainWrapperState extends State<MainWrapper> {
+class _MainWrapperState extends State<MainWrapper> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   bool _isExiting = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Centralized app-level checks
     WidgetsBinding.instance.addPostFrameCallback((_) {
       VersionService.checkForUpdate(context);
       FirestoreService().updateStreak();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    AppLog.d("AI_DEBUG: App Lifecycle State changed to: $state");
+    
+    if (state == AppLifecycleState.resumed) {
+      // Refresh critical data when user returns to the app
+      FirestoreService().updateStreak();
+      VersionService.checkForUpdate(context);
+    } else if (state == AppLifecycleState.paused) {
+      // Perform any urgent saving if needed
+      AppLog.d("AI_DEBUG: App paused - ensuring local state is consistent");
+    }
   }
 
   final List<Widget> _screens = [
@@ -251,7 +330,7 @@ class _MainWrapperState extends State<MainWrapper> {
             _handleBackNavigation();
           },
           child: Scaffold(
-            body: IndexedStack(
+            body: LazyIndexedStack(
               index: _selectedIndex,
               children: _screens,
             ),

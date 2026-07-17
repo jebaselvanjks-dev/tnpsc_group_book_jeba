@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tnpsc_group_book/screens/profile_screen.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
@@ -211,6 +212,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accentColor),
                   ),
                   const SizedBox(height: 10),
+                  // Card(
+                  //   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  //   elevation: 3,
+                  //   child: Container(
+                  //     decoration: BoxDecoration(
+                  //       gradient: LinearGradient(
+                  //         colors: [Colors.blue.shade50, Colors.white],
+                  //         begin: Alignment.topLeft,
+                  //         end: Alignment.bottomRight,
+                  //       ),
+                  //       borderRadius: BorderRadius.circular(16),
+                  //     ),
+                  //     child: ListTile(
+                  //       leading: Container(
+                  //         padding: const EdgeInsets.all(8),
+                  //         decoration: const BoxDecoration(
+                  //           color: Colors.blueAccent,
+                  //           shape: BoxShape.circle
+                  //         ),
+                  //         child: const AppIcon(Icons.share_rounded, color: Colors.white),
+                  //       ),
+                  //       title: Text(
+                  //         lang == 'ta' ? 'நண்பர்களுடன் பகிர்க' : 'Share with Friends',
+                  //         style: AppTheme.getStyle(
+                  //           fontSize: 16,
+                  //           fontWeight: FontWeight.bold,
+                  //           color: AppTheme.textMainColor
+                  //         ),
+                  //       ),
+                  //       subtitle: Text(
+                  //         lang == 'ta' ? 'அழகான போஸ்டர் மூலம் பகிரவும்' : 'Share via beautiful poster',
+                  //         style: AppTheme.getStyle(fontSize: 12, color: AppTheme.textSecondaryColor),
+                  //       ),
+                  //       trailing: const Icon(
+                  //         Icons.chevron_right_rounded,
+                  //         color: Colors.blueAccent,
+                  //         size: 30
+                  //       ),
+                  //       onTap: () {
+                  //         // Note: Share logic is in ProfileScreen
+                  //         ScaffoldMessenger.of(context).showSnackBar(
+                  //           SnackBar(
+                  //             content: Text(lang == 'ta' ? 'சுயவிவரப் பக்கத்தில் (Profile) பகிரவும்' : 'Please use the Share option in the Profile tab'),
+                  //             backgroundColor: Colors.blue,
+                  //           ),
+                  //         );
+                  //       },
+                  //     ),
+                  //   ),
+                  // ),
+                  // const SizedBox(height: 8),
                   ValueListenableBuilder<ThemeMode>(
                     valueListenable: AppTheme.themeNotifier,
                     builder: (context, _, __) {

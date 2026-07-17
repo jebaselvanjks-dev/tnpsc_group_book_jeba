@@ -354,7 +354,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
       } else if (code == 'insufficient_points') {
         _showNeedPointsMessage();
       } else if (code == 'no_questions') {
-        _showError("No questions could be loaded or generated. Please try again.");
+        _showError(AppLanguage.getString('no_questions'));
       } else if (code != null) {
         // Point deduction and attempt increment are now handled in RoomService.createRoom transaction
         // UI Refresh: Force rebuild to show updated points if they come back to this screen
@@ -373,7 +373,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
           MaterialPageRoute(builder: (context) => WaitingRoomScreen(roomCode: code, isHost: true)),
         );
       } else {
-        _showError("Failed to create room.");
+        _showError(AppLanguage.getString('error_generic'));
       }
     });
   }
@@ -385,8 +385,8 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     }
 
     String code = _codeController.text.trim().toUpperCase();
-    if (code.length != 6) {
-      _showError("Invalid room code");
+    if (code.length < 5) {
+      _showError(AppLanguage.languageNotifier.value == 'ta' ? "சரியான குறியீட்டை உள்ளிடவும்" : "Please enter a valid code");
       return;
     }
 
@@ -756,7 +756,8 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   }
 
   void _showError(String message) {
-    AppLog.e(message);
+    if (!mounted) return;
+    AppLog.e("UI Error: $message");
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red));
   }
 

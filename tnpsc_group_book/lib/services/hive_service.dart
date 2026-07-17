@@ -46,6 +46,7 @@ class HiveService {
             key.startsWith('room_ad_watches_') ||
             key.startsWith('reward_ad_watches_') ||
             key.startsWith('quiz_ad_watches_') ||
+            key.startsWith('share_reward_earned_') ||
             key.startsWith('room_create_attempts_') ||
             key.startsWith('sticky_ai_config_')
         )) {
@@ -569,5 +570,18 @@ class HiveService {
 
   static bool canWatchRewardAdToday() {
     return getRewardAdWatchCountToday() < 3;
+  }
+
+  // ------------------- Share Rewards -------------------
+  static bool canEarnShareRewardToday() {
+    var box = Hive.box(userBoxName);
+    String today = _todayDate();
+    return !(box.get('share_reward_earned_$today', defaultValue: false) as bool);
+  }
+
+  static Future<void> markShareRewardEarnedToday() async {
+    var box = Hive.box(userBoxName);
+    String today = _todayDate();
+    await box.put('share_reward_earned_$today', true);
   }
 }

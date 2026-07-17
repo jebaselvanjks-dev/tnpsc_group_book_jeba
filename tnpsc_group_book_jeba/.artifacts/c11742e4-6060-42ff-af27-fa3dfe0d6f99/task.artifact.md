@@ -1,0 +1,3 @@
+- [x] Fix casting error in `_sanitizeForHive` in `firestore_service.dart`
+- [x] Remove randomization logic from `getDailyRotatingQuiz` in `firestore_service.dart`
+- [x] Verify logs for casting errors (Syntactically verified with `analyze_file`)

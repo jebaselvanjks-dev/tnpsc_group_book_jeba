@@ -1,15 +1,11 @@
 import 'dart:io';
-import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:intl/intl.dart' hide TextDirection;
 import 'package:path_provider/path_provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
@@ -31,6 +27,17 @@ import '../services/credential_storage.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  /// Static method to trigger share poster from anywhere
+  static Future<void> triggerShare(BuildContext context) async {
+    final state = context.findAncestorStateOfType<_ProfileScreenState>();
+    if (state != null) {
+      await state._shareAppWithRandomQuiz();
+    } else {
+      // Fallback: If not in tree, we can't easily trigger private state.
+      // Ideally, the share logic should be in a separate service.
+    }
+  }
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -67,15 +74,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not launch $urlString')),
+            SnackBar(content: Text(AppLanguage.getString('error_launch_url'))),
           );
         }
       }
     } catch (e) {
+      AppLog.e("Launch Error: $e");
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLanguage.getString('error_generic'))),
+        );
       }
     }
   }
@@ -155,8 +163,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           userData?['email'] ??
                           user?.email ??
                           AppLanguage.getString('no_email_linked');
-                      final String totalScore = (userData?['totalScore'] ?? 0)
-                          .toString();
                       final String rankVal = globalRank > 0
                           ? globalRank.toString()
                           : "--";
@@ -181,7 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   child: CircleAvatar(
                                     radius: 40,
                                     backgroundColor: AppTheme.primaryColor
-                                        .withOpacity(0.1),
+                                        .withValues(alpha: 0.1),
                                     backgroundImage: user?.photoURL != null
                                         ? NetworkImage(user!.photoURL!)
                                         : null,
@@ -290,7 +296,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   leading: Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: Colors.blue.withOpacity(0.1),
+                                      color: Colors.blue.withValues(alpha: 0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const AppIcon(
@@ -329,7 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                       Switch(
                                         value: lang == 'en',
-                                        activeColor: AppTheme.secondaryColor,
+                                        activeThumbColor: AppTheme.secondaryColor,
                                         inactiveThumbColor: AppTheme.secondaryColor,
                                         onChanged: (val) =>
                                             AppLanguage.changeLanguage(
@@ -344,7 +350,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   leading: Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: Colors.purple.withOpacity(0.1),
+                                      color: Colors.purple.withValues(alpha: 0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const AppIcon(
@@ -357,7 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     value:
                                         currentMode == ThemeMode.dark ||
                                         (currentMode == ThemeMode.system && isDark),
-                                    activeColor: AppTheme.secondaryColor,
+                                    activeThumbColor: AppTheme.secondaryColor,
                                     onChanged: (val) {
                                       AppTheme.setThemeMode(
                                         val ? ThemeMode.dark : ThemeMode.light,
@@ -373,7 +379,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       leading: Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: Colors.orange.withOpacity(0.1),
+                                          color: Colors.orange.withValues(alpha: 0.1),
                                           shape: BoxShape.circle,
                                         ),
                                         child: const AppIcon(
@@ -535,8 +541,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 const Divider(height: 1),
                                 ListTile(
-                                  leading: AppIcon(
-                                    AppIcons.logout_rounded ?? Icons.logout_rounded, // fallback if not defined
+                                  leading: const AppIcon(
+                                    AppIcons.logout_rounded,
                                     color: Colors.redAccent,
                                   ),
                                   title: Text(
@@ -618,9 +624,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -648,14 +654,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+
   Future<void> _shareAppWithRandomQuiz() async {
     try {
       final now = AppDate.getISTNow();
+      final daysSinceEpoch = now.difference(DateTime(1970, 1, 1)).inDays;
       List<Question> pool = [];
 
-      // 1. Try to fetch from a daily rotating quiz (General Tamil -> Studies -> Aptitude)
+      // 1. Try to fetch from a daily rotating quiz
       try {
-        pool = await _firestoreService.getDailyRotatingQuiz();
+        pool = await _firestoreService.getDailyRotatingQuiz(isAdmin: _isAdmin);
       } catch (e) {
         AppLog.e("Error fetching daily rotating quiz for share: $e");
       }
@@ -663,40 +671,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // 2. Fallback to today's Daily Quiz from Firestore
       if (pool.isEmpty) {
         try {
-          List<Question> dailyQuiz = await _firestoreService.getDailyQuiz();
-          if (dailyQuiz.isNotEmpty) {
-            pool = dailyQuiz;
-          }
+          pool = await _firestoreService.getDailyQuiz();
         } catch (e) {
           AppLog.e("Error fetching daily quiz for share: $e");
         }
       }
 
-      // 3. Final fallback to Random Table (defaultRoomQuestions) if pool is still empty
+      // 3. Final fallback to default questions
       if (pool.isEmpty) {
         pool = defaultRoomQuestions;
       }
 
-      // 4. Use the specific question from the pool (now deterministic)
-      final question = pool.first;
+      if (pool.isEmpty) return;
 
-      // 5. Find the actual Subject object for the poster header
-      Subject subject = tnpscSubjects[0]; // fallback
-      if (question.subject != null) {
-        try {
-          subject = tnpscSubjects.firstWhere(
-            (s) => s.titleEn.toLowerCase().contains(question.subject!.toLowerCase()) ||
-                   s.titleTa.toLowerCase().contains(question.subject!.toLowerCase())
-          );
-        } catch (_) {
-          // Attempt fuzzy match or stay with fallback
-          try {
-             subject = tnpscSubjects.firstWhere(
-              (s) => question.subject!.toLowerCase().contains(s.titleEn.toLowerCase()) ||
-                     question.subject!.toLowerCase().contains(s.titleTa.toLowerCase())
-            );
-          } catch (_) {}
-        }
+      // 4. Deterministic selection: Pick one question that stays the same for 24 hours
+      // If pool came from getDailyRotatingQuiz, it usually has 1 item.
+      // If from fallback, it has many. This ensures variety across days.
+      final question = pool[daysSinceEpoch % pool.length];
+
+      // 5. Find the actual Subject object for colors/branding
+      Subject subject = tnpscSubjects[0]; 
+      String qSub = (question.subject ?? question.quizType ?? "").toLowerCase();
+      
+      try {
+        subject = tnpscSubjects.firstWhere(
+          (s) => s.titleEn.toLowerCase().contains(qSub) ||
+                 s.titleTa.toLowerCase().contains(qSub) ||
+                 qSub.contains(s.titleEn.toLowerCase())
+        );
+      } catch (_) {
+        // Stay with fallback subject
       }
 
       // 6. Capture the poster with high quality settings
@@ -743,7 +747,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   )
@@ -805,7 +809,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             final directory = await getTemporaryDirectory();
                             final imagePath = await File('${directory.path}/share_quiz.png').create();
                             await imagePath.writeAsBytes(imageBytes);
-                            await Share.shareXFiles([XFile(imagePath.path)], text: shareText);
+                            
+                            // Share using Share with high quality params
+                            final result = await Share.shareXFiles(
+                              [XFile(imagePath.path)],
+                              text: shareText,
+                            );
+                            
+                            if (result.status == ShareResultStatus.success) {
+                              // Award points if not already earned today
+                              if (HiveService.canEarnShareRewardToday()) {
+                                await _firestoreService.incrementUserPoints(50);
+                                await HiveService.markShareRewardEarnedToday();
+                                
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        AppLanguage.languageNotifier.value == 'ta'
+                                            ? "வாழ்த்துக்கள்! பகிர்ந்ததற்காக 50 புள்ளிகள் கிடைத்தன!"
+                                            : "Congratulations! You earned 50 points for sharing!",
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                  setState(() {}); // Refresh UI stats
+                                }
+                              }
+                            }
                           } catch (e) {
                             AppLog.e("Error sharing from dialog: $e");
                           }
@@ -862,9 +893,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.7),
-                  Colors.black.withOpacity(0.3),
-                  Colors.black.withOpacity(0.9),
+                  Colors.black.withValues(alpha: 0.7),
+                  Colors.black.withValues(alpha: 0.3),
+                  Colors.black.withValues(alpha: 0.9),
                 ],
               ),
             ),
@@ -879,7 +910,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             height: 300,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.blue.withOpacity(0.15),
+              color: Colors.blue.withValues(alpha: 0.15),
             ),
           ),
         ),
@@ -889,27 +920,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildPosterHeader(Question question, Subject subject, Color goldColor) {
     String displayTitle = subject.titleTa; // Default to the subject's Tamil title
-    AppLog.d("Topic: ${question.quizType}");
     
-    // Determine the rotating type based on date (Gives us a reliable fallback if quizType is null)
-    final now = AppDate.getISTNow();
-    List<String> types = ['general_tamil', 'general_studies', 'aptitude'];
-    int daysSinceEpoch = now.difference(DateTime(1970, 1, 1)).inDays;
-    String expectedType = types[daysSinceEpoch % types.length];
+    // Check for rotating quiz types and apply Tamil translations (STRICT MATCHING)
+    String qType = (question.quizType ?? "").toLowerCase();
+    String qSub = (question.subject ?? "").toLowerCase();
 
-    // Use question.quizType if available, otherwise use expectedType
-    String activeType = question.quizType ?? expectedType;
-
-    // Check for rotating quiz types and apply Tamil translations (PRIORITY)
-    if (activeType == "general_tamil") {
+    if (qType == "general_tamil" || qSub == "general tamil" || qSub == "general_tamil") {
       displayTitle = "பொது தமிழ்";
-    } else if (activeType == "general_studies") {
+    } else if (qType == "general_studies" || qSub == "general studies" || qSub == "general_studies") {
       displayTitle = "பொது அறிவு";
-    } else if (activeType == "aptitude") {
+    } else if (qType == "aptitude" || qSub == "aptitude") {
       displayTitle = "கணிதத் திறன்";
     } else if (question.subject != null && question.subject!.isNotEmpty) {
-      // Fallback to question subject if it's not a rotating type and not generic
-      String qSub = question.subject!.toLowerCase();
+      // Use the actual subject name if it's not a generic placeholder
       if (qSub != "general" && qSub != "daily quiz" && qSub != "daily_quiz") {
         displayTitle = question.subject!;
       }
@@ -928,15 +951,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(subject.icon, color: goldColor, size: 32),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      // padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: goldColor.withValues(alpha: 0.5),
+                            blurRadius: 8,
+                          )
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'asset/images/logo.png', // Using the app logo as the Play Store icon
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        displayTitle,
+                        "TNPSC Master: Group 1, 2, 4",
                         style: AppTheme.getStyle(
-                          fontSize: 25,
+                          fontSize: 17,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
+                          ignoreScale: true,
                         ),
                       ),
                     ),
@@ -950,6 +994,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: Colors.white70,
+                      ignoreScale: true,
                     ),
                   ),
                 ),
@@ -964,7 +1009,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               border: Border.all(color: goldColor, width: 2.5),
               boxShadow: [
                 BoxShadow(
-                  color: goldColor.withOpacity(0.3),
+                  color: goldColor.withValues(alpha: 0.3),
                   blurRadius: 15,
                   spreadRadius: 2,
                 )
@@ -975,7 +1020,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             child: ClipOval(
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.all(8.0),
                 child: Image.asset(
                   'asset/images/logo.png',
                   fit: BoxFit.contain,
@@ -996,11 +1041,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF030611).withOpacity(0.6),
+          color: const Color(0xFF030611).withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.blue.withOpacity(0.3), width: 1.5),
+          border: Border.all(color: Colors.blue.withValues(alpha: 0.3), width: 1.5),
           boxShadow: [
-            BoxShadow(color: Colors.blue.withOpacity(0.1), blurRadius: 10)
+            BoxShadow(color: Colors.blue.withValues(alpha: 0.1), blurRadius: 10)
           ],
         ),
         child: Column(
@@ -1013,10 +1058,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Text("Q.", style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: Text("Q.", style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true)),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1026,10 +1071,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Text(
                         question.questionEn ?? question.question,
                         style: AppTheme.getStyle(
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                           height: 1.3,
+                          ignoreScale: true,
                         ),
                       ),
                       if (question.questionTa != null && question.questionTa!.isNotEmpty)
@@ -1038,10 +1084,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Text(
                             question.questionTa!,
                             style: AppTheme.getStyle(
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white70,
+                              color: Colors.tealAccent,
                               height: 1.3,
+                              ignoreScale: true,
                             ),
                           ),
                         ),
@@ -1050,11 +1097,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             ...question.displayOptions.asMap().entries.map((entry) {
               int idx = entry.key;
               String label = String.fromCharCode(65 + idx);
-              bool isCorrect = idx == question.correctOptionIndex;
+              // bool isCorrect = idx == question.correctOptionIndex;
 
               String optEn = "";
               String optTa = "";
@@ -1072,12 +1119,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 6.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isCorrect ? Colors.green.withOpacity(0.5) : Colors.white10,
+                        color: Colors.white60,
+                      // color: isCorrect ? Colors.green.withValues(alpha: 0.5) : Colors.white10,
                       width: 1,
                     ),
                   ),
@@ -1087,13 +1135,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         width: 24,
                         height: 24,
                         decoration: BoxDecoration(
-                          color: isCorrect ? Colors.green : goldColor,
+                          color: goldColor,
+                          // color: isCorrect ? Colors.green : goldColor,
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
                         child: Text(
                           label,
-                          style: AppTheme.getStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black),
+                          style: AppTheme.getStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, ignoreScale: true),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1105,8 +1154,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 optTa.isNotEmpty ? "$optEn / " : optEn,
                                 style: AppTheme.getStyle(
                                   fontSize: 11,
-                                  color: isCorrect ? Colors.greenAccent : Colors.white,
-                                  fontWeight: isCorrect ? FontWeight.bold : FontWeight.w500,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                  ignoreScale: true,
                                 ),
                               ),
                             if (optTa.isNotEmpty)
@@ -1114,15 +1164,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 optTa,
                                 style: AppTheme.getStyle(
                                   fontSize: 10,
-                                  color: isCorrect ? Colors.greenAccent : Colors.white70,
-                                  fontWeight: isCorrect ? FontWeight.bold : FontWeight.normal,
+                                  color: Colors.tealAccent,
+                                  fontWeight: FontWeight.w500,
+                                  ignoreScale: true,
                                 ),
                               ),
                           ],
                         ),
                       ),
-                      if (isCorrect)
-                        const Icon(Icons.verified_rounded, color: Colors.green, size: 16),
+                      // if (isCorrect)
+                      //   const Icon(Icons.verified_rounded, color: Colors.green, size: 16),
                     ],
                   ),
                 ),
@@ -1172,7 +1223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           border: Border.all(color: Colors.white24, width: 4),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.8),
+              color: Colors.black.withValues(alpha: 0.8),
               blurRadius: 30,
               offset: const Offset(0, 15),
             )
@@ -1191,7 +1242,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildPosterMainBranding(Color goldColor) {
     return Positioned(
-      bottom: 180,
+      bottom: 195,
       left: 170,
       right: 15,
       child: Column(
@@ -1199,43 +1250,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.school_rounded, color: Colors.white70, size: 40),
+              const Icon(Icons.school_rounded, color: Colors.white70, size: 25),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "TNPSC",
+                    "TNPSC MASTER",
                     style: AppTheme.getStyle(
-                      fontSize: 25,
+                      fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                       height: 0.9,
-                    ),
-                  ),
-                  Text(
-                    "MASTER",
-                    style: AppTheme.getStyle(
-                      fontSize: 25,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      height: 0.9,
+                      ignoreScale: true,
                     ),
                   ),
                 ],
               ),
               const Spacer(),
-              const Icon(Icons.emoji_events_rounded, color: Color(0xFFE5BA73), size: 40),
+              const Icon(Icons.emoji_events_rounded, color: Color(0xFFE5BA73), size: 25),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: [goldColor, const Color(0xFFE5BA73)]),
               borderRadius: BorderRadius.circular(30),
-              boxShadow: [BoxShadow(color: goldColor.withOpacity(0.3), blurRadius: 10)],
+              boxShadow: [BoxShadow(color: goldColor.withValues(alpha: 0.3), blurRadius: 10)],
             ),
             child: Text(
               "Group 1 | Group 2 | Group 4 | VAO",
@@ -1245,6 +1288,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 fontWeight: FontWeight.w900,
                 color: Colors.black,
                 letterSpacing: 1,
+                ignoreScale: true,
               ),
             ),
           ),
@@ -1259,9 +1303,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       left: 170,
       right: 15,
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.4),
+          color: Colors.black.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.white10),
         ),
@@ -1275,20 +1319,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   decoration: BoxDecoration(
                     color: Colors.red,
                     borderRadius: BorderRadius.circular(4),
-                    boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 6)],
+                    boxShadow: [BoxShadow(color: Colors.red.withValues(alpha: 0.4), blurRadius: 6)],
                   ),
                   child: Row(
                     children: [
                       const Icon(Icons.sensors, color: Colors.white, size: 10),
                       const SizedBox(width: 4),
-                      Text("LIVE", style: AppTheme.getStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text("LIVE", style: AppTheme.getStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true)),
                     ],
                   ),
                 ),
                 const SizedBox(width: 10),
                 Text(
                   "LIVE GROUP BATTLE",
-                  style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white),
+                  style: AppTheme.getStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white, ignoreScale: true),
                 ),
               ],
             ),
@@ -1314,9 +1358,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         width: 85,
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.5),
+          color: Colors.black.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
@@ -1330,11 +1374,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Text(
                         title,
-                        style: AppTheme.getStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: AppTheme.getStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true),
                       ),
                       Text(
                         sub,
-                        style: AppTheme.getStyle(fontSize: 8, color: Colors.white70, fontWeight: FontWeight.w600),
+                        style: AppTheme.getStyle(fontSize: 8, color: Colors.white70, fontWeight: FontWeight.w600, ignoreScale: true),
                       ),
                     ],
                   ),
@@ -1360,11 +1404,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   title,
-                  style: AppTheme.getStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: AppTheme.getStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true),
                 ),
                 Text(
                   sub,
-                  style: AppTheme.getStyle(fontSize: 8, color: Colors.greenAccent, fontWeight: FontWeight.w600),
+                  style: AppTheme.getStyle(fontSize: 8, color: Colors.greenAccent, fontWeight: FontWeight.w600, ignoreScale: true),
                 ),
               ],
             ),

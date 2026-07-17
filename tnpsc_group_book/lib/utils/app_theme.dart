@@ -240,14 +240,17 @@ class AppTheme {
     Color? color,
     double? height,
     double? letterSpacing,
+    bool ignoreScale = false,
   }) {
     bool isTamil = AppLanguage.languageNotifier.value == 'ta';
     
     // Reduce Tamil font size by 1.5 as requested
     double adjustedSize = isTamil ? fontSize - 1.5 : fontSize;
     
-    // Apply global font scaling factor
-    adjustedSize = adjustedSize * fontSizeFactorNotifier.value;
+    // Apply global font scaling factor unless ignored
+    if (!ignoreScale) {
+      adjustedSize = adjustedSize * fontSizeFactorNotifier.value;
+    }
     
     // Use Outfit for English, Noto Sans Tamil for Tamil
     if (isTamil) {

@@ -496,6 +496,7 @@ class _QuizScreenState extends State<QuizScreen> {
       RewardService.showRewardAdIfAllowed(
           useLimit: false,
           onRewardEarned: () {
+            if (!mounted) return;
             // Navigate to result screen without adding extra points (points are added per question)
             Navigator.pushReplacement(
               context,
@@ -515,6 +516,7 @@ class _QuizScreenState extends State<QuizScreen> {
           }
       );
     }else{
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

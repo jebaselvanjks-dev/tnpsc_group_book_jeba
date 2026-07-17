@@ -113,11 +113,13 @@ class RewardService {
       _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
           ad.dispose();
+          _rewardedAd = null;
           _isAdLoaded = false;
           loadRewardedAd(); // Load next ad
         },
         onAdFailedToShowFullScreenContent: (ad, err) {
           ad.dispose();
+          _rewardedAd = null;
           _isAdLoaded = false;
           loadRewardedAd();
           if (onFailure != null) onFailure(); else onRewardEarned(); 
@@ -127,11 +129,30 @@ class RewardService {
         onRewardEarned();
       });
     } else {
-      AppLog.d('AI_DEBUG: Rewarded Ad not ready yet, loading and will retry.');
+      AppLog.d('AI_DEBUG: Rewarded Ad not ready yet, loading and will retry once.');
       loadRewardedAd();
+      
+      // AI_DEBUG: Use a single retry to avoid infinite recursion
       Future.delayed(const Duration(seconds: 2), () {
         if (_isAdLoaded && _rewardedAd != null) {
-          showRewardAd(onRewardEarned: onRewardEarned, onFailure: onFailure);
+          // One final check before giving up
+          _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _rewardedAd = null;
+              _isAdLoaded = false;
+              loadRewardedAd();
+            },
+            onAdFailedToShowFullScreenContent: (ad, err) {
+              ad.dispose();
+              _rewardedAd = null;
+              _isAdLoaded = false;
+              loadRewardedAd();
+            },
+          );
+          _rewardedAd!.show(onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
+            onRewardEarned();
+          });
         } else {
           AppLog.d('AI_DEBUG: Ad still not ready after 2s, proceeding to failure path.');
           if (onFailure != null) onFailure(); else onRewardEarned();

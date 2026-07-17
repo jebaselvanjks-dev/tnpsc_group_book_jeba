@@ -900,6 +900,12 @@ class AppLanguage {
         return ta ? 'கூடுதல் வீரர் செலவு' : 'Extra Player Cost';
       case 'free':
         return ta ? 'இலவசம்' : 'Free';
+      case 'error_generic':
+        return ta ? 'ஏதோ தவறு நடந்துவிட்டது. மீண்டும் முயற்சிக்கவும்.' : 'Something went wrong. Please try again.';
+      case 'error_network':
+        return ta ? 'இணைய இணைப்பைச் சரிபார்க்கவும்.' : 'Please check your internet connection.';
+      case 'error_launch_url':
+        return ta ? 'இந்த இணைப்பைத் திறக்க முடியவில்லை.' : 'Could not open this link.';
       default:
         return key;
     }

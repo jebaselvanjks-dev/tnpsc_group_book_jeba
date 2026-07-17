@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 class AppLog {
   /// Set this to false to hide all debug logs across the app
-  static bool showDebugLogs = false;
+  static bool showDebugLogs = true;
 
   /// Logs a debug message if showDebugLogs is true
   static void d(String message) {

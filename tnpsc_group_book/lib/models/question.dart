@@ -203,7 +203,8 @@ final List<Question> defaultRoomQuestions = [
     ],
     correctOptionIndex: 0,
     explanation: "Dr. Muthulakshmi Reddy was the first woman doctor in India and the first female legislator. / டாக்டர் முத்துலட்சுமி ரெட்டி இந்தியாவின் முதல் பெண் மருத்துவர் மற்றும் முதல் பெண் சட்டமன்ற உறுப்பினர் ஆவார்.",
-    subject: "General",
+    subject: "General Studies",
+    quizType: "general_studies",
   ),
   Question(
     question: "Which is the state bird of Tamil Nadu?\nதமிழ்நாட்டின் மாநிலப் பறவை எது?",
@@ -215,7 +216,8 @@ final List<Question> defaultRoomQuestions = [
     ],
     correctOptionIndex: 0,
     explanation: "The Emerald Dove is the state bird of Tamil Nadu. / மரகதப் புறா தமிழ்நாட்டின் மாநிலப் பறவை ஆகும்.",
-    subject: "General",
+    subject: "General Studies",
+    quizType: "general_studies",
   ),
   Question(
     question: "Who is known as the 'Father of the Indian Constitution'?\n'இந்திய அரசியலமைப்பின் தந்தை' என்று அழைக்கப்படுபவர் யார்?",
@@ -227,7 +229,8 @@ final List<Question> defaultRoomQuestions = [
     ],
     correctOptionIndex: 0,
     explanation: "Dr. B.R. Ambedkar was the chief architect and is recognized as the Father of the Indian Constitution. / டாக்டர் பி.ஆர்.அம்பேத்கர் இந்திய அரசியலமைப்பின் முதன்மை வடிவமைப்பாளர் மற்றும் தந்தை என அங்கீகரிக்கப்பட்டுள்ளார்.",
-    subject: "General",
+    subject: "General Studies",
+    quizType: "general_studies",
   ),
   Question(
     question: "In which year was the state of Madras renamed as Tamil Nadu?\nமெட்ராஸ் மாநிலம் எந்த ஆண்டு தமிழ்நாடு என பெயர் மாற்றம் செய்யப்பட்டது?",
@@ -239,7 +242,8 @@ final List<Question> defaultRoomQuestions = [
     ],
     correctOptionIndex: 1,
     explanation: "In 1969, under Chief Minister C.N. Annadurai, Madras State was officially renamed Tamil Nadu. / 1969 இல், முதலமைச்சர் சி.என். அண்ணாதுரையின் கீழ், மெட்ராஸ் மாநிலம் அதிகாரப்பூர்வமாக தமிழ்நாடு என பெயர் மாற்றம் செய்யப்பட்டது.",
-    subject: "General",
+    subject: "General Studies",
+    quizType: "general_studies",
   ),
   Question(
     question: "Who built the famous Brihadeeswarar Temple in Thanjavur?\nதஞ்சாவூர் பிரகதீஸ்வரர் கோயிலைக் கட்டியவர் யார்?",
@@ -251,7 +255,8 @@ final List<Question> defaultRoomQuestions = [
     ],
     correctOptionIndex: 0,
     explanation: "The Brihadeeswarar Temple in Thanjavur was built by Rajaraja Chola I in 1010 AD. / தஞ்சாவூர் பிரகதீஸ்வரர் கோயில் கி.பி. 1010 இல் முதலாம் ராஜராஜ சோழனால் கட்டப்பட்டது.",
-    subject: "General",
+    subject: "General Studies",
+    quizType: "general_studies",
   ),
   Question(
     question: "Which is the highest peak in Tamil Nadu?\nதமிழ்நாட்டின் மிக உயர்ந்த சிகரம் எது?",
@@ -263,7 +268,8 @@ final List<Question> defaultRoomQuestions = [
     ],
     correctOptionIndex: 0,
     explanation: "Doddabetta is the highest peak in the Nilgiri Hills of Tamil Nadu, standing at 2,637 meters. / தொட்டபெட்டா தமிழ்நாட்டின் நீலகிரி மலையில் அமைந்துள்ள மிக உயர்ந்த சிகரமாகும் (2,637 மீட்டர்).",
-    subject: "General",
+    subject: "General Studies",
+    quizType: "general_studies",
   ),
   Question(
     question: "Who authored the national anthem of India?\nஇந்தியாவின் தேசிய கீதத்தை இயற்றியவர் யார்?",
@@ -275,7 +281,8 @@ final List<Question> defaultRoomQuestions = [
     ],
     correctOptionIndex: 0,
     explanation: "Jana Gana Mana, the national anthem of India, was composed by Nobel laureate Rabindranath Tagore. / இந்தியாவின் தேசிய கீதமான ஜன கண மன, நோபல் பரிசு பெற்ற ரவீந்திரநாத் தாகூரால் இயற்றப்பட்டது.",
-    subject: "General",
+    subject: "General Studies",
+    quizType: "general_studies",
   ),
   Question(
     question: "Which article of the Indian Constitution provides for the Right to Equality?\nஇந்திய அரசியலமைப்பின் எந்த விதி சமத்துவ உரிமையை வழங்குகிறது?",
@@ -287,7 +294,8 @@ final List<Question> defaultRoomQuestions = [
     ],
     correctOptionIndex: 0,
     explanation: "Articles 14 to 18 of the Indian Constitution deal with the Right to Equality. / இந்திய அரசியலமைப்பின் 14 முதல் 18 வரையிலான விதிகள் சமத்துவ உரிமையைப் பற்றி பேசுகின்றன.",
-    subject: "General",
+    subject: "General Studies",
+    quizType: "general_studies",
   ),
   Question(
     question: "Who was the author of the Tamil epic 'Silappatikaram'?\nதமிழின் காப்பியமான 'சிலப்பதிகாரம்' இயற்றியவர் யார்?",
@@ -299,7 +307,8 @@ final List<Question> defaultRoomQuestions = [
     ],
     correctOptionIndex: 0,
     explanation: "Silappatikaram was written by Ilango Adigal, who was a Chera prince. / சிலப்பதிகாரம் சேர மன்னர் மரபைச் சேர்ந்த இளங்கோவடிகளால் எழுதப்பட்டது.",
-    subject: "General",
+    subject: "General Tamil",
+    quizType: "general_tamil",
   ),
   Question(
     question: "Which national leader is known as 'Periyar'?\n'பெரியார்' என்று அழைக்கப்படும் தேசியத் தலைவர் யார்?",
@@ -311,14 +320,16 @@ final List<Question> defaultRoomQuestions = [
     ],
     correctOptionIndex: 0,
     explanation: "E.V. Ramasamy is affectionately called 'Periyar' (The Elder) and is known as the Father of the Dravidian Movement. / ஈ.வெ. ராமசாமி அன்புடன் 'பெரியார்' என்று அழைக்கப்படுகிறார் மற்றும் திராவிட இயக்கத்தின் தந்தை என்று அறியப்படுகிறார்.",
-    subject: "General",
+    subject: "General Studies",
+    quizType: "general_studies",
   ),
   Question(
     question: "How many letters are there in total in Tamil language according to Nannul?\\nநன்னூலின் படி தமிழ் மொழியில் உள்ள மொத்த எழுத்துக்களின் எண்ணிக்கை யாது?",
     options: ["247 / 247", "255 / 255", "260 / 260", "275 / 275"],
     correctOptionIndex: 0,
     explanation: "According to Nannul, Tamil language has 247 letters (including vowels, consonants, and compound letters). / நன்னூலின்படி தமிழ் மொழியில் மொத்தம் 247 எழுத்துக்கள் உள்ளன.",
-    subject: "General",
+    subject: "General Tamil",
+    quizType: "general_tamil",
   ),
 ];
 

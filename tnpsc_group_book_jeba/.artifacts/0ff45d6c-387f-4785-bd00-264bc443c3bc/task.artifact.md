@@ -1,0 +1,10 @@
+- [x] Create `LazyIndexedStack` widget for optimized tab loading
+- [x] Implement app lifecycle observer in `MainWrapper` (`main.dart`)
+- [x] Replace `IndexedStack` with `LazyIndexedStack` in `main.dart`
+- [x] Reduce Splash Screen delay and optimize service init in `splash_screen.dart`
+- [x] Optimize `FirestoreService.getUserData` for faster startup
+- [x] Implement global error boundary in `main.dart`
+- [x] Add `mounted` checks to `splash_screen.dart` and `login_screen.dart`
+- [x] Fix potential navigation crashes in `quiz_screen.dart`
+- [x] Fix ad loading logic in `reward_service.dart` to prevent recursion
+- [x] Verify app stability under stress
