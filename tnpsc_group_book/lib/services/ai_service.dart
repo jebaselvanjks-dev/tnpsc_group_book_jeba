@@ -353,7 +353,9 @@ STRICT QUALITY RULES (MUST FOLLOW)
 14. Only ONE option must be correct.
 15. Verify the correct answer before assigning correctOptionIndex.
 16. correctOptionIndex MUST exactly match the correct option (0-3).
-17. Explanation must clearly justify why the answer is correct.
+17. Explanation must clearly justify why the answer is correct. 
+    - For Math/Aptitude: Show step-by-step calculation (Formula -> Steps -> Final Answer).
+    - Ensure the calculated result EXACTLY matches the value in the correct option.
 18. MANDATORY BILINGUAL FORMAT (STRICT):
     - "question_en": "English question text"
     - "question_ta": "தமிழ் வினா உரை"
@@ -374,13 +376,13 @@ STRICT QUALITY RULES (MUST FOLLOW)
 30. Validate every answer before returning JSON.
 
 Before generating the JSON, internally verify:
+- APTITUDE ACCURACY: Perform step-by-step calculation. Does the result match the option?
 - BILINGUAL REQUIREMENT: Does every field have both English and Tamil?
 - Grammar accuracy (Tamil & English)
 - No duplicate questions or patterns
 - No duplicate options
 - Correctness of correctOptionIndex
-- Step-by-step math accuracy (for Aptitude)
-- Explanation clarity and accuracy
+- Explanation clarity and accuracy (Show the math!)
 
 Output Format:
 
@@ -439,8 +441,7 @@ $commonRules
 Generate exactly 4 UNIQUE TNPSC Aptitude MCQs.
 
 Topics:
-- HCF
-- LCM
+- HCF & LCM
 - Ratio
 - Percentage
 - Profit & Loss
@@ -450,7 +451,9 @@ Topics:
 - Compound Interest
 - Mensuration
 
-Each question must require calculation.
+CRITICAL: Each question must require calculation. 
+- You MUST solve the problem step-by-step internally before selecting the correct option.
+- The explanation MUST show the formula and the substitution steps clearly in both languages.
 
 $avoidPrompt
 
@@ -562,7 +565,9 @@ STRICT QUALITY RULES (MUST FOLLOW)
 14. Only ONE option must be correct.
 15. Verify the correct answer before assigning correctOptionIndex.
 16. correctOptionIndex MUST exactly match the correct option (0-3).
-17. Explanation must clearly justify why the answer is correct.
+17. Explanation must clearly justify why the answer is correct. 
+    - For Math/Aptitude: Show step-by-step calculation (Formula -> Steps -> Final Answer).
+    - Ensure the calculated result EXACTLY matches the value in the correct option.
 18. MANDATORY BILINGUAL FORMAT (STRICT):
     - "question_en": "English question text"
     - "question_ta": "தமிழ் வினா உரை"
@@ -583,13 +588,13 @@ STRICT QUALITY RULES (MUST FOLLOW)
 30. Validate every answer before returning JSON.
 
 Before generating the JSON, internally verify:
+- APTITUDE ACCURACY: Perform step-by-step calculation. Does the result match the option?
 - BILINGUAL REQUIREMENT: Does every field have both English and Tamil?
 - Grammar accuracy (Tamil & English)
 - No duplicate questions or patterns
 - No duplicate options
 - Correctness of correctOptionIndex
-- Step-by-step math accuracy (for Aptitude)
-- Explanation clarity and accuracy
+- Explanation clarity and accuracy (Show the math!)
 
 Output Format:
 
@@ -656,7 +661,9 @@ Topics:
 - Area & Volume
 - Logical Reasoning
 
-Each question must require calculation.
+CRITICAL: Each question must require calculation.
+- You MUST solve the problem step-by-step internally before selecting the correct option.
+- The explanation MUST show the formula and the substitution steps clearly in both languages.
 
 $avoidPrompt
 
@@ -776,7 +783,10 @@ Generate 20 UNIQUE TNPSC Aptitude and Mental Ability MCQs (SSLC Standard).
 Cover Simplification, Percentage, HCF/LCM, Ratio, Interest, Area, Volume, Time and Work.
 CRITICAL INSTRUCTIONS:
 1. Double-check the 'correctOptionIndex' (0, 1, 2, or 3).
-2. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. NO OTHER LANGUAGES (Hindi, etc.).
+2. For Math/Aptitude: Solve step-by-step internally before finalizing.
+3. The explanation MUST show the formula and clear calculation steps in both English and Tamil.
+4. Ensure the calculated result EXACTLY matches the value in the correct option.
+5. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. NO OTHER LANGUAGES (Hindi, etc.).
 ''';
     } else if (subject == 'current_affairs') {
       specializedPrompt = '''
@@ -898,6 +908,9 @@ STRICT LANGUAGE REQUIREMENTS:
 2. NO OTHER LANGUAGES: Strictly DO NOT include Hindi, Malayalam, or others.
 3. Ensure there are NO spelling mistakes.
 4. Each question MUST be bilingual using separate keys for English and Tamil.
+5. For Math/Aptitude questions, you MUST solve them step-by-step internally.
+6. The explanation MUST show the formula and clear calculation steps in both languages.
+7. Ensure the calculated result EXACTLY matches the correct option.
 Strictly use this BILINGUAL JSON format: 
 [{"question_en": "English question text", 
 "question_ta": "தமிழ் வினா உரை",
@@ -1014,7 +1027,10 @@ Generate 20 UNIQUE TNPSC Aptitude and Mental Ability MCQs (SSLC Standard).
 Cover Simplification, Percentage, HCF/LCM, Ratio, Interest, Area, Volume, Time and Work.
 CRITICAL INSTRUCTIONS:
 1. Double-check the 'correctOptionIndex' (0, 1, 2, or 3).
-2. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. NO OTHER LANGUAGES (Hindi, etc.).
+2. For Math/Aptitude: Solve step-by-step internally before finalizing.
+3. The explanation MUST show the formula and clear calculation steps in both English and Tamil.
+4. Ensure the calculated result EXACTLY matches the value in the correct option.
+5. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. NO OTHER LANGUAGES (Hindi, etc.).
 ''';
     } else if (subject == 'current_affairs') {
       specializedPrompt = '''
@@ -1189,6 +1205,9 @@ CRITICAL INSTRUCTIONS:
 2. For Math/Aptitude, double-check your calculations.
 3. USE ONLY Pure Tamil and Pure English. NO MIXED LANGUAGE. NO OTHER LANGUAGES (Hindi, etc.).
 4. Each question MUST be bilingual using separate keys for English and Tamil.
+5. For Math/Aptitude questions, you MUST solve them step-by-step internally.
+6. The explanation MUST show the formula and clear calculation steps in both languages.
+7. Ensure the calculated result EXACTLY matches the correct option.
 Strictly use this BILINGUAL JSON format: 
 [{"question_en": "English question text", 
 "question_ta": "தமிழ் வினா உரை",
