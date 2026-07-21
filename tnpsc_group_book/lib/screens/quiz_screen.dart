@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:tnpsc_group_book/utils/app_log.dart';
+import 'package:tnpsc_group_book/widgets/bilingual_text.dart';
 import '../models/question.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
@@ -15,8 +17,7 @@ import '../services/ai_service.dart';
 import '../services/tts_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/reward_service.dart';
-import '../widgets/bilingual_text.dart';
-import '../utils/app_log.dart';
+import '../widgets/error_state_widget.dart';
 
 class QuizScreen extends StatefulWidget {
   final String subjectTitle;
@@ -302,25 +303,6 @@ class _QuizScreenState extends State<QuizScreen> {
     if (!isDailyOrMock && isCorrect) {
       await RewardService.addPoints(2);
     }
-
-    final String correctLabel = AppLanguage.getString('correct_feedback');
-    final String wrongLabel = AppLanguage.getString('wrong_feedback');
-    final String correctAnswerLabel = AppLanguage.getString('correct_answer_feedback');
-
-    // Show bilingual correct answer in SnackBar if user is wrong
-    final correctOpt = _visibleQuestions[_currentQuestionIndex].options[correctIndex];
-    final bilingualCorrect = AppLanguage.formatBilingual(correctOpt);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(isCorrect 
-          ? correctLabel 
-          : '$wrongLabel $correctAnswerLabel $bilingualCorrect'),
-        backgroundColor: isCorrect ? Colors.green : Colors.red,
-        duration: Duration(seconds: isCorrect ? 1 : 3),
-      ),
-    );
-    Future.delayed(const Duration(milliseconds: 600), _nextQuestion);
 
     // Stop speaking if option is tapped
     if (TtsService.isSpeaking(_getQuestionTtsText(_visibleQuestions[_currentQuestionIndex]))) {
@@ -724,32 +706,9 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
               title: Text(displayTitle),
             ),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const AppIcon(AppIcons.quiz, size: 80, color: Colors.grey),
-                  const SizedBox(height: 20),
-                  Text(AppLanguage.getString('no_questions'), textAlign: TextAlign.center,style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  if (isAdmin) ...[
-                  Text(AppLanguage.getString('generate_questions_desc'), textAlign: TextAlign.center,style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)),
-                  const SizedBox(height: 30),
-                    _isGenerating
-                        ? const CircularProgressIndicator()
-                        : ElevatedButton(
-                            onPressed: _generateMoreQuestions,
-                            child: Text(AppLanguage.getString('generate_ai')),
-                          ),
-                    const SizedBox(height: 10),
-                  ],
-                  ElevatedButton(
-                    onPressed: () => Navigator.maybePop(context),
-                    child: Text(AppLanguage.getString('go_back')),
-                  )
-                ],
-              ),
+            body: AppErrorWidget(
+              message: AppLanguage.getString('no_questions'),
+              onRetry: isAdmin ? _generateMoreQuestions : null,
             ),
           );
         } else {
@@ -914,6 +873,43 @@ class _QuizScreenState extends State<QuizScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 10),
+                                  if (_selectedAnswers[_currentQuestionIndex] != null)
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      margin: const EdgeInsets.only(bottom: 24),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              const Icon(Icons.info_outline_rounded, color: Colors.blue, size: 20),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                AppLanguage.getString('explanation'),
+                                                style: AppTheme.getStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.blue,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          BilingualText(
+                                            en: question.explanationEn,
+                                            ta: question.explanationTa,
+                                            legacy: question.explanation,
+                                            fontSize: 14,
+                                            color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ...List.generate(_shuffledIndicesFor(_currentQuestionIndex).length, (i) {
                                     final index = _shuffledIndicesFor(_currentQuestionIndex)[i];
                                     final selected = _selectedAnswers[_currentQuestionIndex];

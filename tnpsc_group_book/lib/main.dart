@@ -28,6 +28,8 @@ import 'services/deep_link_service.dart';
 import 'utils/app_log.dart';
 import 'widgets/lazy_indexed_stack.dart';
 
+import 'widgets/error_state_widget.dart';
+
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 void main() {
@@ -50,9 +52,7 @@ void main() {
 
 // Background initializations triggered by SplashScreen
 Future<void> initializeServices() async {
-  // AI_DEBUG: Yield to let UI render first frame
-  await Future.delayed(Duration.zero);
-  AppLog.d("AI_DEBUG: initializeServices started");
+  // AI_DEBUG: Start critical services immediately
   
   // Lock orientation to portrait
   SystemChrome.setPreferredOrientations([
@@ -60,38 +60,30 @@ Future<void> initializeServices() async {
     DeviceOrientation.portraitDown,
   ]);
   
-  // 1. Critical initializations
+  // 1. Critical initializations (Must be ready before Home screen)
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    AppLog.d("AI_DEBUG: Firebase initialized");
   } catch (e) {
     AppLog.e("AI_DEBUG: Firebase init error: $e");
   }
   
-  // Initialize Hive immediately as it's needed for UI state and other services
+  // Initialize Hive immediately as it's needed for Auth, UI state and Theme
   await HiveService.init();
-  AppLog.d("AI_DEBUG: Hive initialized");
 
   // Load preferences from Hive
   AppLanguage.init();
   AppTheme.init();
-  AppLog.d("AI_DEBUG: App preferences initialized");
-
-  // Initialize DeepLinkService after Hive as it may depend on app settings/language
-  DeepLinkService().init();
   
-  // 2. Network/Heavy initializations (In Background)
+  // All other services are moved to background to not block launch
   _initServicesInBackground();
-  
-  AppLog.d("AI_DEBUG: initializeServices completed");
 }
 
-// Background initializations to speed up startup
+// Lazy initializations to speed up startup
 Future<void> _initServicesInBackground() async {
-  // Use a small delay to allow the splash screen to render first
-  await Future.delayed(const Duration(milliseconds: 100));
+  // Small delay to allow the app to actually reach the first screen
+  await Future.delayed(const Duration(milliseconds: 500));
 
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
@@ -103,6 +95,7 @@ Future<void> _initServicesInBackground() async {
   MobileAds.instance.initialize();
   TtsService.init();
   RewardService.loadRewardedAd();
+  DeepLinkService().init();
 }
 
 class TNPSCPrepApp extends StatelessWidget {
@@ -115,38 +108,14 @@ class TNPSCPrepApp extends StatelessWidget {
       return ValueListenableBuilder<String>(
         valueListenable: AppLanguage.languageNotifier,
         builder: (context, lang, _) {
-          final ta = lang == 'ta';
           return MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: Scaffold(
-              body: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline_rounded, color: Colors.red, size: 60),
-                      const SizedBox(height: 16),
-                      Text(
-                        AppLanguage.getString('error_generic'),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        ta ? "செயலியை மீண்டும் தொடங்கவும். நாங்கள் இதைச் சரிசெய்கிறோம்." : "Please restart the app. We've logged this issue for fixing.",
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () => SystemNavigator.pop(),
-                        child: Text(ta ? "வெளியேறு" : "Exit App"),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: AppTheme.themeNotifier.value,
+            home: AppErrorWidget(
+              isFullScreen: true,
+              onRetry: () => SystemNavigator.pop(),
             ),
           );
         }
@@ -190,6 +159,7 @@ class MainWrapper extends StatefulWidget {
 class _MainWrapperState extends State<MainWrapper> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   bool _isExiting = false;
+  DateTime _lastBackgroundCheck = DateTime.now();
 
   @override
   void initState() {
@@ -197,9 +167,14 @@ class _MainWrapperState extends State<MainWrapper> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // Centralized app-level checks
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      VersionService.checkForUpdate(context);
-      FirestoreService().updateStreak();
+      _runPeriodicChecks();
     });
+  }
+
+  void _runPeriodicChecks() {
+    VersionService.checkForUpdate(context);
+    FirestoreService().updateStreak();
+    _lastBackgroundCheck = DateTime.now();
   }
 
   @override
@@ -211,15 +186,19 @@ class _MainWrapperState extends State<MainWrapper> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    AppLog.d("AI_DEBUG: App Lifecycle State changed to: $state");
     
     if (state == AppLifecycleState.resumed) {
-      // Refresh critical data when user returns to the app
-      FirestoreService().updateStreak();
-      VersionService.checkForUpdate(context);
+      // Only run heavy checks if away for more than 15 minutes
+      final now = DateTime.now();
+      if (now.difference(_lastBackgroundCheck).inMinutes >= 15) {
+        AppLog.d("AI_DEBUG: Resumed after >15m - Running periodic checks");
+        _runPeriodicChecks();
+      } else {
+        AppLog.d("AI_DEBUG: Resumed quickly - Skipping periodic checks for smoothness");
+      }
     } else if (state == AppLifecycleState.paused) {
-      // Perform any urgent saving if needed
-      AppLog.d("AI_DEBUG: App paused - ensuring local state is consistent");
+      _lastBackgroundCheck = DateTime.now();
+      AppLog.d("AI_DEBUG: App paused - tracking timestamp");
     }
   }
 

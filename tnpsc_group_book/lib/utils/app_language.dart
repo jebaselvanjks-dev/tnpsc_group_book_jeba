@@ -227,7 +227,7 @@ class AppLanguage {
       case 'end':
         return ta ? 'முடி' : 'End';
       case 'no_questions':
-        return ta ? 'இந்த தலைப்பிற்கான கேள்விகள் எதுவும் கிடைக்கவில்லை.' : 'No questions found for this topic.';
+        return ta ? 'தற்போது கேள்விகள் எதுவும் இல்லை. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.' : 'No questions available right now. Please try again in a moment.';
       case 'generate_questions_desc':
         return ta ? 'தயவுசெய்து ஆப் அமைப்புகளில் இருந்து கேள்விகளை உருவாக்கவும்.' : 'Please generate questions from App Settings.';
       case 'go_back':
@@ -289,7 +289,7 @@ class AppLanguage {
       case 'start_test':
         return ta ? 'தேர்வைத் தொடங்கு' : 'Start Test';
       case 'study_material_preparing':
-        return ta ? 'பாடக்குறிப்புகள் தயார் செய்யப்படுகின்றன...' : 'Study material is being prepared...';
+        return ta ? 'பாடக்குறிப்புகள் தயாராகவில்லை. உருவாக்க பொத்தானை அழுத்தவும்.' : 'Study material not ready. Please tap generate button.';
       case 'mock_tests_title':
         return ta ? 'மாதிரித் தேர்வுகள் 🎯' : 'Mock Tests 🎯';
       case 'no_mock_tests':
@@ -901,11 +901,11 @@ class AppLanguage {
       case 'free':
         return ta ? 'இலவசம்' : 'Free';
       case 'error_generic':
-        return ta ? 'ஏதோ தவறு நடந்துவிட்டது. மீண்டும் முயற்சிக்கவும்.' : 'Something went wrong. Please try again.';
+        return ta ? 'மன்னிக்கவும், ஏதோ தவறு நடந்துவிட்டது. செயலியை மீண்டும் தொடங்கவும்.' : 'Oops! Something went wrong. Please restart the app.';
       case 'error_network':
-        return ta ? 'இணைய இணைப்பைச் சரிபார்க்கவும்.' : 'Please check your internet connection.';
+        return ta ? 'இணைய இணைப்பு துண்டிக்கப்பட்டுள்ளது. உங்கள் சிக்னலைச் சரிபார்க்கவும்.' : 'Internet connection lost. Please check your signal.';
       case 'error_launch_url':
-        return ta ? 'இந்த இணைப்பைத் திறக்க முடியவில்லை.' : 'Could not open this link.';
+        return ta ? 'மன்னிக்கவும், இந்த இணைப்பைத் திறக்க முடியவில்லை.' : 'Sorry, we couldn\'t open this link.';
       default:
         return key;
     }

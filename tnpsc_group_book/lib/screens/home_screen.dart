@@ -38,10 +38,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final FirestoreService _firestoreService = FirestoreService();
+  Future<DocumentSnapshot?>? _userDataFuture;
 
   @override
   void initState() {
     super.initState();
+    _userDataFuture = _firestoreService.getUserData();
     _checkInitialSync();
     // AI_DEBUG: Check clipboard on home screen entry for room codes
     DeepLinkService().checkClipboard();
@@ -64,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
         
         return SafeArea(
           child: FutureBuilder<DocumentSnapshot?>(
-              future: _firestoreService.getUserData(),
+              future: _userDataFuture,
               builder: (context, snapshot) {
                 String userName = AppLanguage.getString('user_fallback');
                 int streak = 0;
@@ -106,133 +108,139 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                 }
 
-                return SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header Section (Greeting & Stats)
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "${AppLanguage.getString('greeting')}, \n$userName! 👋",
-                                    style: AppTheme.getStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.white : AppTheme.textMainColor,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    AppLanguage.getString('ready_to_crack'),
-                                    style: AppTheme.getStyle(
-                                      fontSize: 14,
-                                      color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                return CustomScrollView(
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header Section (Greeting & Stats)
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "${AppLanguage.getString('greeting')}, \n$userName! 👋",
+                                        style: AppTheme.getStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? Colors.white : AppTheme.textMainColor,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        AppLanguage.getString('ready_to_crack'),
+                                        style: AppTheme.getStyle(
+                                          fontSize: 14,
+                                          color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    ValueListenableBuilder(
+                                      valueListenable: Hive.box(HiveService.userBoxName).listenable(),
+                                      builder: (context, box, child) {
+                                        int s = box.get('streak', defaultValue: streak) as int;
+                                        // Broken streak check for real-time Hive listener
+                                        String lastActive = box.get('lastActiveDate', defaultValue: "") as String;
+                                        String today = AppDate.getTodayString();
+                                        if (lastActive != "" && lastActive != today) {
+                                          try {
+                                            DateTime lastDate = AppDate.parse(lastActive);
+                                            DateTime istNow = AppDate.getISTNow();
+                                            int diff = DateTime(istNow.year, istNow.month, istNow.day).difference(lastDate).inDays;
+                                            if (diff > 1) s = 0;
+                                          } catch (_) {}
+                                        }
+
+                                        return _buildHeaderStat(
+                                          icon: Icons.local_fire_department_rounded,
+                                          label: "$s ${AppLanguage.getString('days')}",
+                                          colors: [Colors.orange, Colors.deepOrange],
+                                        );
+                                      },
+                                    ),
+                                    const SizedBox(height: 12),
+                                    ValueListenableBuilder(
+                                        valueListenable: Hive.box(
+                                          HiveService.userBoxName,
+                                        ).listenable(),
+                                        builder: (context, box, child) {
+                                          int points =
+                                          box.get('totalScore', defaultValue: totalPoints) as int;
+                                          return _buildHeaderStat(
+                                            icon: Icons.stars_rounded,
+                                            label: "$points pts",
+                                            colors: [Colors.blue, Colors.indigo],
+                                          );})
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Listening Now Mini Player
+                          ValueListenableBuilder<String?>(
+                            valueListenable: TtsService.currentTextNotifier,
+                            builder: (context, playingText, _) {
+                              if (playingText == null) return const SizedBox.shrink();
+                              return Padding(
+                                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                                child: RepaintBoundary(child: _buildMiniPlayer(context, playingText, isDark)),
+                              );
+                            },
+                          ),
+
+                          // Main Content
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Daily Quiz Highlight
                                 ValueListenableBuilder(
                                   valueListenable: Hive.box(HiveService.userBoxName).listenable(),
                                   builder: (context, box, child) {
-                                    int s = box.get('streak', defaultValue: streak) as int;
-                                    // Broken streak check for real-time Hive listener
-                                    String lastActive = box.get('lastActiveDate', defaultValue: "") as String;
-                                    String today = AppDate.getTodayString();
-                                    if (lastActive != "" && lastActive != today) {
-                                      try {
-                                        DateTime lastDate = AppDate.parse(lastActive);
-                                        DateTime istNow = AppDate.getISTNow();
-                                        int diff = DateTime(istNow.year, istNow.month, istNow.day).difference(lastDate).inDays;
-                                        if (diff > 1) s = 0;
-                                      } catch (_) {}
-                                    }
-
-                                    return _buildHeaderStat(
-                                      icon: Icons.local_fire_department_rounded,
-                                      label: "$s ${AppLanguage.getString('days')}",
-                                      colors: [Colors.orange, Colors.deepOrange],
-                                    );
+                                    return RepaintBoundary(child: _buildDailyQuizCard(context, isDark));
                                   },
                                 ),
-                                const SizedBox(height: 12),
-                                ValueListenableBuilder(
-                                    valueListenable: Hive.box(
-                                      HiveService.userBoxName,
-                                    ).listenable(),
-                                    builder: (context, box, child) {
-                                      int points =
-                                      box.get('totalScore', defaultValue: totalPoints) as int;
-                                      return _buildHeaderStat(
-                                        icon: Icons.stars_rounded,
-                                        label: "$points pts",
-                                        colors: [Colors.blue, Colors.indigo],
-                                      );})
+                                const SizedBox(height: 32),
+                                RepaintBoundary(
+                                  child: Row(
+                                        children: [
+                                          _buildQuickActionCard(context, title: AppLanguage.getString('mistake_bank'), icon: "📝", color: Colors.orange, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MistakeBankScreen()))),
+                                          const SizedBox(width: 12),
+                                          _buildQuickActionCard(context, title: AppLanguage.getString('saved_quizzes'), icon: "🔖", color: Colors.blue, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BookmarkScreen()))),
+                                          const SizedBox(width: 12),
+                                          _buildQuickActionCard(context, title: AppLanguage.getString('group_test_lobby'), icon: "👥", color: Colors.green, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RoomSetupScreen()))),
+                                        ],
+                                      ),
+                                ),
+                                const SizedBox(height: 32),
+
+                                // Smart Weak Area Analysis Card
+                                RepaintBoundary(child: _buildSmartWeakAreaAnalysis(context, isDark)),
+
+                                const SizedBox(height: 50),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-
-                      // Listening Now Mini Player
-                      ValueListenableBuilder<String?>(
-                        valueListenable: TtsService.currentTextNotifier,
-                        builder: (context, playingText, _) {
-                          if (playingText == null) return const SizedBox.shrink();
-                          return Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                            child: _buildMiniPlayer(context, playingText, isDark),
-                          );
-                        },
-                      ),
-
-                      // Main Content
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Daily Quiz Highlight
-                            ValueListenableBuilder(
-                              valueListenable: Hive.box(HiveService.userBoxName).listenable(),
-                              builder: (context, box, child) {
-                                return _buildDailyQuizCard(context, isDark);
-                              },
-                            ),
-                            const SizedBox(height: 32),
-                            Row(
-                                  children: [
-                                    _buildQuickActionCard(context, title: AppLanguage.getString('mistake_bank'), icon: "📝", color: Colors.orange, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MistakeBankScreen()))),
-                                    const SizedBox(width: 12),
-                                    _buildQuickActionCard(context, title: AppLanguage.getString('saved_quizzes'), icon: "🔖", color: Colors.blue, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BookmarkScreen()))),
-                                    const SizedBox(width: 12),
-                                    _buildQuickActionCard(context, title: AppLanguage.getString('group_test_lobby'), icon: "👥", color: Colors.green, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RoomSetupScreen()))),
-                                  ],
-                                ),
-                            const SizedBox(height: 32),
-
-                            // Smart Weak Area Analysis Card
-                            _buildSmartWeakAreaAnalysis(context, isDark),
-
-                            const SizedBox(height: 50),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 );
               },
             ),

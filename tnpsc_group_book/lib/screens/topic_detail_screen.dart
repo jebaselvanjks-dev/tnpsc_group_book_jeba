@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
@@ -9,7 +10,7 @@ import 'quiz_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/tts_service.dart';
 import '../services/hive_service.dart';
-import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import '../widgets/error_state_widget.dart';
 
 class TopicDetailScreen extends StatefulWidget {
   final String topic;
@@ -566,34 +567,21 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
     }
 
     if (_material.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const AppIcon(AppIcons.ai, size: 60, color: Colors.amber),
-            const SizedBox(height: 20),
-            Text(AppLanguage.getString('study_material_preparing')),
-              const SizedBox(height: 20),
-              _isGenerating
-                  ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                      onPressed: () async {
-                        if (!mounted) return;
-                        setState(() => _isGenerating = true);
-                        bool success = await AiService.generateStudyMaterial(
-                          widget.topicKey ?? widget.topic,
-                          category: widget.categoryKey ?? widget.category,
-                        );
-                        if (success) {
-                          await _fetchInitialData();
-                        }
-                        if (!mounted) return;
-                        setState(() => _isGenerating = false);
-                      },
-                      child: Text(AppLanguage.getString('generate_ai')),
-                    ),
-          ],
-        ),
+      return AppErrorWidget(
+        message: AppLanguage.getString('study_material_preparing'),
+        onRetry: () async {
+          if (!mounted) return;
+          setState(() => _isGenerating = true);
+          bool success = await AiService.generateStudyMaterial(
+            widget.topicKey ?? widget.topic,
+            category: widget.categoryKey ?? widget.category,
+          );
+          if (success) {
+            await _fetchInitialData();
+          }
+          if (!mounted) return;
+          setState(() => _isGenerating = false);
+        },
       );
     }
 

@@ -23,9 +23,8 @@ class HiveService {
     
     isInitialized = true;
     
-    // AI_DEBUG: Run daily cleanup to reduce mobile memory usage
-    // Don't await this to speed up startup, but it's now optimized
-    _cleanupOldDailyData();
+    // AI_DEBUG: Run daily cleanup in the background to not block startup
+    Future.microtask(() => _cleanupOldDailyData());
   }
 
   // AI_DEBUG: Deletes old daily stat keys to prevent local storage growth

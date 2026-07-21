@@ -304,11 +304,13 @@ class _ResultScreenState extends State<ResultScreen> {
                       alignment: Alignment.center,
                       children: [
                         if (accuracy >= 50)
-                          Lottie.network(
-                            'https://assets2.lottiefiles.com/packages/lf20_touohxv0.json', // Confetti animation
-                            width: 200,
-                            height: 200,
-                            repeat: false,
+                          RepaintBoundary(
+                            child: Lottie.network(
+                              'https://assets2.lottiefiles.com/packages/lf20_touohxv0.json', // Confetti animation
+                              width: 200,
+                              height: 200,
+                              repeat: false,
+                            ),
                           ),
                         Container(
                           padding: const EdgeInsets.all(24),

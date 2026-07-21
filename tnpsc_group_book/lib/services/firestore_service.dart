@@ -172,27 +172,26 @@ class FirestoreService {
               const GetOptions(source: Source.serverAndCache)));
 
       if (doc.exists) {
-        var data = doc.data() as Map<String, dynamic>;
+        final data = doc.data() as Map<String, dynamic>?;
+        if (data == null) return doc;
 
-        // AI_DEBUG: Sanitize data for Hive (Recursive Timestamp conversion)
-        Map<String, dynamic> sanitizedData = _sanitizeForHive(data) as Map<
-            String,
-            dynamic>;
+        try {
+          // AI_DEBUG: Sanitize data for Hive (Recursive Timestamp conversion)
+          Map<String, dynamic> sanitizedData = _sanitizeForHive(data) as Map<String, dynamic>;
 
-        // Cache to Hive for offline
-        await HiveService.cacheUserData(sanitizedData);
-        await _syncCompletedQuizzesToHive(data);
+          // Cache to Hive for offline
+          await HiveService.cacheUserData(sanitizedData);
+          await _syncCompletedQuizzesToHive(data);
 
-        // Sync stats to Hive
-        final userBox = Hive.box(HiveService.userBoxName);
-        if (data.containsKey('totalScore')) await userBox.put(
-            'totalScore', data['totalScore']);
-        if (data.containsKey('quizzesCompleted')) await userBox.put(
-            'quizzesCompleted', data['quizzesCompleted']);
-        if (data.containsKey('streak')) await userBox.put(
-            'streak', data['streak']);
-        if (data.containsKey('lastActiveDate')) await userBox.put(
-            'lastActiveDate', data['lastActiveDate']);
+          // Sync stats to Hive
+          final userBox = Hive.box(HiveService.userBoxName);
+          if (data.containsKey('totalScore')) await userBox.put('totalScore', data['totalScore'] ?? 0);
+          if (data.containsKey('quizzesCompleted')) await userBox.put('quizzesCompleted', data['quizzesCompleted'] ?? 0);
+          if (data.containsKey('streak')) await userBox.put('streak', data['streak'] ?? 0);
+          if (data.containsKey('lastActiveDate')) await userBox.put('lastActiveDate', data['lastActiveDate'] ?? "");
+        } catch (e) {
+          AppLog.e("Error processing user data for Hive", e);
+        }
 
         return doc;
       }

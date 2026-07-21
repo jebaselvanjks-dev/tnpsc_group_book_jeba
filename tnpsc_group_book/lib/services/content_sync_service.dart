@@ -21,10 +21,16 @@ class ContentSyncService {
         // 1. Sync Questions
         AppLog.d("AI_DEBUG: Syncing Questions for: ${subject.titleEn}");
         await _firestoreService.getSubjectQuestions(subject.titleEn, forceRefresh: true);
+        
+        // Brief yield between calls to reduce pressure
+        await Future.delayed(const Duration(milliseconds: 500));
 
         // 2. Sync Study Material
         AppLog.d("AI_DEBUG: Syncing Material for: ${subject.titleEn}");
         await _firestoreService.getStudyMaterial(subject.titleEn, forceRefresh: true);
+        
+        // Brief yield between subjects
+        await Future.delayed(const Duration(milliseconds: 1000));
       }
 
       await userBox.put('is_initial_sync_done', true);

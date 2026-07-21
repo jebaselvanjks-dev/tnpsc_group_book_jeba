@@ -80,7 +80,7 @@ class _MistakeBankScreenState extends State<MistakeBankScreen> {
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
                   itemCount: _mistakes.length,
-                  physics: const BouncingScrollPhysics(),
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                   itemBuilder: (context, index) {
                     final q = _mistakes[index];
                     return _buildMistakeCard(q, isDark);

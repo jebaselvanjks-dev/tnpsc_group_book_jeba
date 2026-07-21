@@ -48,11 +48,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final user = FirebaseAuth.instance.currentUser;
   String _appVersion = "1.0.0";
+  Future<List<dynamic>>? _profileDataFuture;
+  bool _isSharing = false;
 
   @override
   void initState() {
     super.initState();
     _loadAppVersion();
+    _profileDataFuture = Future.wait([
+      _firestoreService.getUserData(),
+      _firestoreService.getUserGlobalRank(),
+    ]);
   }
 
   Future<void> _loadAppVersion() async {
@@ -145,10 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 valueListenable: AppTheme.themeNotifier,
                 builder: (context, currentMode, _) {
                   return FutureBuilder<List<dynamic>>(
-                    future: Future.wait([
-                      _firestoreService.getUserData(),
-                      _firestoreService.getUserGlobalRank(),
-                    ]),
+                    future: _profileDataFuture,
                     builder: (context, snapshot) {
                       final userDataDoc = snapshot.data?[0] as DocumentSnapshot?;
                       final int globalRank = snapshot.data?[1] as int? ?? 0;
@@ -533,11 +536,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       color: Colors.blueAccent,
                                     ),
                                   ),
-                                  trailing: const AppIcon(
-                                    Icons.chevron_right_rounded,
-                                    color: Colors.grey,
-                                  ),
-                                  onTap: _shareAppWithRandomQuiz,
+                                  trailing: _isSharing 
+                                    ? const SizedBox(
+                                        width: 20, 
+                                        height: 20, 
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blueAccent)
+                                      )
+                                    : const AppIcon(
+                                        Icons.chevron_right_rounded,
+                                        color: Colors.grey,
+                                      ),
+                                  onTap: _isSharing ? null : _shareAppWithRandomQuiz,
                                 ),
                                 const Divider(height: 1),
                                 ListTile(
@@ -656,6 +665,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 
   Future<void> _shareAppWithRandomQuiz() async {
+    if (_isSharing) return;
+    setState(() => _isSharing = true);
+    
     try {
       final now = AppDate.getISTNow();
       final daysSinceEpoch = now.difference(DateTime(1970, 1, 1)).inDays;
@@ -682,7 +694,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         pool = defaultRoomQuestions;
       }
 
-      if (pool.isEmpty) return;
+      if (pool.isEmpty) {
+        if (mounted) setState(() => _isSharing = false);
+        return;
+      }
 
       // 4. Deterministic selection: Pick one question that stays the same for 24 hours
       // If pool came from getDailyRotatingQuiz, it usually has 1 item.
@@ -729,6 +744,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       AppLog.e("Error sharing app: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _isSharing = false);
+      }
     }
   }
 

@@ -63,7 +63,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               : ListView.builder(
                   padding: const EdgeInsets.all(20),
                   itemCount: _history.length,
-                  physics: const BouncingScrollPhysics(),
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                   itemBuilder: (context, index) {
                     final item = _history[index];
                     return _buildHistoryCard(item, isDark);

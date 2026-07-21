@@ -62,7 +62,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
               : ListView.builder(
                   padding: const EdgeInsets.all(20),
                   itemCount: _bookmarks.length,
-                  physics: const BouncingScrollPhysics(),
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                   itemBuilder: (context, index) {
                     final q = _bookmarks[index];
                     return _buildBookmarkCard(q, isDark, index);

@@ -30,21 +30,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _navigateToHome() async {
     try {
-      // AI_DEBUG: Brief pause to ensure logo is painted smoothly
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      // 1. Run all critical services in background while splash is showing
-      // Using a timeout to ensure splash doesn't hang forever
-      final initFuture = initializeServices().timeout(
-        const Duration(seconds: 10),
+      // 1. Run all critical services in background
+      // AI_DEBUG: Using a reduced timeout to prevent hanging
+      await initializeServices().timeout(
+        const Duration(seconds: 5),
         onTimeout: () => AppLog.e("AI_DEBUG: Service initialization timed out!"),
       );
-      
-      // 2. Wait for a minimum time for the animation (1.0s)
-      final delayFuture = Future.delayed(const Duration(milliseconds: 1000));
-      
-      // AI_DEBUG: Await both. This ensures services are ready AND the user sees the logo.
-      await Future.wait([initFuture, delayFuture]);
     } catch (e) {
       AppLog.e("AI_DEBUG: Error during splash initialization: $e");
     }
@@ -54,20 +45,21 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       
-      if (user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainWrapper()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      }
+      // Navigate using a custom smooth Fade transition instead of default Slide
+      final nextScreen = user != null ? const MainWrapper() : const LoginScreen();
+      
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => nextScreen,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 600),
+        ),
+      );
     } catch (e) {
       AppLog.e("AI_DEBUG: Navigation error in SplashScreen: $e");
-      // Fallback: If Firebase fails, try to go to Login anyway
       if (mounted) {
         Navigator.pushReplacement(
           context,
