@@ -7,7 +7,7 @@ import 'package:tnpsc_group_book/utils/app_theme.dart';
 import '../utils/app_log.dart';
 
 class VersionService {
-  static const String _playStoreUrl = "https://play.google.com/store/apps/details?id=com.tnpsc.master";
+  static const String _playStoreUrl = "https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book";
   static int? _requiredVersion;
 
   static Future<bool> isUpdateRequired() async {
