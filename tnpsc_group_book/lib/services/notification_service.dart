@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:googleapis_auth/auth_io.dart' as auth;
+import 'package:tnpsc_group_book/utils/app_date.dart';
 import 'dart:convert';
 import '../utils/app_log.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -306,7 +307,7 @@ class NotificationService {
       return scheduledDate;
     } catch (e) {
       AppLog.d("AI_DEBUG: Timezone error, falling back to local: $e");
-      final now = DateTime.now();
+      final now = AppDate.getISTNow();
       DateTime scheduledDate = DateTime(now.year, now.month, now.day, hour, minute);
       if (scheduledDate.isBefore(now)) {
         scheduledDate = scheduledDate.add(const Duration(days: 1));

@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../utils/app_date.dart';
+
 class Room {
   final String id;
   final String hostId;
@@ -36,7 +38,7 @@ class Room {
       status: map['status'] ?? 'waiting',
       mode: map['mode'] ?? 'group_test',
       expectedPlayerCount: map['expectedPlayerCount'] ?? 0,
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? AppDate.getISTNow(),
       startTime: (map['startTime'] as Timestamp?)?.toDate(),
       endTime: (map['endTime'] as Timestamp?)?.toDate(),
       questions: map['questions'] ?? [],

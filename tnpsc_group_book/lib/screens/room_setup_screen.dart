@@ -1,22 +1,18 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:tnpsc_group_book/screens/room_leaderboard_screen.dart';
 import '../services/room_service.dart';
 import '../utils/app_language.dart';
 import '../utils/app_date.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
-import '../models/subject.dart';
-import 'admin_quiz_manage_screen.dart';
 import 'waiting_room_screen.dart';
 import '../services/hive_service.dart';
 import '../services/reward_service.dart';
 import 'package:hive/hive.dart';
 import '../services/version_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/question.dart';
 import '../services/deep_link_service.dart';
 import '../utils/app_log.dart';
@@ -58,9 +54,9 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     super.initState();
     
     // Initialize with a safe future time (5 mins from now) to avoid immediate validation error
-    final now = DateTime.now().add(const Duration(minutes: 5));
-    _startTime = TimeOfDay.fromDateTime(now);
-    _endTime = TimeOfDay.fromDateTime(now.add(const Duration(hours: 1)));
+    final now = AppDate.getISTNow().add(const Duration(minutes: 5));
+    _startTime = AppDate.getISTTimeOfDay(now);
+    _endTime = AppDate.getISTTimeOfDay(now.add(const Duration(hours: 1)));
 
     _loadTeaserQuestions();
     _refreshExistingRoom();
@@ -287,12 +283,11 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         await HiveService.incrementRoomAdWatchCount();
         
         // Prepare dates
-        final now = DateTime.now();
-        final startDateTime = DateTime(now.year, now.month, now.day, _startTime.hour, _startTime.minute);
-        final endDateTime = DateTime(now.year, now.month, now.day, _endTime.hour, _endTime.minute);
+        final startDateTime = AppDate.getISTTodayWithTime(_startTime.hour, _startTime.minute);
+        final endDateTime = AppDate.getISTTodayWithTime(_endTime.hour, _endTime.minute);
         
         // Validation: Start time must be in future (at least 2 mins from now)
-        final nowAtCreation = DateTime.now();
+        final nowAtCreation = AppDate.getISTNow();
         if (startDateTime.isBefore(nowAtCreation.add(const Duration(minutes: 2)))) {
           if (mounted) {
             _showError(AppLanguage.languageNotifier.value == 'ta' 
@@ -1325,8 +1320,8 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                 },
                               );
                               if (picked != null) {
-                                final now = DateTime.now();
-                                final pickedDT = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+                                final now = AppDate.getISTNow();
+                                final pickedDT = AppDate.getISTTodayWithTime(picked.hour, picked.minute);
                                 
                                 if (pickedDT.isBefore(now.subtract(const Duration(minutes: 1)))) {
                                   if (mounted) {
@@ -1412,9 +1407,8 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                 },
                               );
                               if (picked != null) {
-                                final now = DateTime.now();
-                                final startDT = DateTime(now.year, now.month, now.day, _startTime.hour, _startTime.minute);
-                                final pickedDT = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+                                final startDT = AppDate.getISTTodayWithTime(_startTime.hour, _startTime.minute);
+                                final pickedDT = AppDate.getISTTodayWithTime(picked.hour, picked.minute);
                                 
                                 if (pickedDT.isBefore(startDT)) {
                                   if (mounted) {

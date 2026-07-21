@@ -70,7 +70,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                 Navigator.pop(modalContext);
                 
                 // Show time picker restricted to room range
-                final initialTime = _customTime ?? TimeOfDay.now();
+                final initialTime = _customTime ?? AppDate.getISTTimeOfDay();
                 
                 final TimeOfDay? picked = await showTimePicker(
                   context: context,
@@ -112,7 +112,12 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                       ),
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: child!,
+                        child: MediaQuery(
+                          data: MediaQuery.of(context).copyWith(
+                            textScaler: const TextScaler.linear(0.9),
+                          ),
+                          child: child!,
+                        ),
                       ),
                     );
                   },
@@ -121,8 +126,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                 if (picked != null) {
                   // Validate against room range if available
                   if (_roomStartTime != null && _roomEndTime != null) {
-                    final now = DateTime.now();
-                    final pickedDateTime = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+                    final pickedDateTime = AppDate.getISTTodayWithTime(picked.hour, picked.minute);
                     
                     // Check if it's within range (using a small margin for comparison)
                     bool isValid = pickedDateTime.isAfter(_roomStartTime!.subtract(const Duration(minutes: 1))) && 
@@ -210,7 +214,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
           child: Directionality(
             textDirection: ui.TextDirection.ltr,
             child: MediaQuery(
-              data: const MediaQueryData(),
+              data: const MediaQueryData().copyWith(textScaler: const TextScaler.linear(0.9)),
               child: _buildShareCard(roomData),
             ),
           ),
@@ -341,10 +345,10 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
     int dayIndex = AppDate.getISTNow().weekday;
     String backgroundImage = 'asset/images/sharequiz$dayIndex.png';
 
-    final now = DateTime.now();
+    final now = AppDate.getISTNow();
     DateTime displayDate = now;
     if (_customTime != null) {
-      displayDate = DateTime(now.year, now.month, now.day, _customTime!.hour, _customTime!.minute);
+      displayDate = AppDate.getISTTodayWithTime(_customTime!.hour, _customTime!.minute);
     }
 
     return Container(
@@ -641,49 +645,6 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
     );
   }
 
-  Widget _buildPosterFeatures(Color goldColor) {
-    return Positioned(
-      bottom: 195,
-      left: 20,
-      right: 20,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildFeatureItem(Icons.people_rounded, "REAL-TIME\nCOMPETITION", "நேரடி போட்டி"),
-          _buildFeatureItem(Icons.emoji_events_outlined, "LEADERBOARD", "முன்னிலை பட்டியல்"),
-          _buildFeatureItem(Icons.bar_chart_rounded, "PERFORMANCE\nANALYTICS", "செயல்திறன் பகுப்பாய்வு"),
-          _buildFeatureItem(Icons.ads_click_rounded, "IMPROVE &\nSUCCEED", "மேம்படுத்தி வெற்றி!"),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureItem(IconData icon, String enLabel, String taLabel) {
-    return SizedBox(
-      width: 85,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [const Color(0xFF1A2E5A), const Color(0xFF030611)]
-              ),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
-            ),
-            child: Icon(icon, color: const Color(0xFFE5BA73), size: 22),
-          ),
-          const SizedBox(height: 8),
-          Text(enLabel, textAlign: TextAlign.center, style: AppTheme.getStyle(fontSize: 7, fontWeight: FontWeight.bold, color: Colors.white70)),
-          Text(taLabel, textAlign: TextAlign.center, style: AppTheme.getStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white.withOpacity(0.6))),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPosterMockups() {
     return Positioned(
       bottom: -15,
@@ -802,8 +763,8 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
 
   void _editRoomTime() async {
     final isTamil = AppLanguage.languageNotifier.value == 'ta';
-    TimeOfDay start = _roomStartTime != null ? TimeOfDay.fromDateTime(_roomStartTime!) : TimeOfDay.now();
-    TimeOfDay end = _roomEndTime != null ? TimeOfDay.fromDateTime(_roomEndTime!) : TimeOfDay(hour: (start.hour + 1) % 24, minute: start.minute);
+    TimeOfDay start = _roomStartTime != null ? AppDate.getISTTimeOfDay(_roomStartTime!) : AppDate.getISTTimeOfDay();
+    TimeOfDay end = _roomEndTime != null ? AppDate.getISTTimeOfDay(_roomEndTime!) : TimeOfDay(hour: (start.hour + 1) % 24, minute: start.minute);
 
     await showModalBottomSheet(
       context: context,
@@ -865,14 +826,19 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                               ),
                               child: BackdropFilter(
                                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                child: child!,
+                                child: MediaQuery(
+                                  data: MediaQuery.of(context).copyWith(
+                                    textScaler: const TextScaler.linear(0.9),
+                                  ),
+                                  child: child!,
+                                ),
                               ),
                             );
                           },
                         );
                         if (picked != null) {
-                          final now = DateTime.now();
-                          final pickedDT = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+                          final now = AppDate.getISTNow();
+                          final pickedDT = AppDate.getISTTodayWithTime(picked.hour, picked.minute);
                           
                           if (pickedDT.isBefore(now.subtract(const Duration(minutes: 1)))) {
                             if (mounted) {
@@ -951,15 +917,20 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                               ),
                               child: BackdropFilter(
                                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                child: child!,
+                                child: MediaQuery(
+                                  data: MediaQuery.of(context).copyWith(
+                                    textScaler: const TextScaler.linear(0.9),
+                                  ),
+                                  child: child!,
+                                ),
                               ),
                             );
                           },
                         );
                         if (picked != null) {
-                          final baseDate = _roomStartTime ?? DateTime.now();
-                          final startDT = DateTime(baseDate.year, baseDate.month, baseDate.day, start.hour, start.minute);
-                          final pickedDT = DateTime(baseDate.year, baseDate.month, baseDate.day, picked.hour, picked.minute);
+                          final baseDate = _roomStartTime ?? AppDate.getISTNow();
+                          final startDT = AppDate.getISTDateTime(baseDate.year, baseDate.month, baseDate.day, start.hour, start.minute);
+                          final pickedDT = AppDate.getISTDateTime(baseDate.year, baseDate.month, baseDate.day, picked.hour, picked.minute);
 
                           if (pickedDT.isBefore(startDT)) {
                             if (mounted) {
@@ -1006,12 +977,12 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    final baseDate = _roomStartTime ?? DateTime.now();
-                    final startDT = DateTime(baseDate.year, baseDate.month, baseDate.day, start.hour, start.minute);
-                    final endDT = DateTime(baseDate.year, baseDate.month, baseDate.day, end.hour, end.minute);
+                    final baseDate = _roomStartTime ?? AppDate.getISTNow();
+                    final startDT = AppDate.getISTDateTime(baseDate.year, baseDate.month, baseDate.day, start.hour, start.minute);
+                    final endDT = AppDate.getISTDateTime(baseDate.year, baseDate.month, baseDate.day, end.hour, end.minute);
 
                     // Validation: Start time must be in future (at least 2 mins from now)
-                    final nowAtEdit = DateTime.now();
+                    final nowAtEdit = AppDate.getISTNow();
                     if (startDT.isBefore(nowAtEdit.add(const Duration(minutes: 2)))) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(isTamil 

@@ -709,9 +709,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: Colors.black, // Dark base to match poster theme
           child: Directionality(
             textDirection: ui.TextDirection.ltr,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: _buildSharePoster(question, subject, dayIndex: now.weekday),
+            child: MediaQuery(
+              data: const MediaQueryData().copyWith(textScaler: const TextScaler.linear(1)),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: _buildSharePoster(question, subject, dayIndex: now.weekday),
+              ),
             ),
           ),
         ),
@@ -865,7 +868,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Container(
       width: 450,
-      constraints: const BoxConstraints(minHeight: 700),
+      constraints: const BoxConstraints(minHeight: 680),
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(color: Colors.black),
       child: Stack(
@@ -874,36 +877,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
               _buildPosterHeader(question, subject, goldColor),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10.0),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(child: _buildPosterQuestionSection(question, goldColor)),
-                    const SizedBox(width: 10),
-                    _buildPosterSidebar(),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(width: 10),
+              _buildPosterSidebar(),
               // Dynamic space to push footer to bottom if height is large
-              Flexible(child: Container()), 
+              // Flexible(child: Container()),
               Padding(
-                padding: const EdgeInsets.only(left: 20, right: 15, bottom: 20),
+                padding: const EdgeInsets.only(left: 20, right: 15, bottom: 0),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     _buildPosterMockup(),
                     const SizedBox(width: 15),
                     Expanded(
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        // mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildPosterMainBranding(goldColor),
-                          const SizedBox(height: 10),
                           _buildPosterBattleSection(goldColor),
                         ],
                       ),
@@ -957,89 +957,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildPosterHeader(Question question, Subject subject, Color goldColor) {
-    String displayTitle = subject.titleTa; // Default to the subject's Tamil title
-    
-    // Check for rotating quiz types and apply Tamil translations (STRICT MATCHING)
-    String qType = (question.quizType ?? "").toLowerCase();
-    String qSub = (question.subject ?? "").toLowerCase();
-
-    if (qType == "general_tamil" || qSub == "general tamil" || qSub == "general_tamil") {
-      displayTitle = "பொது தமிழ்";
-    } else if (qType == "general_studies" || qSub == "general studies" || qSub == "general_studies") {
-      displayTitle = "பொது அறிவு";
-    } else if (qType == "aptitude" || qSub == "aptitude") {
-      displayTitle = "கணிதத் திறன்";
-    } else if (question.subject != null && question.subject!.isNotEmpty) {
-      // Use the actual subject name if it's not a generic placeholder
-      if (qSub != "general" && qSub != "daily quiz" && qSub != "daily_quiz") {
-        displayTitle = question.subject!;
-      }
-    }
-
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      // padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: goldColor.withValues(alpha: 0.5),
-                            blurRadius: 8,
-                          )
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'asset/images/logo.png', // Using the app logo as the Play Store icon
-                          fit: BoxFit.fill,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "TNPSC Master: Group 1, 2, 4",
-                        style: AppTheme.getStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          ignoreScale: true,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 44),
-                  child: Text(
-                    "தினமும் படி, வெற்றியை வெல்லு!",
-                    style: AppTheme.getStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white70,
-                      ignoreScale: true,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
           Container(
-            width: 75,
-            height: 75,
+            width: 70,
+            height: 70,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: goldColor, width: 2.5),
@@ -1064,12 +989,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
+          SizedBox(width: 5,),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "TNPSC Master: Group 1, 2, 4",
+                        style: AppTheme.getStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          ignoreScale: true,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  "தினமும் படி, வெற்றியை வெல்லு!",
+                  style: AppTheme.getStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white70,
+                    ignoreScale: true,
+                  ),
+                ),
+                Column(
+                  children: [
+                    Image.network(
+                      'https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png',
+                      height: 35,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildPosterQuestionSection(Question question, Color goldColor) {
+    final String qEn = question.questionEn ?? question.question;
+    final String qTa = question.questionTa ?? "";
+    final int totalLength = qEn.length + qTa.length;
+
+    double qFontSize = 14;
+    double optFontSize = 13;
+    
+    if (totalLength > 250) {
+      qFontSize = 10.5;
+      optFontSize = 9.5;
+    } else if (totalLength > 180) {
+      qFontSize = 10.5;
+      optFontSize = 12;
+    } else if (totalLength > 120) {
+      qFontSize = 13.5;
+    }
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1101,22 +1083,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      question.questionEn ?? question.question,
+                      qEn,
                       style: AppTheme.getStyle(
-                        fontSize: 12,
+                        fontSize: qFontSize,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                         height: 1.3,
                         ignoreScale: true,
                       ),
                     ),
-                    if (question.questionTa != null && question.questionTa!.isNotEmpty)
+                    if (qTa.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Text(
-                          question.questionTa!,
+                          qTa,
                           style: AppTheme.getStyle(
-                            fontSize: 11,
+                            fontSize: qFontSize,
                             fontWeight: FontWeight.bold,
                             color: Colors.tealAccent,
                             height: 1.3,
@@ -1185,7 +1167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Text(
                               optTa.isNotEmpty ? "$optEn / " : optEn,
                               style: AppTheme.getStyle(
-                                fontSize: 11,
+                                fontSize: optFontSize,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w500,
                                 ignoreScale: true,
@@ -1195,7 +1177,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Text(
                               optTa,
                               style: AppTheme.getStyle(
-                                fontSize: 10,
+                                fontSize: optFontSize - 1,
                                 color: Colors.tealAccent,
                                 fontWeight: FontWeight.w500,
                                 ignoreScale: true,
@@ -1217,41 +1199,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildPosterSidebar() {
-    return SizedBox(
-      width: 95,
-      child: Column(
-        children: [
-          _buildSidebarItem(Icons.people_alt_rounded, "LIVE QUIZ", "DAILY\nLIVE BATTLES", const Color(0xFF9C27B0)),
-          _buildSidebarItem(Icons.emoji_events_rounded, "RANK", "ON LIVE\nLEADERBOARD", const Color(0xFF03A9F4)),
-          _buildSidebarItem(Icons.card_giftcard_rounded, "WIN POINTS", "& EXCITING\nREWARDS", const Color(0xFFFF9800)),
-          _buildSidebarItem(Icons.verified_user_rounded, "100% FREE", "TO PLAY", const Color(0xFF4CAF50)),
-          const SizedBox(height: 15,),
-          Column(
-            children: [
-              Image.network(
-                'https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png',
-                height: 35,
-              ),
-            ],
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.only(top: 5.0),
+      child: SizedBox(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildSidebarItem(Icons.people_alt_rounded, "LIVE QUIZ", "DAILY\nLIVE BATTLES", const Color(0xFF9C27B0)),
+            _buildSidebarItem(Icons.emoji_events_rounded, "RANK", "ON LIVE\nLEADERBOARD", const Color(0xFF03A9F4)),
+            _buildSidebarItem(Icons.card_giftcard_rounded, "WIN POINTS", "& EXCITING\nREWARDS", const Color(0xFFFF9800)),
+            _buildSidebarItem(Icons.verified_user_rounded, "100% FREE", "TO PLAY", const Color(0xFF4CAF50)),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildPosterMockup() {
     return Container(
-      width: 130,
+      width: 120,
       height: 250,
       decoration: BoxDecoration(
         color: const Color(0xFF030611),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white24, width: 4),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Color(0xFFFFD700).withValues(alpha: 0.8), width: 2.3),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.8),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
+            color: Color(0xFFFFD700).withValues(alpha: 0.2),
+            blurRadius: 15,
+            offset: const Offset(10, 15),
           )
         ],
       ),
@@ -1265,65 +1241,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPosterMainBranding(Color goldColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.school_rounded, color: Colors.white70, size: 20),
-            const SizedBox(width: 6),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "TNPSC Master",
-                  style: AppTheme.getStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    height: 0.9,
-                    ignoreScale: true,
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            const Icon(Icons.emoji_events_rounded, color: Color(0xFFE5BA73), size: 20),
-          ],
-        ),
-        const SizedBox(height: 5),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [goldColor, const Color(0xFFE5BA73)]),
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [BoxShadow(color: goldColor.withValues(alpha: 0.3), blurRadius: 10)],
-          ),
-          child: Text(
-            "Group 1 | Group 2 | Group 4 | VAO",
-            textAlign: TextAlign.center,
-            style: AppTheme.getStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: Colors.black,
-              letterSpacing: 1,
-              ignoreScale: true,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildPosterBattleSection(Color goldColor) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: Colors.white30),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1419,11 +1343,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   title,
-                  style: AppTheme.getStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true),
+                  style: AppTheme.getStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true),
                 ),
                 Text(
                   sub,
-                  style: AppTheme.getStyle(fontSize: 8, color: Colors.greenAccent, fontWeight: FontWeight.w600, ignoreScale: true),
+                  style: AppTheme.getStyle(fontSize: 8.5, color: Colors.greenAccent, fontWeight: FontWeight.w600, ignoreScale: true),
                 ),
               ],
             ),

@@ -239,16 +239,12 @@ class FirestoreService {
     }
   }
 
-  DateTime _getISTNow() {
-    return AppDate.getISTNow();
-  }
-
   // Fetch Daily Quiz Questions with Caching
   Future<List<Question>> getDailyQuiz() async {
     try {
-      String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
-      String tomorrow = DateFormat('yyyy-MM-dd', 'en_US').format(
-          _getISTNow().add(const Duration(days: 1)));
+      String today = AppDate.getTodayString();
+      String tomorrow = AppDate.format(
+          AppDate.getISTNow().add(const Duration(days: 1)));
 
       // AI_DEBUG: Check Hive first for today's quiz
       List<Question> cachedToday = HiveService.getQuestions("Daily Quiz");
@@ -277,7 +273,7 @@ class FirestoreService {
             "AI_DEBUG: Today's Daily quiz not found. Generating via AI...");
         try {
           bool generated = await AiService.generateAndSaveDailyQuiz(
-              _getISTNow())
+              AppDate.getISTNow())
               .timeout(const Duration(seconds: 30));
           if (generated) {
             QuerySnapshot newTodaySnap = await _db
@@ -310,7 +306,7 @@ class FirestoreService {
           AppLog.d(
               "AI_DEBUG: Tomorrow's quiz not found. Generating in background...");
           AiService.generateAndSaveDailyQuiz(
-              _getISTNow().add(const Duration(days: 1)));
+              AppDate.getISTNow().add(const Duration(days: 1)));
         }
       } catch (_) {}
 
@@ -365,7 +361,7 @@ class FirestoreService {
   // The question returned is also deterministic based on the date to stay "sticky" for 24 hours
   Future<List<Question>> getDailyRotatingQuiz({bool isAdmin = false}) async {
     try {
-      DateTime now = _getISTNow();
+      DateTime now = AppDate.getISTNow();
       List<String> types = ['general_tamil', 'general_studies', 'aptitude'];
       int daysSinceEpoch = now.difference(DateTime(1970, 1, 1)).inDays;
 
@@ -450,7 +446,7 @@ class FirestoreService {
       List<Question> dailyQuiz = await getDailyQuiz();
       if (dailyQuiz.isNotEmpty) {
         // Deterministically pick one question
-        int daysSinceEpoch = DateTime.now().difference(DateTime(1970, 1, 1)).inDays;
+        int daysSinceEpoch = AppDate.getISTNow().difference(DateTime(1970, 1, 1)).inDays;
         int qIndex = daysSinceEpoch % dailyQuiz.length;
         Question q = dailyQuiz[qIndex];
         
@@ -481,8 +477,8 @@ class FirestoreService {
   // Fetch Mock Quiz Questions with Caching
   Future<List<Question>> getMockQuiz() async {
     try {
-      String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
-      String tomorrow = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow().add(const Duration(days: 1)));
+      String today = AppDate.getTodayString();
+      String tomorrow = AppDate.format(AppDate.getISTNow().add(const Duration(days: 1)));
       
       // AI_DEBUG: Check Hive first for today's mock quiz
       List<Question> cachedToday = HiveService.getQuestions("Mock Quiz");
@@ -509,7 +505,7 @@ class FirestoreService {
         // 2. Not found, try generating via AI (with timeout)
         AppLog.d("AI_DEBUG: Today's Mock quiz not found. Generating via AI...");
         try {
-          bool generated = await AiService.generateAndSaveMockQuiz(_getISTNow())
+          bool generated = await AiService.generateAndSaveMockQuiz(AppDate.getISTNow())
               .timeout(const Duration(seconds: 45)); // Mock quiz has more questions, give more time
           if (generated) {
             QuerySnapshot newTodaySnap = await _db
@@ -540,7 +536,7 @@ class FirestoreService {
             .get();
          if (tomorrowSnap.docs.isEmpty) {
            AppLog.d("AI_DEBUG: Tomorrow's mock quiz not found. Generating in background...");
-           AiService.generateAndSaveMockQuiz(_getISTNow().add(const Duration(days: 1)));
+           AiService.generateAndSaveMockQuiz(AppDate.getISTNow().add(const Duration(days: 1)));
          }
       } catch (_) {}
 
@@ -587,14 +583,14 @@ class FirestoreService {
   }
 
   String _getMondayDateString() {
-    DateTime now = _getISTNow();
+    DateTime now = AppDate.getISTNow();
     // weekday is 1 (Monday) to 7 (Sunday)
     DateTime monday = now.subtract(Duration(days: now.weekday - 1));
-    return DateFormat('yyyy-MM-dd', 'en_US').format(monday);
+    return AppDate.format(monday);
   }
 
   String _getMockLeaderboardDocId() {
-    DateTime now = _getISTNow();
+    DateTime now = AppDate.getISTNow();
     int weekday = now.weekday; // 1 (Mon) to 7 (Sun)
     DateTime targetDate;
 
@@ -605,7 +601,7 @@ class FirestoreService {
       targetDate = now;
     }
     
-    String datePart = DateFormat('yyyy-MM-dd', 'en_US').format(targetDate);
+    String datePart = AppDate.format(targetDate);
     String docId = "mock_$datePart";
     AppLog.d("AI_DEBUG: Generated Mock Leaderboard Doc ID: $docId (Now: ${DateFormat('yyyy-MM-dd HH:mm').format(now)} IST)");
     return docId;
@@ -626,7 +622,7 @@ class FirestoreService {
       Query query;
       String fullPath;
       if (isDaily) {
-        String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+        String today = AppDate.getTodayString();
         fullPath = 'leaderboards/daily_$today/scores';
         query = _db.collection('leaderboards').doc('daily_$today').collection('scores');
       } else {
@@ -690,7 +686,7 @@ class FirestoreService {
     try {
       String docId;
       if (isDaily) {
-        String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+        String today = AppDate.getTodayString();
         docId = 'daily_$today';
       } else {
         docId = _getMockLeaderboardDocId();
@@ -750,7 +746,7 @@ class FirestoreService {
 
        // Update Daily and Weekly Leaderboards if score > existingBest AND it's a Daily Quiz
        if (score > 0 && isDaily && score > existingBest) {
-         String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+         String today = AppDate.getTodayString();
          String monday = _getMondayDateString();
 
          var scoreData = {
@@ -760,7 +756,7 @@ class FirestoreService {
            'totalQuestions': totalQuestions,
            'timeTaken': timeTaken,
            'timestamp': FieldValue.serverTimestamp(),
-           'expiresAt': _getISTNow().add(const Duration(days: 7)), // For TTL Auto Delete
+           'expiresAt': AppDate.getISTNow().add(const Duration(days: 7)), // For TTL Auto Delete
          };
 
          // Update Daily (Subcollection format for TTL)
@@ -786,7 +782,7 @@ class FirestoreService {
            'totalQuestions': totalQuestions,
            'timeTaken': timeTaken,
            'timestamp': FieldValue.serverTimestamp(),
-           'expiresAt': _getISTNow().add(const Duration(days: 7)), 
+           'expiresAt': AppDate.getISTNow().add(const Duration(days: 7)), 
          };
 
          batch.set(_db.collection('leaderboards').doc(docId).collection('scores').doc(uid), scoreData, SetOptions(merge: true));
@@ -799,7 +795,7 @@ class FirestoreService {
        }
 
       if (isDaily) {
-        String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+        String today = AppDate.getTodayString();
 
         batch.set(_db.collection('users').doc(uid), {
           'completedDailyQuizzes': today,
@@ -807,7 +803,7 @@ class FirestoreService {
         }, SetOptions(merge: true));
         AppLog.d("AI_DEBUG: BATCH: Completed quiz date $today");
       } else if (isMock) {
-        String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+        String today = AppDate.getTodayString();
         
         batch.set(_db.collection('users').doc(uid), {
           'completedMockQuizzes': today,
@@ -843,7 +839,7 @@ class FirestoreService {
     if (uid == null) return;
 
     final userBox = Hive.box(HiveService.userBoxName);
-    String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+    String today = AppDate.getTodayString();
 
     // 1. Local check to prevent double execution in same session/device
     String localLastActive = userBox.get('lastActiveDate', defaultValue: "") as String;
@@ -886,7 +882,7 @@ class FirestoreService {
         return;
       }
 
-      DateTime istNow = _getISTNow();
+      DateTime istNow = AppDate.getISTNow();
       DateTime lastDate = DateFormat('yyyy-MM-dd', 'en_US').parse(lastActive == "" ? today : lastActive);
       int diff = DateTime(istNow.year, istNow.month, istNow.day).difference(lastDate).inDays;
 

@@ -227,7 +227,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       try {
         int successCount = 0;
         for (int i = 0; i < 7; i++) {
-          DateTime targetDate = DateTime.now().toUtc().add(Duration(hours: 5, minutes: 30, days: i));
+          DateTime targetDate = AppDate.getISTNow().add(Duration(days: i));
           String dateStr = DateFormat('yyyy-MM-dd', 'en_US').format(targetDate);
 
           final db = FirebaseFirestore.instance;
@@ -410,7 +410,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     try {
       // Find the next 3 scheduled dates starting from today
       List<DateTime> nextDates = [];
-      DateTime checkDate = DateTime.now();
+      DateTime checkDate = AppDate.getISTNow();
       
       bool isScheduledDay(DateTime d) =>
           d.weekday == DateTime.sunday ||

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import 'package:screenshot/screenshot.dart';
@@ -152,7 +153,19 @@ class _ResultScreenState extends State<ResultScreen> {
 
   Future<void> _shareScorecard() async {
     try {
-      final Uint8List? image = await _screenshotController.captureFromWidget(_buildShareablePoster(), delay: const Duration(milliseconds: 100));
+      final Uint8List? image = await _screenshotController.captureFromWidget(
+        Material(
+          color: Colors.transparent,
+          child: Directionality(
+            textDirection: ui.TextDirection.ltr,
+            child: MediaQuery(
+              data: const MediaQueryData().copyWith(textScaler: const TextScaler.linear(0.9)),
+              child: _buildShareablePoster(),
+            ),
+          ),
+        ),
+        delay: const Duration(milliseconds: 100),
+      );
 
       if (image != null) {
         final directory = await getTemporaryDirectory();

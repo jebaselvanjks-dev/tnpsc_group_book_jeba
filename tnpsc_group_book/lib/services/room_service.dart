@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
+import 'package:tnpsc_group_book/utils/app_date.dart';
 import '../models/room.dart';
 import '../models/question.dart';
 import '../utils/app_log.dart';
@@ -9,7 +9,6 @@ import 'firestore_service.dart';
 import 'ai_service.dart';
 import 'hive_service.dart';
 import 'package:hive/hive.dart';
-import 'package:flutter/foundation.dart';
 
 class RoomService {
   static const int roomQuestionCount = 20;
@@ -51,12 +50,8 @@ class RoomService {
 
   static String? currentRoomDate;
 
-  DateTime _getISTNow() {
-    return DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
-  }
-
   DocumentReference _getRoomRef(String roomCode, {String? date}) {
-    String d = date ?? (currentRoomDate ?? DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow()));
+    String d = date ?? (currentRoomDate ?? AppDate.getTodayString());
     return _db.collection('rooms').doc('daily_$d').collection('matches').doc(roomCode);
   }
 
@@ -73,7 +68,7 @@ class RoomService {
   String? uid = _auth.currentUser?.uid;
   if (uid == null) return false;
 
-  String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+  String today = AppDate.getTodayString();
   int allowedLimit = HiveService.dailyRoomMatchLimit();
 
   try {
@@ -101,7 +96,7 @@ class RoomService {
     String? uid = _auth.currentUser?.uid;
     if (uid == null) return;
 
-    String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+    String today = AppDate.getTodayString();
     
     int currentCount = 0;
     try {
@@ -149,7 +144,7 @@ class RoomService {
       if (!canPlay) return 'limit_reached';
 
       String roomCode = _generateRoomCode();
-      String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+      String today = AppDate.getTodayString();
       currentRoomDate = today;
 
       // Ensure unique room code
@@ -275,7 +270,7 @@ class RoomService {
         maxPlayers: maxPlayers,
         status: 'waiting',
         mode: 'group_test',
-        createdAt: _getISTNow(),
+        createdAt: AppDate.getISTNow(),
         startTime: startTime,
         endTime: endTime,
         questions: questionsMap,
@@ -385,7 +380,7 @@ class RoomService {
     if (uid == null) return null;
 
     try {
-      String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+      String today = AppDate.getTodayString();
       QuerySnapshot snap = await _db
           .collection('rooms')
           .doc('daily_$today')
@@ -440,7 +435,7 @@ class RoomService {
     if (uid == null) return 'auth_error';
 
     try {
-      String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+      String today = AppDate.getTodayString();
       currentRoomDate = today;
       DocumentReference roomRef = _getRoomRef(roomCode);
       DocumentSnapshot roomDoc = await roomRef.get();
@@ -552,7 +547,7 @@ class RoomService {
       });
 
       // AI_DEBUG: Add roomCode to user's room_history in the 'users' collection
-      String today = DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+      String today = AppDate.getTodayString();
       batch.set(_db.collection('users').doc(uid), {
         'room_history': "$roomCode|$today",
         'last_room_played': roomCode,
@@ -731,7 +726,7 @@ class RoomService {
     try {
       // 1. Try fetching from user document field first
       final userDoc = await _db.collection('users').doc(uid).get();
-      final userData = userDoc.data() as Map<String, dynamic>?;
+      final userData = userDoc.data();
       
       dynamic rawHistory = userData?['room_history'];
       List<dynamic> historyStrings = [];
@@ -758,7 +753,7 @@ class RoomService {
           for (var doc in oldSnap.docs) {
             var data = doc.data() as Map<String, dynamic>;
             String code = data['roomCode'] ?? "";
-            String date = data['date'] ?? DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow());
+            String date = data['date'] ?? AppDate.getTodayString();
             if (code.isNotEmpty) {
               migratedStrings.add("$code|$date");
             }
@@ -781,7 +776,7 @@ class RoomService {
         final parts = entry.toString().split('|');
         return {
           'roomCode': parts[0],
-          'date': parts.length > 1 ? parts[1] : DateFormat('yyyy-MM-dd', 'en_US').format(_getISTNow()),
+          'date': parts.length > 1 ? parts[1] : AppDate.getTodayString(),
         };
       }).toList();
 

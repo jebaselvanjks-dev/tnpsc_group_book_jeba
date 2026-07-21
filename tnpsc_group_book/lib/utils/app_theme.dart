@@ -6,7 +6,7 @@ import '../services/hive_service.dart';
 
 class AppTheme {
   static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
-  static final ValueNotifier<double> fontSizeFactorNotifier = ValueNotifier(1);
+  static final ValueNotifier<double> fontSizeFactorNotifier = ValueNotifier(0.9);
 
   /// Dark theme backgrounds (used across app + native splash)
   static const Color darkBgColor = Color(0xFF030611);

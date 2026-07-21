@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:http/http.dart' as http;
+import 'package:tnpsc_group_book/utils/app_date.dart';
 import '../utils/app_log.dart';
 import 'hive_service.dart';
 
@@ -92,9 +92,6 @@ class AiService {
     ];
   }
 
-  // -----------------------------------------------------------------
-  // Core request helper – discovers models, falls back, and returns raw text
-  // -----------------------------------------------------------------
   static Future<String?> _generateWithFallback(String prompt) async {
     // 0. Check Sticky Config First
     final sticky = HiveService.getStickyAiConfig();
@@ -291,12 +288,9 @@ class AiService {
     return null;
   }
 
-  // -----------------------------------------------------------------
-  // Helper to get topics/questions from last 30 days to avoid repeats
-  // -----------------------------------------------------------------
   static Future<String> _getRecentQuizContext(String collectionName, int days) async {
     String context = "";
-    DateTime cutoff = DateTime.now().subtract(Duration(days: days));
+    DateTime cutoff = AppDate.getISTNow().subtract(Duration(days: days));
     try {
       final docs = await FirebaseFirestore.instance
           .collection(collectionName)
@@ -320,18 +314,10 @@ class AiService {
     return context;
   }
 
-  static DateTime _getISTNow() {
-    return DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
-  }
-
-  // -----------------------------------------------------------------
-  // Daily quiz (10 Tamil, 6 GS, 4 Aptitude) generation
-  // -----------------------------------------------------------------
   static Future<bool> generateAndSaveDailyQuiz(DateTime date) async {
     // If we're generating for 'today' or 'tomorrow', we should ensure the input date is interpreted correctly.
-    // However, the caller usually passes DateTime.now() or .add(1 day).
     // To be safe, we format the passed date object using en_US.
-    final dateStr = DateFormat('yyyy-MM-dd', 'en_US').format(date);
+    final dateStr = AppDate.format(date);
 
     // Get topics from last 30 days to avoid repeats
     String recentContext = await _getRecentQuizContext('quizzes', 30);
@@ -539,11 +525,8 @@ $commonRules
     return true;
   }
 
-  // -----------------------------------------------------------------
-  // Mock quiz (25 Tamil, 15 GS, 10 Aptitude) generation
-  // -----------------------------------------------------------------
   static Future<bool> generateAndSaveMockQuiz(DateTime date) async {
-    final dateStr = DateFormat('yyyy-MM-dd', 'en_US').format(date);
+    final dateStr = AppDate.format(date);
 
     // Get topics from last 30 days to avoid repeats in mock tests
     String recentContext = await _getRecentQuizContext('mock_tests', 30);
@@ -752,9 +735,6 @@ $commonRules
     return false;
   }
 
-  // -----------------------------------------------------------------
-  // Room specific pre-defined quiz generation
-  // -----------------------------------------------------------------
   static Future<bool> generateAndSaveRoomPredefinedQuiz(String subject) async {
     String specializedPrompt = "";
 
@@ -853,7 +833,7 @@ Only return the raw JSON array, no other text or markdown formatting.
             ...q, 
             'quiz_type': subject,
             'subject': subject,
-            'createdAt': DateTime.now().toIso8601String(), // Changed from serverTimestamp to fix Array error
+            'createdAt': AppDate.getISTNow().toIso8601String(), // Changed from serverTimestamp to fix Array error
           }).toList();
           
           // 3. Maintenance: Combine (Prepend new) and trim to latest 500
@@ -883,16 +863,13 @@ Only return the raw JSON array, no other text or markdown formatting.
     return false;
   }
 
-  // -----------------------------------------------------------------
-  // Scheduled quiz generation (used by bulk‑7‑day flow)
-  // -----------------------------------------------------------------
   static Future<bool> generateScheduledQuiz(
     DateTime date,
     String quizType, {
     int count = 20,
     int? setIndex,
   }) async {
-    final dateStr = DateFormat('yyyy-MM-dd', 'en_US').format(date);
+    final dateStr = AppDate.format(date);
     String subjectTitle = "";
     String syllabusPrompt = "";
 
@@ -993,9 +970,6 @@ Return only the raw JSON array of EXACTLY $count items.
     return false;
   }
 
-  // -----------------------------------------------------------------
-  // Additional helper methods (subject questions, study material, chats, etc.)
-  // -----------------------------------------------------------------
   static Future<bool> generateSubjectQuestions(
     String subject, {
     String? category,

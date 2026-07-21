@@ -352,7 +352,7 @@ class HiveService {
   }
 
   static double getFontSizeFactor() {
-    return Hive.box(userBoxName).get('font_size_factor', defaultValue: 1.0) as double;
+    return Hive.box(userBoxName).get('font_size_factor', defaultValue: 0.9) as double;
   }
 
   // Vibration Setting
@@ -492,7 +492,7 @@ class HiveService {
   // ------------------- User Profile -------------------
   static Future<void> updateUserName(String name) async {
     await Hive.box(userBoxName).put('user_display_name', name);
-    await Hive.box(userBoxName).put('last_name_update_date', DateTime.now().toIso8601String());
+    await Hive.box(userBoxName).put('last_name_update_date', AppDate.getISTNow().toIso8601String());
   }
 
   static String? getUserName() {
@@ -512,7 +512,7 @@ class HiveService {
     if (lastUpdate == null) return true;
     
     // Check if at least 30 days have passed
-    return DateTime.now().difference(lastUpdate).inDays >= 30;
+    return AppDate.getISTNow().difference(lastUpdate).inDays >= 30;
   }
 
   // ------------------- Sticky AI Config -------------------

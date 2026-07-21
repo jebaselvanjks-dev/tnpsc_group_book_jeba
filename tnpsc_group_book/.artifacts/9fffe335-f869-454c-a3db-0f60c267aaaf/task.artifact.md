@@ -1,0 +1,7 @@
+- [x] Clean up `room_service.dart` (Unused imports, remove `_getISTNow`)
+- [x] Clean up `firestore_service.dart` (Remove `_getISTNow`, replace usages)
+- [x] Clean up `ai_service.dart` (Remove `_getISTNow`)
+- [x] Clean up `room_setup_screen.dart` (Unused imports)
+- [x] Clean up `waiting_room_screen.dart` (Unused methods, dead code)
+- [x] Clean up `profile_screen.dart` (Unused variable, unused methods)
+- [x] Final project-wide analysis

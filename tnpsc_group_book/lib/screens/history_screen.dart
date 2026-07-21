@@ -6,6 +6,8 @@ import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
 
+import '../utils/app_date.dart';
+
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
@@ -97,7 +99,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildHistoryCard(Map<String, dynamic> item, bool isDark) {
-    final DateTime timestamp = item['timestamp']?.toDate() ?? DateTime.now();
+    final DateTime timestamp = item['timestamp']?.toDate() ?? AppDate.getISTNow();
     final String dateStr = DateFormat('MMM dd, yyyy • hh:mm a').format(timestamp);
     final int score = item['score'] ?? 0;
     final int total = item['totalQuestions'] ?? 0;
