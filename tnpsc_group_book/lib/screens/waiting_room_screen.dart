@@ -447,12 +447,12 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                     children: [
                       Text(
                         "TNPSC",
-                        style: AppTheme.getStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, height: 1.0, letterSpacing: 2),
+                        style: AppTheme.getStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, height: 1.0, letterSpacing: 2, ignoreScale: true),
                       ),
                       const SizedBox(height: 5),
                       Text(
                         "LIVE BATTLE",
-                        style: AppTheme.getStyle(fontSize: 32, fontWeight: FontWeight.w900, color: goldColor, height: 1.0, letterSpacing: 1),
+                        style: AppTheme.getStyle(fontSize: 32, fontWeight: FontWeight.w900, color: goldColor, height: 1.0, letterSpacing: 1, ignoreScale: true),
                       ),
                     ],
                   ),
@@ -480,7 +480,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
             ),
             child: Text(
               AppLanguage.getString(roomData['subject'] ?? 'General'),
-              style: AppTheme.getStyle(fontSize: 25, fontWeight: FontWeight.bold, color: Colors.white70),
+              style: AppTheme.getStyle(fontSize: 25, fontWeight: FontWeight.bold, color: Colors.white70, ignoreScale: true),
             ),
           ),
         ],
@@ -518,7 +518,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
           children: [
             Text(
               "ROOM CODE",
-              style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white70, letterSpacing: 3),
+              style: AppTheme.getStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white70, letterSpacing: 3, ignoreScale: true),
             ),
             const SizedBox(height: 10),
             Container(
@@ -532,12 +532,12 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
               child: Text(
                 widget.roomCode,
                 textAlign: TextAlign.center,
-                style: AppTheme.getStyle(fontSize: 30, fontWeight: FontWeight.w900, color: const Color(0xFF030611), letterSpacing: 8),
+                style: AppTheme.getStyle(fontSize: 30, fontWeight: FontWeight.w900, color: const Color(0xFF030611), letterSpacing: 8, ignoreScale: true),
               ),
             ),
             const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(16),
@@ -545,9 +545,18 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
               ),
               child: Row(
                 children: [
-                  Expanded(child: _buildInfoItem(Icons.calendar_month_rounded, DateFormat('dd MMM yyyy').format(date), DateFormat('hh:mm a').format(date))),
-                  Container(width: 1, height: 35, color: Colors.white10),
-                  Expanded(child: _buildInfoItem(Icons.groups_rounded, "அதிகபட்ச வீரர்கள்", "${roomData['maxPlayers'] ?? 100}")),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: _buildInfoItem(Icons.calendar_month_rounded, DateFormat('dd MMM yyyy').format(date), DateFormat('hh:mm a').format(date), 14),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 15.0,right: 15),
+                    child: Container(width: 1, height: 35, color: Colors.white10),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: _buildInfoItem(Icons.groups_rounded, "அதிகபட்ச வீரர்கள்", "${roomData['maxPlayers'] ?? 100}",13),
+                  ),
                 ],
               ),
             ),
@@ -557,19 +566,19 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
     );
   }
 
-  Widget _buildInfoItem(IconData icon, String top, String bottom) {
+  Widget _buildInfoItem(IconData icon, String top, String bottom, double topicFontSize) {
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: const Color(0xFFE5BA73), size: 18),
-            const SizedBox(width: 8),
-            Text(top, style: AppTheme.getStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
+            Icon(icon, color: const Color(0xFFE5BA73), size: 17),
+            const SizedBox(width: 5),
+            Text(top, style: AppTheme.getStyle(fontSize: topicFontSize, fontWeight: FontWeight.bold, color: Colors.white70, ignoreScale: true)),
           ],
         ),
         const SizedBox(height: 4),
-        Text(bottom, style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
+        Text(bottom, style: AppTheme.getStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Colors.white, ignoreScale: true)),
       ],
     );
   }
@@ -612,11 +621,11 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                 children: [
                   Text(
                     "Join Battle",
-                    style: AppTheme.getStyle(fontSize: 10, color: Colors.white70),
+                    style: AppTheme.getStyle(fontSize: 13, color: Colors.white70, ignoreScale: true),
                   ),
                   Text(
                     "குழு வினாடி வினா",
-                    style: AppTheme.getStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: AppTheme.getStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true),
                   ),
                 ],
               ),
@@ -667,9 +676,9 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
             children: [
               const Icon(Icons.star_rounded, color: Color(0xFFE5BA73), size: 16),
               const SizedBox(height: 4),
-              Text("PREPARE", style: AppTheme.getStyle(fontSize: 7, fontWeight: FontWeight.w900, color: const Color(0xFFE5BA73), letterSpacing: 1)),
-              Text("PRACTICE", style: AppTheme.getStyle(fontSize: 7, fontWeight: FontWeight.w900, color: const Color(0xFFE5BA73), letterSpacing: 1)),
-              Text("SUCCEED", style: AppTheme.getStyle(fontSize: 7, fontWeight: FontWeight.w900, color: const Color(0xFFE5BA73), letterSpacing: 1)),
+              Text("PREPARE", style: AppTheme.getStyle(fontSize: 7, fontWeight: FontWeight.w900, color: const Color(0xFFE5BA73), letterSpacing: 1, ignoreScale: true)),
+              Text("PRACTICE", style: AppTheme.getStyle(fontSize: 7, fontWeight: FontWeight.w900, color: const Color(0xFFE5BA73), letterSpacing: 1, ignoreScale: true)),
+              Text("SUCCEED", style: AppTheme.getStyle(fontSize: 7, fontWeight: FontWeight.w900, color: const Color(0xFFE5BA73), letterSpacing: 1, ignoreScale: true)),
               const SizedBox(height: 4),
               const Icon(Icons.star_rounded, color: Color(0xFFE5BA73), size: 16),
             ],

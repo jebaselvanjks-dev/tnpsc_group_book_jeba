@@ -197,7 +197,7 @@ class _ResultScreenState extends State<ResultScreen> {
           const SizedBox(height: 20),
           Text(
             AppLanguage.getString('app_title').toUpperCase(),
-            style: AppTheme.getStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white).copyWith(letterSpacing: 2),
+            style: AppTheme.getStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true).copyWith(letterSpacing: 2),
           ),
           const SizedBox(height: 30),
           Container(
@@ -211,9 +211,9 @@ class _ResultScreenState extends State<ResultScreen> {
               children: [
                 Text(
                   "${widget.score} / ${widget.totalQuestions}",
-                  style: AppTheme.getStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: AppTheme.getStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true),
                 ),
-                Text(AppLanguage.getString('correct_answers'), style: AppTheme.getStyle(color: Colors.white70, fontSize: 16)),
+                Text(AppLanguage.getString('correct_answers'), style: AppTheme.getStyle(color: Colors.white70, fontSize: 16, ignoreScale: true)),
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -231,12 +231,12 @@ class _ResultScreenState extends State<ResultScreen> {
           const SizedBox(height: 30),
           Text(
             AppLanguage.getString('prepare_anywhere'),
-            style: AppTheme.getStyle(fontSize: 14, color: Colors.white70).copyWith(fontStyle: FontStyle.italic),
+            style: AppTheme.getStyle(fontSize: 14, color: Colors.white70, ignoreScale: true).copyWith(fontStyle: FontStyle.italic),
           ),
           const SizedBox(height: 10),
           Text(
             AppLanguage.getString('download_app'),
-            style: AppTheme.getStyle(fontSize: 14, color: Colors.amber, fontWeight: FontWeight.bold),
+            style: AppTheme.getStyle(fontSize: 14, color: Colors.amber, fontWeight: FontWeight.bold, ignoreScale: true),
           ),
         ],
       ),
@@ -248,9 +248,9 @@ class _ResultScreenState extends State<ResultScreen> {
       children: [
         Text(
           value,
-          style: AppTheme.getStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+          style: AppTheme.getStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold, ignoreScale: true),
         ),
-        Text(label, style: AppTheme.getStyle(fontSize: 12, color: Colors.white70)),
+        Text(label, style: AppTheme.getStyle(fontSize: 12, color: Colors.white70, ignoreScale: true)),
       ],
     );
   }

@@ -710,7 +710,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Directionality(
             textDirection: ui.TextDirection.ltr,
             child: MediaQuery(
-              data: const MediaQueryData().copyWith(textScaler: const TextScaler.linear(1)),
+              data: const MediaQueryData().copyWith(textScaler: const TextScaler.linear(0.9)),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 400),
                 child: _buildSharePoster(question, subject, dayIndex: now.weekday),
@@ -899,7 +899,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     _buildPosterMockup(),
-                    const SizedBox(width: 15),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         // mainAxisSize: MainAxisSize.min,
@@ -963,8 +963,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 70,
-            height: 70,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: goldColor, width: 2.5),
@@ -1009,20 +1009,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ],
                 ),
-                Text(
-                  "தினமும் படி, வெற்றியை வெல்லு!",
-                  style: AppTheme.getStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white70,
-                    ignoreScale: true,
-                  ),
-                ),
-                Column(
+                Row(
                   children: [
-                    Image.network(
-                      'https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png',
-                      height: 35,
+                    Expanded(
+                      child: Text(
+                        "தினமும் படி, வெற்றியை வெல்லு!",
+                        style: AppTheme.getStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white70,
+                          ignoreScale: true,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 100,
+                      child: Image.network(
+                        'https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png',
+                        height: 35,
+                      ),
                     ),
                   ],
                 ),
@@ -1207,7 +1212,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             _buildSidebarItem(Icons.people_alt_rounded, "LIVE QUIZ", "DAILY\nLIVE BATTLES", const Color(0xFF9C27B0)),
             _buildSidebarItem(Icons.emoji_events_rounded, "RANK", "ON LIVE\nLEADERBOARD", const Color(0xFF03A9F4)),
-            _buildSidebarItem(Icons.card_giftcard_rounded, "WIN POINTS", "& EXCITING\nREWARDS", const Color(0xFFFF9800)),
+            _buildSidebarItem(Icons.card_giftcard_rounded, "WIN POINTS", "EXCITING\nREWARDS", const Color(0xFFFF9800)),
             _buildSidebarItem(Icons.verified_user_rounded, "100% FREE", "TO PLAY", const Color(0xFF4CAF50)),
           ],
         ),
@@ -1263,9 +1268,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.sensors, color: Colors.white, size: 10),
+                    const Icon(Icons.sensors, color: Colors.white, size: 9),
                     const SizedBox(width: 4),
-                    Text("LIVE", style: AppTheme.getStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true)),
+                    Text("LIVE", style: AppTheme.getStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white, ignoreScale: true)),
                   ],
                 ),
               ),

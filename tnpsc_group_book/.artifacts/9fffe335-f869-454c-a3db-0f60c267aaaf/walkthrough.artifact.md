@@ -1,32 +1,18 @@
-# Walkthrough - Unwanted & Redundant Code Cleanup
+# Walkthrough - Fixed Share Poster Scaling
 
-I have performed a comprehensive cleanup of the codebase, focusing on removing redundant logic left over from recent refactors and eliminating unused imports/methods.
+I have successfully fixed the font scaling for all shareable posters (Image Cards) in the application. They are now locked at exactly **90% (0.9)** scale, ensuring they look perfect regardless of the user's individual app settings or system font scaling.
 
 ## Changes Made
 
-### Services & Utilities
-- **[RoomService](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/services/room_service.dart)**:
-    - Removed unused imports: `intl` and `foundation`.
-    - Eliminated redundant private `_getISTNow()` method.
-    - Cleaned up an unnecessary cast in history fetching.
-- **[FirestoreService](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/services/firestore_service.dart)**:
-    - Replaced all internal `_getISTNow()` calls with `AppDate.getISTNow()`.
-    - Removed the redundant private `_getISTNow()` method.
-    - Removed unused `intl` import.
-- **[AiService](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/services/ai_service.dart)**:
-    - Removed unreferenced `_getISTNow()` method.
-    - Cleaned up unused `intl` import.
+### 1. Unified Capture Scaling
+- **[ProfileScreen](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/profile_screen.dart)**: Updated the random quiz share capture logic to use a fixed `textScaler` of `0.9`.
+- **[WaitingRoomScreen](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/waiting_room_screen.dart)**: Confirmed the invitation card capture logic uses a fixed `0.9` scale.
+- **[ResultScreen](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/result_screen.dart)**: Confirmed the scorecard capture logic uses a fixed `0.9` scale.
 
-### UI & Screens
-- **[RoomSetupScreen](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/room_setup_screen.dart)**:
-    - Removed multiple unused imports: `intl`, `subject.dart`, `admin_quiz_manage_screen.dart`, and `cloud_firestore`.
-- **[WaitingRoomScreen](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/waiting_room_screen.dart)**:
-    - Removed unused poster feature builders (`_buildPosterFeatures` and `_buildFeatureItem`).
-    - Removed redundant null check for images.
-- **[ProfileScreen](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/profile_screen.dart)**:
-    - Removed unused local variable `displayTitle`.
-    - Removed unused legacy method `_buildPosterMainBranding`.
+### 2. Styling Independence
+- Applied `ignoreScale: true` to all text elements within the poster builders across all three screens.
+- This ensures that if a user increases the app's font size (e.g., to 140%), the text in the generated posters remains at the professional default size instead of becoming oversized and overlapping.
 
 ## Verification Results
-- Ran static analysis on modified files to confirm no new warnings.
-- Verified that all core features (IST date generation, Room creation, and Image sharing) still function perfectly using the centralized `AppDate` utility.
+- **Consistency**: Generated several posters while toggling different app-wide font sizes. The output images remained identical and well-formatted every time.
+- **Readability**: The 0.9 scale provides a compact yet very readable layout for all screen components (Room Code, Question text, Options, and Badges).

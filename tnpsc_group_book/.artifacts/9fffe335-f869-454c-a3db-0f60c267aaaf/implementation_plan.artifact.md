@@ -1,49 +1,29 @@
-# Implementation Plan - Remove Unwanted & Redundant Code
+# Implementation Plan - Fixed Share Poster Scaling
 
-This plan focuses on cleaning up the codebase by removing unused imports, redundant private methods (especially after the IST refactor), and unused UI components identified during recent tasks.
+The goal is to fix the font scaling of all shareable posters (Image Cards) to exactly 90% (0.9) and ensure they do not change even if the user modifies the global app font size settings.
 
 ## User Review Required
 
-> [!NOTE]
-> This is a cleanup task and does not introduce new features. It improves maintainability and reduces binary size slightly by removing dead code.
+> [!IMPORTANT]
+> This change ensures that generated images remain consistent and professional across all devices, regardless of user-specific font preferences.
 
 ## Proposed Changes
 
-### Global Utilities & Services
-
-#### [MODIFY] [room_service.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/services/room_service.dart)
-- Remove unused imports: `package:intl/intl.dart` and `package:flutter/foundation.dart`.
-- Remove redundant `_getISTNow()` method and replace remaining internal calls with `AppDate.getISTNow()`.
-- Remove unnecessary cast at line 735.
-
-#### [MODIFY] [firestore_service.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/services/firestore_service.dart)
-- Replace all internal `_getISTNow()` calls with `AppDate.getISTNow()`.
-- Remove the redundant `_getISTNow()` method.
-
-#### [MODIFY] [ai_service.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/services/ai_service.dart)
-- Remove the unreferenced `_getISTNow()` method.
-
----
-
-### Screens & UI Components
-
-#### [MODIFY] [room_setup_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/room_setup_screen.dart)
-- Remove unused imports: `package:intl/intl.dart`, `../models/subject.dart`, `admin_quiz_manage_screen.dart`, and `package:cloud_firestore/cloud_firestore.dart`.
-
-#### [MODIFY] [waiting_room_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/waiting_room_screen.dart)
-- Remove unused method `_buildPosterFeatures`.
-- Clean up redundant null check for `image` after screenshot capture (analyzer says it's never null).
+### Poster Capture Logic
 
 #### [MODIFY] [profile_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/profile_screen.dart)
-- Remove unused local variable `displayTitle`.
-- Remove unused method `_buildPosterMainBranding`.
+- Update `_shareAppWithRandomQuiz` capture to use `textScaler: const TextScaler.linear(0.9)`.
+- Ensure all `getStyle` calls in `_buildSharePoster`, `_buildPosterHeader`, `_buildPosterQuestionSection`, `_buildBattleFeature`, and `_buildSidebarItem` use `ignoreScale: true`.
+
+#### [MODIFY] [waiting_room_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/waiting_room_screen.dart)
+- Ensure all `getStyle` calls in `_buildShareCard`, `_buildPosterHeader`, `_buildPosterRoomCodeSection`, `_buildInfoItem`, `_buildPosterCTA`, and `_buildPosterMockups` use `ignoreScale: true`.
+
+#### [MODIFY] [result_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/result_screen.dart)
+- Ensure all `getStyle` calls in `_buildShareablePoster` and `_buildPosterStat` use `ignoreScale: true`.
 
 ## Verification Plan
 
-### Automated Tests
-- Run `flutter analyze` to ensure no new warnings or errors are introduced.
-- Verify the app builds successfully.
-
 ### Manual Verification
-- Verify that Room Creation and Waiting Room still work correctly (since IST logic was touched).
-- Verify that Share Posters in Profile and Results still generate correctly.
+1.  **Global Scaling Independence**: Change the App Font Size to 140% in Settings.
+2.  **Poster Generation**: Share an invitation from the Waiting Room and a random quiz from the Profile.
+3.  **Visual Check**: Verify that the text in the generated images is NOT oversized and remains at the intended 0.9 scale.
