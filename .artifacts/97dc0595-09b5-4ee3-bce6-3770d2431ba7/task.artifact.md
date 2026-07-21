@@ -1,0 +1,8 @@
+- [ ] Synchronize build tools to recommended versions
+    - [ ] Modify `gradle.properties` (Add `android.newDsl=false`, `android.overridePathCheck=true`)
+    - [ ] Modify `settings.gradle.kts` (AGP 8.7.3, Kotlin 2.1.0)
+    - [ ] Modify `gradle-wrapper.properties` (Gradle 8.10.2)
+- [ ] Verification
+    - [ ] Run Gradle clean
+    - [ ] Run Gradle build without daemon
+    - [ ] Run Flutter build
