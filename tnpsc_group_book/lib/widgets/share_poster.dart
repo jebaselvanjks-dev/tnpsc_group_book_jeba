@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:animated_text_kit/animated_text_kit.dart';
 import '../models/question.dart';
 import '../models/subject.dart';
 import '../utils/app_theme.dart';
 
-class SharePoster extends StatelessWidget {
+class SharePoster extends StatefulWidget {
   final Question question;
   final Subject subject;
   final int dayIndex;
@@ -18,8 +20,44 @@ class SharePoster extends StatelessWidget {
   });
 
   @override
+  State<SharePoster> createState() => _SharePosterState();
+}
+
+class _SharePosterState extends State<SharePoster> with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void didUpdateWidget(SharePoster oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showCorrectAnswer && !oldWidget.showCorrectAnswer) {
+      _pulseController.repeat(reverse: true);
+    } else if (!widget.showCorrectAnswer) {
+      _pulseController.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    String backgroundImage = 'asset/images/sharequiz$dayIndex.png';
+    String backgroundImage = 'asset/images/sharequiz${widget.dayIndex}.png';
     const Color goldColor = Color(0xFFFFD700);
 
     return Container(
@@ -30,41 +68,50 @@ class SharePoster extends StatelessWidget {
       child: Stack(
         children: [
           _buildPosterBackground(backgroundImage),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 30),
-              _buildPosterHeader(goldColor),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _buildPosterQuestionSection(goldColor)),
-                  ],
+          AnimationLimiter(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: AnimationConfiguration.toStaggeredList(
+                duration: const Duration(milliseconds: 400),
+                childAnimationBuilder: (widget) => SlideAnimation(
+                  verticalOffset: 20.0,
+                  child: FadeInAnimation(child: widget),
                 ),
-              ),
-              const SizedBox(width: 10),
-              _buildPosterSidebar(),
-              Padding(
-                padding: const EdgeInsets.only(left: 20, right: 15, bottom: 0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _buildPosterMockup(),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          _buildPosterBattleSection(goldColor),
-                        ],
-                      ),
+                children: [
+                  const SizedBox(height: 30),
+                  _buildPosterHeader(goldColor),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: _buildPosterQuestionSection(goldColor)),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 10),
+                  _buildPosterSidebar(),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20, right: 15, bottom: 0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _buildPosterMockup(),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              _buildPosterBattleSection(goldColor),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -192,8 +239,8 @@ class SharePoster extends StatelessWidget {
   }
 
   Widget _buildPosterQuestionSection(Color goldColor) {
-    final String qEn = question.questionEn ?? question.question;
-    final String qTa = question.questionTa ?? "";
+    final String qEn = widget.question.questionEn ?? widget.question.question;
+    final String qTa = widget.question.questionTa ?? "";
     final int totalLength = qEn.length + qTa.length;
 
     double qFontSize = 14;
@@ -245,28 +292,42 @@ class SharePoster extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      qEn,
-                      style: AppTheme.getStyle(
-                        fontSize: qFontSize,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1.3,
-                        ignoreScale: true,
-                      ),
+                    AnimatedTextKit(
+                      animatedTexts: [
+                        TyperAnimatedText(
+                          qEn,
+                          textStyle: AppTheme.getStyle(
+                            fontSize: qFontSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            height: 1.3,
+                            ignoreScale: true,
+                          ),
+                          speed: const Duration(milliseconds: 30),
+                        ),
+                      ],
+                      totalRepeatCount: 1,
+                      isRepeatingAnimation: false,
                     ),
                     if (qTa.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),
-                        child: Text(
-                          qTa,
-                          style: AppTheme.getStyle(
-                            fontSize: qFontSize,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.tealAccent,
-                            height: 1.3,
-                            ignoreScale: true,
-                          ),
+                        child: AnimatedTextKit(
+                          animatedTexts: [
+                            TyperAnimatedText(
+                              qTa,
+                              textStyle: AppTheme.getStyle(
+                                fontSize: qFontSize,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.tealAccent,
+                                height: 1.3,
+                                ignoreScale: true,
+                              ),
+                              speed: const Duration(milliseconds: 30),
+                            ),
+                          ],
+                          totalRepeatCount: 1,
+                          isRepeatingAnimation: false,
                         ),
                       ),
                   ],
@@ -275,95 +336,119 @@ class SharePoster extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          ...question.displayOptions.asMap().entries.map((entry) {
-            int idx = entry.key;
-            String label = String.fromCharCode(65 + idx);
-            bool isCorrect = idx == question.correctOptionIndex;
-
-            String optEn = "";
-            String optTa = "";
-
-            if (question.optionsEn != null &&
-                idx < question.optionsEn!.length &&
-                question.optionsEn![idx].isNotEmpty) {
-              optEn = question.optionsEn![idx];
-            }
-            if (question.optionsTa != null &&
-                idx < question.optionsTa!.length &&
-                question.optionsTa![idx].isNotEmpty) {
-              optTa = question.optionsTa![idx];
-            }
-            if (optEn.isEmpty && optTa.isEmpty) {
-              optEn = question.options[idx];
-            }
-
-            bool highlight = showCorrectAnswer && isCorrect;
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 6.0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: highlight ? Colors.green.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: highlight ? Colors.green : Colors.white60,
-                    width: highlight ? 2 : 1,
-                  ),
+          AnimationLimiter(
+            child: Column(
+              children: AnimationConfiguration.toStaggeredList(
+                duration: const Duration(milliseconds: 300),
+                childAnimationBuilder: (widget) => SlideAnimation(
+                  horizontalOffset: 30.0,
+                  child: FadeInAnimation(child: widget),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
+                children: widget.question.displayOptions.asMap().entries.map((entry) {
+                  int idx = entry.key;
+                  String label = String.fromCharCode(65 + idx);
+                  bool isCorrect = idx == widget.question.correctOptionIndex;
+
+                  String optEn = "";
+                  String optTa = "";
+
+                  if (widget.question.optionsEn != null &&
+                      idx < widget.question.optionsEn!.length &&
+                      widget.question.optionsEn![idx].isNotEmpty) {
+                    optEn = widget.question.optionsEn![idx];
+                  }
+                  if (widget.question.optionsTa != null &&
+                      idx < widget.question.optionsTa!.length &&
+                      widget.question.optionsTa![idx].isNotEmpty) {
+                    optTa = widget.question.optionsTa![idx];
+                  }
+                  if (optEn.isEmpty && optTa.isEmpty) {
+                    optEn = widget.question.options[idx];
+                  }
+
+                  bool highlight = widget.showCorrectAnswer && isCorrect;
+
+                  Widget optionWidget = Padding(
+                    padding: const EdgeInsets.only(bottom: 6.0),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                       decoration: BoxDecoration(
-                        color: highlight ? Colors.green : goldColor,
-                        shape: BoxShape.circle,
+                        color: highlight ? Colors.green.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: highlight ? Colors.greenAccent : Colors.white60,
+                          width: highlight ? 2 : 1,
+                        ),
+                        boxShadow: highlight ? [
+                          BoxShadow(color: Colors.green.withOpacity(0.2), blurRadius: 8)
+                        ] : null,
                       ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        label,
-                        style: AppTheme.getStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                            ignoreScale: true),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Wrap(
+                      child: Row(
                         children: [
-                          if (optEn.isNotEmpty)
-                            Text(
-                              optTa.isNotEmpty ? "$optEn / " : optEn,
-                              style: AppTheme.getStyle(
-                                fontSize: optFontSize,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500,
-                                ignoreScale: true,
-                              ),
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: highlight ? Colors.green : goldColor,
+                              shape: BoxShape.circle,
                             ),
-                          if (optTa.isNotEmpty)
-                            Text(
-                              optTa,
+                            alignment: Alignment.center,
+                            child: Text(
+                              label,
                               style: AppTheme.getStyle(
-                                fontSize: optFontSize,
-                                color: Colors.tealAccent,
-                                fontWeight: FontWeight.w500,
-                                ignoreScale: true,
-                              ),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                  ignoreScale: true),
                             ),
+                          ),
+                          const SizedBox(width: 10),
+                                Expanded(
+                            child: Wrap(
+                              children: [
+                                if (optEn.isNotEmpty)
+                                  Text(
+                                    optTa.isNotEmpty ? "$optEn / " : optEn,
+                                    style: AppTheme.getStyle(
+                                      fontSize: optFontSize,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w500,
+                                      ignoreScale: true,
+                                    ),
+                                  ),
+                                if (optTa.isNotEmpty)
+                                  Text(
+                                    optTa,
+                                    style: AppTheme.getStyle(
+                                      fontSize: optFontSize,
+                                      color: Colors.tealAccent,
+                                      fontWeight: FontWeight.w500,
+                                      ignoreScale: true,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (highlight)
+                            const Icon(Icons.verified_rounded, color: Colors.greenAccent, size: 18),
                         ],
                       ),
                     ),
-                    if (highlight)
-                      const Icon(Icons.verified_rounded, color: Colors.green, size: 16),
-                  ],
-                ),
+                  );
+
+                  if (highlight) {
+                    return ScaleTransition(
+                      scale: _pulseAnimation,
+                      child: optionWidget,
+                    );
+                  }
+
+                  return optionWidget;
+                }).toList(),
               ),
-            );
-          }).toList(),
+            ),
+          ),
         ],
       ),
     );

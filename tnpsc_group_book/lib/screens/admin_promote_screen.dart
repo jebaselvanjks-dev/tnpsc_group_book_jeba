@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_widget_recorder/flutter_widget_recorder.dart';
+import 'package:gal/gal.dart';
 import '../models/question.dart';
 import '../models/subject.dart';
 import '../services/firestore_service.dart';
@@ -25,11 +27,14 @@ class AdminPromoteScreen extends StatefulWidget {
 class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProviderStateMixin {
   final FirestoreService _firestoreService = FirestoreService();
   final ScreenshotController _screenshotController = ScreenshotController();
+  final WidgetRecorderController _recorderController = WidgetRecorderController(targetFps: 120);
   
   List<Question> _quizzes = [];
   bool _isLoading = true;
+  bool _isRecording = false;
   int _currentIndex = 0;
-  int _timerSeconds = 5;
+  int _timerSeconds = 10;
+  final int _maxTimerSeconds = 10;
   bool _showAnswer = false;
   Timer? _timer;
   Subject? _currentTopicSubject;
@@ -40,8 +45,8 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    _revealController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _revealController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
     _loadQuizzes();
   }
 
@@ -93,7 +98,7 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
   }
 
   void _startSequence() {
-    _timerSeconds = 5;
+    _timerSeconds = _maxTimerSeconds;
     _showAnswer = false;
     _timer?.cancel();
     _fadeController.forward(from: 0);
@@ -113,23 +118,70 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
     setState(() => _showAnswer = true);
     _revealController.forward();
 
-    // Wait 3 seconds for reveal then move to next
-    Future.delayed(const Duration(seconds: 3), () {
+    // Wait 4 seconds for reveal then move to next (slightly longer for drama)
+    Future.delayed(const Duration(seconds: 4), () {
       if (mounted) {
         if (_currentIndex < _quizzes.length - 1) {
-          _fadeController.reverse().then((_) {
-            if (mounted) {
-              setState(() {
-                _currentIndex++;
-                _startSequence();
-              });
-            }
+          setState(() {
+            _currentIndex++;
+            _startSequence();
           });
         } else {
           // Finished all 3
+          if (_isRecording) {
+            _stopRecordingAndSave();
+          }
         }
       }
     });
+  }
+
+  Future<void> _startRecording() async {
+    final hasAccess = await Gal.hasAccess();
+    if (!hasAccess) {
+      final granted = await Gal.requestAccess();
+      if (!granted) return;
+    }
+
+    setState(() {
+      _isRecording = true;
+      _currentIndex = 0;
+      _startSequence();
+    });
+
+    try {
+      await _recorderController.startRecording(
+        'tnpsc_promo_${DateTime.now().millisecondsSinceEpoch}',
+        pixelRatio: 2.0, // Adjust for quality/performance
+      );
+    } catch (e) {
+      AppLog.e("Error starting recording: $e");
+      setState(() => _isRecording = false);
+    }
+  }
+
+  Future<void> _stopRecordingAndSave() async {
+    try {
+      await _recorderController.stopRecording();
+      final path = _recorderController.path;
+      if (path != null) {
+        await Gal.putVideo(path);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Video saved to gallery! ✅"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      AppLog.e("Error saving recording: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _isRecording = false);
+      }
+    }
   }
 
   Future<void> _shareCurrentQuiz() async {
@@ -158,7 +210,7 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
           ),
         ),
         pixelRatio: 4.0,
-        delay: const Duration(milliseconds: 200),
+        delay: const Duration(milliseconds: 500),
       );
 
       if (imageBytes != null && mounted) {
@@ -212,66 +264,263 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Main Poster Content
-          Center(
-            child: FadeTransition(
-              opacity: _fadeController,
-              child: FittedBox(
-                child: SharePoster(
-                  question: question,
-                  subject: subject,
-                  dayIndex: now.weekday,
-                  showCorrectAnswer: _showAnswer,
-                ),
+          // ─── Recordable Content Wrapper ───
+          WidgetRecorderWrapper(
+            controller: _recorderController,
+            child: Container(
+              color: Colors.black, // Background for video
+              child: Stack(
+                children: [
+                  // Smooth Quiz Transitions
+                  Center(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 1000),
+                      switchInCurve: Curves.easeInOutQuart,
+                      switchOutCurve: Curves.easeInOutQuart,
+                      transitionBuilder: (Widget child, Animation<double> animation) {
+                        final offsetAnimation = Tween<Offset>(
+                          begin: const Offset(1.0, 0.0),
+                          end: Offset.zero,
+                        ).animate(animation);
+
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: offsetAnimation,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Container(
+                        key: ValueKey<int>(_currentIndex),
+                        child: FittedBox(
+                          child: SharePoster(
+                            question: question,
+                            subject: subject,
+                            dayIndex: now.weekday,
+                            showCorrectAnswer: _showAnswer,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Top Progress Bar
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 15,
+                    left: 20,
+                    right: 60,
+                    child: Row(
+                      children: List.generate(_quizzes.length, (index) {
+                        bool isCurrent = index == _currentIndex;
+                        bool isDone = index < _currentIndex;
+
+                        return Expanded(
+                          child: Stack(
+                            children: [
+                              Container(
+                                height: 4,
+                                margin: const EdgeInsets.symmetric(horizontal: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 1000),
+                                curve: Curves.easeInOut,
+                                height: 4,
+                                margin: const EdgeInsets.symmetric(horizontal: 2),
+                                width: isDone ? 1000 : (isCurrent ? 1000 : 0), // Use large width for full fill
+                                decoration: BoxDecoration(
+                                  color: isDone || isCurrent ? Colors.white : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(2),
+                                  boxShadow: isCurrent ? [
+                                    const BoxShadow(color: Colors.white70, blurRadius: 4)
+                                  ] : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+
+                  // Professional Animated Timer (Modern Linear Style)
+                  if (!_showAnswer)
+                    Positioned(
+                      bottom: MediaQuery.of(context).padding.bottom + 80,
+                      left: 40,
+                      right: 40,
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "TIME REMAINING",
+                                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: _timerSeconds < 4 ? Colors.red.withOpacity(0.2) : Colors.white10,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  "0:0$_timerSeconds",
+                                  style: TextStyle(
+                                    color: _timerSeconds < 4 ? Colors.redAccent : Colors.amber, 
+                                    fontSize: 14, 
+                                    fontWeight: FontWeight.w900,
+                                    fontFeatures: const [ui.FontFeature.tabularFigures()],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Stack(
+                            children: [
+                              Container(
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ),
+                              TweenAnimationBuilder<double>(
+                                tween: Tween<double>(begin: 1.0, end: _timerSeconds / _maxTimerSeconds),
+                                duration: const Duration(milliseconds: 1000),
+                                builder: (context, value, child) {
+                                  return FractionallySizedBox(
+                                    widthFactor: value,
+                                    child: Container(
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: value < 0.4 
+                                            ? [Colors.redAccent, Colors.orangeAccent] 
+                                            : [Colors.amber, Colors.orange],
+                                        ),
+                                        borderRadius: BorderRadius.circular(3),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: (value < 0.4 ? Colors.redAccent : Colors.orange).withOpacity(0.5),
+                                            blurRadius: 8,
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Footer Call to Action (Fixed in video)
+                  Positioned(
+                    bottom: MediaQuery.of(context).padding.bottom + 20,
+                    left: 20,
+                    right: 20,
+                    child: Column(
+                      children: [
+                        const Text(
+                          "DOWNLOAD TNPSC MASTER APP",
+                          style: TextStyle(
+                            color: Colors.white70, 
+                            fontWeight: FontWeight.bold, 
+                            fontSize: 12, 
+                            letterSpacing: 3
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          "LINK IN BIO / PLAY STORE",
+                          style: AppTheme.getStyle(
+                            color: Colors.amber, 
+                            fontWeight: FontWeight.w900, 
+                            fontSize: 18
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
 
-          // Timer / Answer Reveal Center
-          if (!_showAnswer)
+          // ─── Non-Recordable Controls Overlay ───
+
+          // Recording Indicator
+          if (_isRecording)
             Positioned(
-              bottom: MediaQuery.of(context).size.height * 0.08,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black.withOpacity(0.7),
-                    border: Border.all(color: Colors.white, width: 3),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    "$_timerSeconds",
-                    style: const TextStyle(color: Colors.white, fontSize: 35, fontWeight: FontWeight.bold),
-                  ),
+              top: MediaQuery.of(context).padding.top + 35,
+              left: 25,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(color: Colors.red.withOpacity(0.3), blurRadius: 10)
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    BlinkingDot(),
+                    SizedBox(width: 8),
+                    Text(
+                      "LIVE RECORDING",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
+                    ),
+                  ],
                 ),
               ),
             ),
 
-          // Footer Call to Action
+          // Side Icons (Non-recordable)
           Positioned(
-            bottom: MediaQuery.of(context).padding.bottom + 20,
-            left: 20,
-            right: 20,
+            right: 15,
+            bottom: MediaQuery.of(context).size.height * 0.25,
             child: Column(
               children: [
-                const Text(
-                  "DOWNLOAD TNPSC MASTER APP",
-                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 2),
+                _buildSideIcon(
+                  Icons.videocam_rounded, 
+                  _isRecording ? "Stop" : "Record", 
+                  _isRecording ? Colors.red : Colors.white,
+                  onTap: _isRecording ? _stopRecordingAndSave : _startRecording,
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  "LINK IN BIO",
-                  style: AppTheme.getStyle(color: Colors.amber, fontWeight: FontWeight.w900, fontSize: 16),
+                const SizedBox(height: 25),
+                _buildSideIcon(
+                  Icons.share_rounded, 
+                  "Share", 
+                  Colors.white,
+                  onTap: _shareCurrentQuiz,
+                ),
+                const SizedBox(height: 25),
+                _buildSideIcon(
+                  Icons.refresh_rounded, 
+                  "Restart", 
+                  Colors.white,
+                  onTap: () {
+                    setState(() {
+                      _currentIndex = 0;
+                      _startSequence();
+                    });
+                  },
                 ),
               ],
             ),
           ),
 
-          // Close button
+          // Close button (Non-recordable)
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             right: 10,
@@ -281,7 +530,7 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
             ),
           ),
 
-          // End controls
+          // End controls (Non-recordable)
           if (_currentIndex == _quizzes.length - 1 && _showAnswer)
             Positioned.fill(
               child: Container(
@@ -293,12 +542,12 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
                       const Icon(Icons.celebration_rounded, color: Colors.amber, size: 80),
                       const SizedBox(height: 20),
                       Text(
-                        "Sequence Complete!",
+                        "Production Ready!",
                         style: AppTheme.getStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 10),
                       const Text(
-                        "Record your screen and share\nthis on YouTube / Instagram!",
+                        "Your professional video has been\nsaved to your device gallery!",
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white70),
                       ),
@@ -311,7 +560,7 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
                           });
                         },
                         icon: const Icon(Icons.refresh),
-                        label: const Text("Restart From Beginning"),
+                        label: const Text("Restart Sequence"),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blueAccent,
                           foregroundColor: Colors.white,
@@ -343,12 +592,50 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.black.withValues(alpha: 0.4),
+              border: icon == Icons.videocam_rounded && label == "Stop" 
+                ? Border.all(color: Colors.red, width: 2) 
+                : null,
             ),
             child: Icon(icon, color: color, size: 28),
           ),
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
         ],
+      ),
+    );
+  }
+}
+
+class BlinkingDot extends StatefulWidget {
+  const BlinkingDot({super.key});
+
+  @override
+  State<BlinkingDot> createState() => _BlinkingDotState();
+}
+
+class _BlinkingDotState extends State<BlinkingDot> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _controller,
+      child: Container(
+        width: 10,
+        height: 10,
+        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
       ),
     );
   }

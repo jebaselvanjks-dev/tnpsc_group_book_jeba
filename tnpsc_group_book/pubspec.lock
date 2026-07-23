@@ -464,6 +464,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_widget_recorder:
+    dependency: "direct main"
+    description:
+      name: flutter_widget_recorder
+      sha256: "0f75bfff3f4856c23f09770b34a35ff2d0472e8ac539b4a4362b262754ebf624"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0"
   font_awesome_flutter:
     dependency: "direct main"
     description:
@@ -472,6 +480,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "11.0.0"
+  gal:
+    dependency: "direct main"
+    description:
+      name: gal
+      sha256: "969598f986789127fd407a750413249e1352116d4c2be66e81837ffeeaafdfee"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.2"
   google_cloud:
     dependency: transitive
     description:
