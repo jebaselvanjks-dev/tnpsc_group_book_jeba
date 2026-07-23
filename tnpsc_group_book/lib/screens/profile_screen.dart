@@ -734,7 +734,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
-        pixelRatio: 4.0, // High density for sharp text and graphics
+        pixelRatio: 8.0, // Ultra HD (4K equivalent) for extreme clarity
         delay: const Duration(milliseconds: 500),
       );
 

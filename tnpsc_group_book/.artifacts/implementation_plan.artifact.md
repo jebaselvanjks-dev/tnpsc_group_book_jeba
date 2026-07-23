@@ -1,59 +1,42 @@
-# Implementation Plan - Admin Promote App (Video Format)
+# Implementation Plan - YouTube Shorts UI & Daily Topic Rotation
 
-The goal is to add a new function in the Admin Panel that displays 3 quizzes one by one in a "video-style" promotion format (Story/Reel style). Each quiz will show for 5 seconds, followed by the correct answer being revealed.
-
-## User Review Required
-
-> [!NOTE]
-> The "Video Format" will be implemented as a sequential UI animation. This allows the admin to use a screen recorder to capture the content for social media promotion.
+Enhance the "Promote App" feature to generate YouTube Shorts style content with automated daily topic rotation and high-impact UI elements.
 
 ## Proposed Changes
 
-### [Component] Widgets & UI Utilities
+### [Component] Firestore Service
 
-#### [NEW] [share_poster.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/widgets/share_poster.dart)
-- Extract the poster building logic from `ProfileScreen` into a standalone, reusable widget.
-- Add `showCorrectAnswer` parameter to highlight the correct option when needed.
-- Support `ignoreScale` for text to ensure consistent layout across devices during capture.
-
----
+#### [MODIFY] [firestore_service.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/services/firestore_service.dart)
+- Add `getRandomQuizzesByTopic(String topic, int limit)`:
+    - Queries the `quizzes` collection.
+    - Filters by `quiz_type` or `subject` matching the topic string.
+    - Returns a list of `Question` objects.
 
 ### [Component] Admin Features
 
-#### [NEW] [admin_promote_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/admin_promote_screen.dart)
-- Implement the "Video Format" sequence.
-- State management for:
-    - Current quiz index (1 to 3).
-    - Timer (5s countdown).
-    - "Answer Revealed" state.
-- Automated flow: Quiz 1 (5s) -> Reveal (2s) -> Quiz 2 (5s) -> Reveal (2s) -> Quiz 3 (5s) -> Reveal (End).
+#### [MODIFY] [admin_promote_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/admin_promote_screen.dart)
+- **Topic Rotation Logic**:
+    - Aggregate all `topicsTa` from `tnpscSubjects`.
+    - Select a topic based on `daysSinceEpoch % totalTopics`.
+- **YouTube Shorts UI**:
+    - Add a "DAILY TNPSC CHALLENGE" header.
+    - Add a "LIKE & SUBSCRIBE" overlay (semi-transparent).
+    - Add a "DOWNLOAD LINK IN BIO" footer.
+    - Improve the "Correct Answer" reveal with a larger, more celebratory animation.
+    - Add a "Current Topic" badge (e.g., "Today: இலக்கணம்").
+- **Share Integration**:
+    - Add a `triggerShare` call for the currently visible quiz.
 
-#### [MODIFY] [admin_panel_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/admin_panel_screen.dart)
-- Add a new management card: **"Promote App (Video Format)"**.
-- Icon: `Icons.video_library_rounded`.
-- Color: `Colors.redAccent`.
+### [Component] UI Widgets
 
----
-
-### [Component] Profile Screen Cleanup
-
-#### [MODIFY] [profile_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/profile_screen.dart)
-- Replace local `_buildSharePoster` and helper methods with the new `SharePoster` widget.
-- Ensure the share preview functionality remains intact.
+#### [MODIFY] [share_poster.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/widgets/share_poster.dart)
+- Add an optional `watermark` or `promotionText` parameter.
+- Refine layout for 9:16 aspect ratio recording.
 
 ## Verification Plan
 
-### Automated Tests
-- N/A (UI-centric visual flow).
-
 ### Manual Verification
-1. **Admin Panel**:
-    - Verify the new "Promote App" card exists.
-2. **Promote Screen**:
-    - Open the screen and ensure it fetches 3 unique quizzes.
-    - Observe the 5s timer and ensure the correct answer is highlighted after it ends.
-    - Verify it transitions smoothly to the next quiz.
-    - Verify the "Share Poster" style is maintained (colors, logos, subject branding).
-3. **Profile Share**:
-    - Go to Profile -> Share with Friends.
-    - Ensure the share poster still generates correctly without any layout breakage.
+1.  **Topic Check**: Open the screen and verify it says "Today's Topic: [Subject Name]".
+2.  **Rotation Check**: Change device date to tomorrow and verify the topic changes to the next one in the list.
+3.  **UI Check**: Ensure the "Subscribe" and "Download App" labels are visible and don't overlap with question content.
+4.  **Answer Check**: Verify the 5s timer still works and highlights the correct answer in green.

@@ -1355,6 +1355,49 @@ class FirestoreService {
     return subjectScores;
   }
 
+  // Fetch random quizzes by topic/subject for promotion
+  Future<List<Question>> getRandomQuizzesByTopic(String topic, {int limit = 3}) async {
+    try {
+      // 1. Try subject_questions collection first (static/master questions)
+      String safeId = topic.replaceAll('/', '-');
+      DocumentSnapshot masterDoc = await _db.collection('subject_questions').doc(safeId).get();
+      
+      List<Question> pool = [];
+      if (masterDoc.exists) {
+        List<dynamic> questionsData = masterDoc.get('questions');
+        pool.addAll(questionsData.map((q) {
+          var map = Map<String, dynamic>.from(q as Map);
+          map['subject'] = topic;
+          return Question.fromMap(map);
+        }));
+      }
+
+      // 2. Try quizzes collection (AI generated daily ones)
+      QuerySnapshot snap = await _db
+          .collection('quizzes')
+          .where('quiz_type', isEqualTo: topic.toLowerCase().replaceAll(' ', '_'))
+          .limit(10)
+          .get();
+      
+      for (var doc in snap.docs) {
+        List<dynamic> qData = doc.get('questions');
+        pool.addAll(qData.map((q) {
+           var map = Map<String, dynamic>.from(q as Map);
+           map['subject'] = topic;
+           return Question.fromMap(map);
+        }));
+      }
+
+      if (pool.isNotEmpty) {
+        pool.shuffle();
+        return pool.take(limit).toList();
+      }
+    } catch (e) {
+      AppLog.e("Error fetching random quizzes by topic: $e");
+    }
+    return [];
+  }
+
   // Upload all static subjects from models/subject.dart to Firestore
   Future<void> uploadAllSubjects() async {
     try {
