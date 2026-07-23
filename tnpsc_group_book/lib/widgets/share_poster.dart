@@ -475,8 +475,8 @@ class _SharePosterState extends State<SharePoster> with SingleTickerProviderStat
 
   Widget _buildPosterMockup() {
     return Container(
-      width: 120,
-      height: 250,
+      width: 100,
+      height: 210,
       decoration: BoxDecoration(
         color: const Color(0xFF030611),
         borderRadius: BorderRadius.circular(20),
@@ -628,7 +628,7 @@ class _SharePosterState extends State<SharePoster> with SingleTickerProviderStat
                 Text(
                   title,
                   style: AppTheme.getStyle(
-                      fontSize: 9.5,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                       ignoreScale: true),
@@ -636,7 +636,7 @@ class _SharePosterState extends State<SharePoster> with SingleTickerProviderStat
                 Text(
                   sub,
                   style: AppTheme.getStyle(
-                      fontSize: 8.5,
+                      fontSize: 10,
                       color: Colors.greenAccent,
                       fontWeight: FontWeight.w600,
                       ignoreScale: true),

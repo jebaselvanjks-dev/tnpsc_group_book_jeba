@@ -1,8 +1,5 @@
-- [x] Restructure `AdminPromoteScreen` for full recordable stack
-- [x] Implement smooth Slide & Fade transitions between quizzes
-- [x] Create animated Modern Linear Timer UI (with gradient & glow)
-- [x] Add smooth animations to Top Progress Bars
-- [x] Add answer reveal animations in `SharePoster`
-- [x] Add staggered entrance animations to all boxes in `SharePoster`
-- [x] Add professional typing and fade animations to Question/Option text
-- [x] Verify recording quality and gallery save
+- [x] Update `targetFps` and `pixelRatio` for better compatibility
+- [x] Add `_isSaving` state management
+- [x] Implement "Saving Video..." UI overlay
+- [x] Add robust logging to recording process
+- [ ] Verify recording and saving functionality

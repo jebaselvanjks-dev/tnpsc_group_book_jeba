@@ -32,6 +32,7 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
   List<Question> _quizzes = [];
   bool _isLoading = true;
   bool _isRecording = false;
+  bool _isSaving = false;
   int _currentIndex = 0;
   int _timerSeconds = 10;
   final int _maxTimerSeconds = 10;
@@ -137,12 +138,17 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
   }
 
   Future<void> _startRecording() async {
+    AppLog.d("VideoRec: Checking permissions...");
     final hasAccess = await Gal.hasAccess();
     if (!hasAccess) {
       final granted = await Gal.requestAccess();
-      if (!granted) return;
+      if (!granted) {
+        AppLog.d("VideoRec: Gallery access denied");
+        return;
+      }
     }
 
+    AppLog.d("VideoRec: Starting recording process...");
     setState(() {
       _isRecording = true;
       _currentIndex = 0;
@@ -152,20 +158,31 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
     try {
       await _recorderController.startRecording(
         'tnpsc_promo_${DateTime.now().millisecondsSinceEpoch}',
-        pixelRatio: 2.0, // Adjust for quality/performance
+        pixelRatio: 1.5, // 1.5 is safer for mobile encoders
       );
+      AppLog.d("VideoRec: Recording started successfully");
     } catch (e) {
-      AppLog.e("Error starting recording: $e");
+      AppLog.e("VideoRec: Error starting recording: $e");
       setState(() => _isRecording = false);
     }
   }
 
   Future<void> _stopRecordingAndSave() async {
+    AppLog.d("VideoRec: Stopping recording...");
+    setState(() {
+      _isRecording = false;
+      _isSaving = true;
+    });
+
     try {
       await _recorderController.stopRecording();
       final path = _recorderController.path;
+      AppLog.d("VideoRec: Recording stopped. Path: $path");
+      
       if (path != null) {
+        AppLog.d("VideoRec: Saving to gallery...");
         await Gal.putVideo(path);
+        AppLog.d("VideoRec: Saved to gallery successfully");
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -174,12 +191,19 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
             ),
           );
         }
+      } else {
+        AppLog.d("VideoRec: No video path found after stopping");
       }
     } catch (e) {
-      AppLog.e("Error saving recording: $e");
+      AppLog.e("VideoRec: Error saving recording: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to save video: $e"), backgroundColor: Colors.red),
+        );
+      }
     } finally {
       if (mounted) {
-        setState(() => _isRecording = false);
+        setState(() => _isSaving = false);
       }
     }
   }
@@ -322,7 +346,7 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
                                 height: 4,
                                 margin: const EdgeInsets.symmetric(horizontal: 2),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
@@ -365,7 +389,7 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: _timerSeconds < 4 ? Colors.red.withOpacity(0.2) : Colors.white10,
+                                  color: _timerSeconds < 4 ? Colors.red.withValues(alpha: 0.2) : Colors.white10,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
@@ -386,7 +410,7 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
                               Container(
                                 height: 6,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(3),
                                 ),
                               ),
@@ -407,7 +431,7 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
                                         borderRadius: BorderRadius.circular(3),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: (value < 0.4 ? Colors.redAccent : Colors.orange).withOpacity(0.5),
+                                            color: (value < 0.4 ? Colors.redAccent : Colors.orange).withValues(alpha: 0.5),
                                             blurRadius: 8,
                                           )
                                         ],
@@ -456,6 +480,33 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
           ),
 
           // ─── Non-Recordable Controls Overlay ───
+          
+          // Saving Overlay
+          if (_isSaving)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.8),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(color: Colors.amber),
+                      const SizedBox(height: 25),
+                      Text(
+                        "Saving Video...",
+                        style: AppTheme.getStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        "Optimizing MP4 for your gallery.\nPlease wait a moment.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white60, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
           // Recording Indicator
           if (_isRecording)

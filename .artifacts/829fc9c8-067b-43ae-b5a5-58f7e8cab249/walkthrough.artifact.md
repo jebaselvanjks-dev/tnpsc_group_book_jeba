@@ -1,32 +1,32 @@
-# Walkthrough - Professional Video Content Creator
+# Walkthrough - Optimized Video Recording with Feedback
 
-I have completely overhauled the **Promote App (Video Format)** screen. It is now a high-end tool capable of generating professional videos with cinematic animations and a modern UI.
+I have optimized the video recording system to ensure maximum compatibility across different Android devices and added clear visual feedback so you know exactly when your video is being saved.
 
-## Key Enhancements
+## Changes Made
 
-### 1. Modern Linear Timer (Alternative Design)
-- Replaced the circular timer with a **Modern Linear Progress Bar**.
-- Features a **Gradient Fill** (Amber to Orange) and a **Glow Effect**.
-- Automatically turns **Red** when the time is running out (less than 4 seconds), creating a sense of urgency.
-- Includes a digital countdown readout for clarity.
+### 1. Hardware Optimization
+- **Reduced FPS**: Changed target frame rate from 60 to **30 FPS**. This is the standard for mobile video and significantly reduces the load on the phone's video encoder.
+- **Safer Resolution**: Changed the pixel ratio from 2.0 to **1.5**. This ensures the generated video resolution doesn't exceed the hardware limits of some devices while still maintaining high quality.
 
-### 2. Cinematic Animations
-- **Typing Effect**: Questions now "type" themselves onto the screen in real-time.
-- **Staggered Box Entrance**: Elements (Header, Quiz, Sidebar, Footer) slide in vertically with a short delay between them.
-- **Smooth Switcher**: Transitioning between quizzes uses a high-quality **Slide & Fade** effect.
-- **Answer Pulse**: The correct answer pulsates when revealed to draw the viewer's attention.
+### 2. "Saving Video" UI Overlay
+- Added a professional **Saving Overlay** that appears immediately after recording stops.
+- It features a loading indicator and clear text: *"Optimizing MP4 for your gallery. Please wait a moment."*
+- This prevents users from navigating away while the video is still encoding in the background.
 
-### 3. Professional Recording
-- **Full Inclusion**: The MP4 video now includes the **Timer**, **Top Progress Bar**, and **Footer**, so your viewers see the full experience.
-- **Clean Output**: Control buttons (Record, Share, Close) are hidden in the video to keep it clean and professional.
-- **Gallery Save**: Direct MP4 saving to your device's Photos app via the `gal` library.
+### 3. Robust Error Tracking & Logging
+- Added detailed **Debug Logs** (prefixed with `VideoRec:`) to track:
+    - Permission checks.
+    - Recording start/stop events.
+    - File path generation.
+    - Gallery save status.
+- Added error snackbars to inform the user if something goes wrong during the saving process.
 
-## How to use for Social Media
-1. Go to **Admin Dashboard** > **Promote App (Video Format)**.
+## How to use
+1. Open **Admin Dashboard** > **Promote App (Video Format)**.
 2. Tap the **Record** button.
-3. The app will play through 3 quizzes with all the cinematic animations.
-4. Once finished, check your **Gallery**.
-5. Upload the video to **Instagram Reels or YouTube Shorts**!
+3. Once the 3-quiz sequence finishes, notice the **"Saving Video..."** screen.
+4. Wait for the success message **"Video saved to gallery! ✅"**.
+5. Your professional video is now ready in your Photos app!
 
 > [!TIP]
-> The new Linear Timer is specifically designed to fit the bottom area of mobile screens, leaving the center clear for the quiz content.
+> If you still face issues, checking the app's debug logs in Android Studio will now show specific `VideoRec:` markers explaining where the process stopped.
