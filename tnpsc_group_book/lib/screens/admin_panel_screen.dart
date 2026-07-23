@@ -11,6 +11,7 @@ import '../utils/app_log.dart';
 
 import 'admin_feedback_screen.dart';
 import 'admin_quiz_manage_screen.dart';
+import 'admin_promote_screen.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
@@ -132,13 +133,27 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               },
             ),
             const SizedBox(height: 12),
-            // Room Predefined Quizzes
+            // Bulk Generate Room Quizzes
             _buildAdminCard(
               context,
               title: "Bulk Generate Room Quizzes",
               icon: Icons.groups_rounded,
               color: Colors.pink,
               onTap: _showRoomQuizGenDialog,
+            ),
+            const SizedBox(height: 12),
+            // Promote App (Video Format)
+            _buildAdminCard(
+              context,
+              title: "Promote App (Video Format)",
+              icon: Icons.video_library_rounded,
+              color: Colors.redAccent,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AdminPromoteScreen()),
+                );
+              },
             ),
             if (_isGenerating) ...[
               const SizedBox(height: 24),

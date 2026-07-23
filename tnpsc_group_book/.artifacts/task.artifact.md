@@ -1,0 +1,5 @@
+- [x] Extract `SharePoster` widget to `lib/widgets/share_poster.dart`
+- [x] Update `ProfileScreen` to use the new `SharePoster` widget
+- [x] Implement `AdminPromoteScreen` in `lib/screens/admin_promote_screen.dart`
+- [x] Add "Promote App (Video Format)" to `AdminPanelScreen`
+- [x] Manual verification and cleanup
