@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
@@ -211,10 +210,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           : ValueListenableBuilder<double>(
                               valueListenable: AppTheme.fontSizeFactorNotifier,
                               builder: (context, factor, child) {
-                                return FaIcon(
-                                  FontAwesomeIcons.google, 
-                                  color: Colors.red,
-                                  size: 24 * factor,
+                                return Image.network(
+                                  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_\"G\"_logo.svg/1200px-Google_\"G\"_logo.svg.png',
+                                  height: 24 * factor,
+                                  width: 24 * factor,
+                                  errorBuilder: (context, error, stackTrace) => Icon(Icons.login, color: Colors.red, size: 24 * factor),
                                 );
                               },
                             ),

@@ -1,4 +1,6 @@
-- [x] Update `pixelRatio` to 8.0 in `AdminPromoteScreen` for 4K quality
-- [x] Update `pixelRatio` to 8.0 in `ProfileScreen` for 4K quality
-- [x] Refine `SharePoster` text scaling for ultra-high resolution
-- [x] Manual verification of image clarity
+- [x] Pre-cache share quiz background images in `AdminPromoteScreen`
+- [x] Add intro/outro delays in recording logic in `AdminPromoteScreen`
+- [x] Enhance transition animation in `AdminPromoteScreen` (Slide + Fade + Scale)
+- [x] Implement smooth 60fps timer progress in `SharePoster`
+- [x] Speed up question typing animation in `SharePoster`
+- [x] Verify overall "smoothness" and recording flow

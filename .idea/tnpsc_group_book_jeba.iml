@@ -111,6 +111,12 @@
       <excludeFolder url="file://$MODULE_DIR$/tnpsc_group_book/windows/flutter/ephemeral/.plugin_symlinks/url_launcher_windows/example/.dart_tool" />
       <excludeFolder url="file://$MODULE_DIR$/tnpsc_group_book/windows/flutter/ephemeral/.plugin_symlinks/url_launcher_windows/example/.pub" />
       <excludeFolder url="file://$MODULE_DIR$/tnpsc_group_book/windows/flutter/ephemeral/.plugin_symlinks/url_launcher_windows/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/tnpsc_group_book/windows/flutter/ephemeral/.plugin_symlinks/gal/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/tnpsc_group_book/windows/flutter/ephemeral/.plugin_symlinks/gal/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/tnpsc_group_book/windows/flutter/ephemeral/.plugin_symlinks/gal/build" />
+      <excludeFolder url="file://$MODULE_DIR$/tnpsc_group_book/windows/flutter/ephemeral/.plugin_symlinks/gal/example/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/tnpsc_group_book/windows/flutter/ephemeral/.plugin_symlinks/gal/example/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/tnpsc_group_book/windows/flutter/ephemeral/.plugin_symlinks/gal/example/build" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

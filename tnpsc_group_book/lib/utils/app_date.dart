@@ -38,4 +38,16 @@ class AppDate {
   static DateTime parse(String dateStr) {
     return DateFormat('yyyy-MM-dd', 'en_US').parse(dateStr);
   }
+
+  /// Returns a seed that changes every 6 hours and is consistent across all users.
+  static int getSlotSeed() {
+    final now = getISTNow();
+    // Use hours since epoch to create a global unique seed for every 6-hour block
+    return (now.millisecondsSinceEpoch / (1000 * 60 * 60 * 6)).floor();
+  }
+
+  /// Returns an index (0-3) representing the current 6-hour slot of the day.
+  static int getSlotOfDay() {
+    return (getISTNow().hour / 6).floor();
+  }
 }

@@ -20,6 +20,7 @@ class _AdBannerState extends State<AdBanner> {
   // final String adUnitId = 'ca-app-pub-3940256099942544/6300978111';
 
   /// Real Banner ID
+
   final String adUnitId = 'ca-app-pub-9952621231526514/4594388106';
 
   @override

@@ -700,10 +700,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
-      // 4. Deterministic selection: Pick one question that stays the same for 24 hours
-      // If pool came from getDailyRotatingQuiz, it usually has 1 item.
-      // If from fallback, it has many. This ensures variety across days.
-      final question = pool[daysSinceEpoch % pool.length];
+      // 4. Deterministic selection: Pick one question that stays the same for 6 hours
+      int slotSeed = AppDate.getSlotSeed();
+      final question = pool[slotSeed % pool.length];
 
       // 5. Find the actual Subject object for colors/branding
       Subject subject = tnpscSubjects[0]; 
@@ -729,7 +728,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               data: const MediaQueryData().copyWith(textScaler: const TextScaler.linear(0.9)),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 400),
-                child: SharePoster(question: question, subject: subject, dayIndex: now.weekday),
+                child: SharePoster(
+                  question: question, 
+                  subject: subject, 
+                  dayIndex: (slotSeed % 7) + 1,
+                ),
               ),
             ),
           ),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hive/hive.dart';
 import 'package:tnpsc_group_book/utils/app_log.dart';
 import 'package:tnpsc_group_book/widgets/bilingual_text.dart';
 import '../models/question.dart';
@@ -50,6 +51,7 @@ class QuizScreen extends StatefulWidget {
 class _QuizScreenState extends State<QuizScreen> {
   int _currentQuestionIndex = 0;
   List<int?> _selectedAnswers = [];
+  List<bool> _unlockedHints = [];
   bool _isLoading = true;
   List<Question> _loadedQuestions = [];
   List<Question> _visibleQuestions = [];
@@ -182,6 +184,7 @@ class _QuizScreenState extends State<QuizScreen> {
         int initialCount = _loadedQuestions.length > limitCount ? limitCount : _loadedQuestions.length;
         _visibleQuestions = _loadedQuestions.sublist(0, initialCount);
         _selectedAnswers = List.filled(_loadedQuestions.length, null);
+        _unlockedHints = List.filled(_loadedQuestions.length, false);
         _isLoading = false;
         _stopwatch.start();
         _startTimer();
@@ -212,6 +215,7 @@ class _QuizScreenState extends State<QuizScreen> {
       int initialCount = _loadedQuestions.length > limitCount ? limitCount : _loadedQuestions.length;
       _visibleQuestions = _loadedQuestions.sublist(0, initialCount);
       _selectedAnswers = List.filled(_loadedQuestions.length, null);
+      _unlockedHints = List.filled(_loadedQuestions.length, false);
       _isLoading = false;
       _stopwatch.start();
       _startTimer();
@@ -362,7 +366,59 @@ class _QuizScreenState extends State<QuizScreen> {
     return q.ttsText;
   }
 
+  Future<void> _unlockHint(int index) async {
+    final int cost = 30;
+    final int currentPoints = Hive.box(HiveService.userBoxName).get('totalScore', defaultValue: 0) as int;
 
+    if (currentPoints < cost) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLanguage.getString('insufficient_points')),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(AppLanguage.getString('show_hint'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(AppLanguage.getString('hint_cost_desc')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppLanguage.getString('cancel'), style: TextStyle(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(AppLanguage.getString('unlock_now'), style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await RewardService.deductPoints(cost);
+      setState(() {
+        _unlockedHints[index] = true;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLanguage.languageNotifier.value == 'ta' ? "விளக்கம் திறக்கப்பட்டது!" : "Explanation Unlocked!"),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    }
+  }
 
   void _nextQuestion() {
     if (_currentQuestionIndex < _visibleQuestions.length - 1) {
@@ -874,42 +930,66 @@ class _QuizScreenState extends State<QuizScreen> {
                                   ),
                                   const SizedBox(height: 10),
                                   if (_selectedAnswers[_currentQuestionIndex] != null)
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      margin: const EdgeInsets.only(bottom: 24),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.info_outline_rounded, color: Colors.blue, size: 20),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                AppLanguage.getString('explanation'),
-                                                style: AppTheme.getStyle(
+                                    _unlockedHints[_currentQuestionIndex]
+                                        ? Container(
+                                            padding: const EdgeInsets.all(16),
+                                            margin: const EdgeInsets.only(bottom: 24),
+                                            decoration: BoxDecoration(
+                                              color: Colors.blue.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(16),
+                                              border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    const Icon(Icons.info_outline_rounded, color: Colors.blue, size: 20),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      AppLanguage.getString('explanation'),
+                                                      style: AppTheme.getStyle(
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.blue,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 8),
+                                                BilingualText(
+                                                  en: question.explanationEn,
+                                                  ta: question.explanationTa,
+                                                  legacy: question.explanation,
                                                   fontSize: 14,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.blue,
+                                                  color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        : Padding(
+                                            padding: const EdgeInsets.only(bottom: 20.0),
+                                            child: Center(
+                                              child: ElevatedButton.icon(
+                                                onPressed: () => _unlockHint(_currentQuestionIndex),
+                                                icon: const Icon(Icons.lightbulb_outline_rounded, size: 20),
+                                                label: Text(
+                                                  "${AppLanguage.getString('show_hint')} (30 pts)",
+                                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                                ),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                                                  foregroundColor: Colors.blue,
+                                                  elevation: 0,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    side: const BorderSide(color: Colors.blue, width: 1),
+                                                  ),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                                 ),
                                               ),
-                                            ],
+                                            ),
                                           ),
-                                          const SizedBox(height: 8),
-                                          BilingualText(
-                                            en: question.explanationEn,
-                                            ta: question.explanationTa,
-                                            legacy: question.explanation,
-                                            fontSize: 14,
-                                            color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
                                   ...List.generate(_shuffledIndicesFor(_currentQuestionIndex).length, (i) {
                                     final index = _shuffledIndicesFor(_currentQuestionIndex)[i];
                                     final selected = _selectedAnswers[_currentQuestionIndex];

@@ -62,17 +62,24 @@ Future<void> initializeServices() async {
   
   // 1. Critical initializations (Must be ready before Home screen)
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    // Run Firebase and Hive init in parallel to speed up startup
+    await Future.wait([
+      (() async {
+        try {
+          await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform,
+          );
+        } catch (e) {
+          AppLog.e("AI_DEBUG: Firebase init error: $e");
+        }
+      })(),
+      HiveService.init(),
+    ]);
   } catch (e) {
-    AppLog.e("AI_DEBUG: Firebase init error: $e");
+    AppLog.e("AI_DEBUG: Service init error: $e");
   }
-  
-  // Initialize Hive immediately as it's needed for Auth, UI state and Theme
-  await HiveService.init();
 
-  // Load preferences from Hive
+  // Load preferences from Hive (Requires Hive boxes to be open)
   AppLanguage.init();
   AppTheme.init();
   

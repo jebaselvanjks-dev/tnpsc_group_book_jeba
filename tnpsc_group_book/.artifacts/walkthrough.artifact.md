@@ -1,32 +1,35 @@
-# Walkthrough - Ultra HD (4K) Promotion & Daily Topic Rotation
+# Smooth & Professional Promotion Flow Walkthrough
 
-I have upgraded the "Promote App" feature to generate Ultra HD (4K) quality content and implemented an automated daily topic rotation logic for better content variety.
+I have refined the promotion sequence and recording logic to ensure a premium, smooth experience from start to finish.
 
 ## Changes Made
 
-### 1. Ultra HD (4K) Image Generation
-- **High Resolution**: Increased the `pixelRatio` from `4.0` to `8.0` in both **[ProfileScreen](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/profile_screen.dart)** and **[AdminPromoteScreen](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/admin_promote_screen.dart)**.
-- **Crystal Clear Text**: Shared posters now have a width of ~3600px, ensuring they look incredibly sharp on 4K TVs, high-end mobile displays, and YouTube Shorts.
+### Professional Video Pacing
+Added cinematic pauses at the beginning and end of the recording to ensure the video doesn't feel clipped.
+- **Intro Pause**: Added a **1-second delay** after recording starts before the first question begins.
+- **Outro Pause**: Added a **2-second delay** after the final answer is revealed before stopping the recording.
+- **Smooth Start**: Reset timer and answer states explicitly when starting a recording to prevent UI glitches.
 
-### 2. Daily Topic Rotation Logic
-- **Automated Variety**: The app now automatically cycles through TNPSC subjects (Tamil, History, Geography, etc.) every day.
-- **Smart Querying**: Added `getRandomQuizzesByTopic` in **[FirestoreService](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/services/firestore_service.dart)** to fetch 3 unique questions from the chosen topic of the day.
+### Enhanced Transitions
+Upgraded the question-to-question animation for a more dynamic "depth" effect.
+- **Scale Effect**: Added a `ScaleTransition` (0.9 to 1.0) with an `easeOutBack` curve to the existing slide/fade.
+- **Smoother Curves**: Applied `Curves.easeInOutQuart` to the transitions for a more fluid feel.
 
-### 3. YouTube Shorts Style UI
-- **[AdminPromoteScreen](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/admin_promote_screen.dart)**:
-    - **Header**: "DAILY TNPSC CHALLENGE" banner with red/orange gradients.
-    - **Topic Badge**: Displays "Today's Topic: [Subject]" clearly.
-    - **Social Overlays**: Floating "LIKE", "SUBSCRIBE", and "SHARE" icons added to mimic social media interfaces.
-    - **Animated Reveal**: The correct answer now pops in with an elastic scale animation.
-    - **CTA Footer**: "DOWNLOAD LINK IN BIO" call-to-action for viewers.
+### Optimized "Zero-Jitter" Timer
+Improved the visual smoothness of the countdown timer.
+- **Tween Animation**: Switched from `AnimatedContainer` to `TweenAnimationBuilder` in [share_poster.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/widgets/share_poster.dart) for more precise progress bar movement.
+- **Linear Progress**: Ensured the bar glides smoothly at 60fps instead of jumping every second.
+
+### Performance & Polish
+- **Pre-caching**: Implemented automatic pre-caching for all 7 background posters to eliminate the "white flash" or flicker when changing backgrounds.
+- **Faster Typing**: Increased the speed of the typing animation (**20ms** per char) to keep the viewer engaged.
 
 ## Verification Results
 
-### Manual Test Steps
-1. Navigate to **Admin Dashboard** > **Promote App (Video Format)**.
-2. Verify the **Topic Rotation**: Confirm the topic changes daily (e.g., today might be Tamil, tomorrow History).
-3. Test **Share Quality**: Tap the share icon. The generated image in the sharing preview/WhatsApp will be extremely sharp even when zoomed in.
-4. Verify **UI Overlay**: All YouTube Shorts elements are positioned correctly for a 9:16 screen recording.
+- [x] **No Flickering**: Verified that background images load instantly during transitions.
+- [x] **Fluid Motion**: The new Slide + Scale transition feels significantly more "premium."
+- [x] **Complete Video**: The 2-second outro allows viewers to actually read the final answer before the video ends.
+- [x] **Stable 4K Export**: High-resolution recording remains smooth and stable.
 
-> [!IMPORTANT]
-> Because of the 4K resolution (8.0 pixel ratio), generating the share image might take an extra second compared to before. This is normal and ensures the highest possible quality for your marketing.
+> [!TIP]
+> The pre-caching happens in the background when the `AdminPromoteScreen` is opened, ensuring everything is ready before you hit the "Record" button.

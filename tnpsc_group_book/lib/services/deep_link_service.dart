@@ -106,15 +106,15 @@ class DeepLinkService with WidgetsBindingObserver {
           pendingRoomCode.value = code;
           AppLog.d("DeepLinkService: SUCCESS! Extracted Code: ${pendingRoomCode.value}");
           
-          scaffoldMessengerKey.currentState?.showSnackBar(
-            SnackBar(
-              content: Text(AppLanguage.languageNotifier.value == 'ta' 
-                ? "கோட் கண்டறியப்பட்டது! கோட்: $code"
-                : "Code Detected! Code: $code"),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+          // scaffoldMessengerKey.currentState?.showSnackBar(
+          //   SnackBar(
+          //     content: Text(AppLanguage.languageNotifier.value == 'ta'
+          //       ? "கோட் கண்டறியப்பட்டது! கோட்: $code"
+          //       : "Code Detected! Code: $code"),
+          //     backgroundColor: Colors.green,
+          //     duration: const Duration(seconds: 3),
+          //   ),
+          // );
           return; // Stop here if code is found
         }
       }

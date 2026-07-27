@@ -61,6 +61,18 @@ class RewardService {
     }
   }
 
+  /// Deducts points from the user's total
+  static Future<void> deductPoints(int points) async {
+    try {
+      if (points <= 0) return;
+      final fs = FirestoreService();
+      await fs.incrementUserPoints(-points);
+      AppLog.d('AI_DEBUG: Deducted $points points');
+    } catch (e) {
+      AppLog.d('AI_DEBUG: Failed to deduct points: $e');
+    }
+  }
+
   static void showRewardAdIfAllowed({
     required Function onRewardEarned, 
     int? fixedRewardAmount, 

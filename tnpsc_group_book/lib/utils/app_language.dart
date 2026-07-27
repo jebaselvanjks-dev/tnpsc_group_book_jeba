@@ -276,6 +276,14 @@ class AppLanguage {
         return ta ? 'உங்கள் பதில் (சரி):' : 'Your Answer (Correct):';
       case 'explanation':
         return ta ? 'விளக்கம்:' : 'Explanation:';
+      case 'show_hint':
+        return ta ? 'விளக்கத்தைக் காட்டு' : 'Show Hint';
+      case 'hint_cost_desc':
+        return ta ? 'விளக்கத்தைக் காண 30 புள்ளிகள் கழிக்கப்படும்.' : '30 points will be deducted to view the explanation.';
+      case 'unlock_now':
+        return ta ? 'திறக்கவும்' : 'Unlock Now';
+      case 'insufficient_points':
+        return ta ? 'உங்களிடம் போதுமான புள்ளிகள் இல்லை.' : 'You do not have enough points.';
       case 'no_bookmarks':
         return ta ? 'புத்தகக் குறிகள் எதுவும் இல்லை!' : 'No bookmarks yet!';
       case 'exam':

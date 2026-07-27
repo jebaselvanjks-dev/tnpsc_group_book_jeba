@@ -1,0 +1,4 @@
+- [x] Upgrade Video Recording to 4K Quality
+    - [x] Update `targetFps` to 60 in `WidgetRecorderController`
+    - [x] Update `pixelRatio` to 4.8 in `startRecording`
+- [x] Verify 4K output resolution

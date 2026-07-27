@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:math';
 import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 import '../models/question.dart';
@@ -355,18 +356,17 @@ class FirestoreService {
     return HiveService.getQuestions("Daily Quiz");
   }
 
-  // Fetch a deterministic rotating quiz based on the current day
+  // Fetch a deterministic rotating quiz based on the current time slot (Every 6 Hours)
   // Rotation: General Tamil -> General Studies -> Aptitude
-  // The question returned is also deterministic based on the date to stay "sticky" for 24 hours
+  // The question returned is deterministic based on the slot seed to stay consistent for all users
   Future<List<Question>> getDailyRotatingQuiz({bool isAdmin = false}) async {
     try {
-      DateTime now = AppDate.getISTNow();
       List<String> types = ['general_tamil', 'general_studies', 'aptitude'];
-      int daysSinceEpoch = now.difference(DateTime(1970, 1, 1)).inDays;
+      int slotSeed = AppDate.getSlotSeed();
 
-      // Regular User & Admin: Deterministic rotation based on date
-      String targetType = types[daysSinceEpoch % types.length];
-      AppLog.d("FirestoreService: Today's rotating quiz type: $targetType");
+      // Deterministic rotation based on 6-hour slot
+      String targetType = types[slotSeed % types.length];
+      AppLog.d("FirestoreService: Slot-based rotating quiz type: $targetType (Seed: $slotSeed)");
 
       QuerySnapshot snap = await _db
           .collection('quizzes')
@@ -384,12 +384,12 @@ class FirestoreService {
           return dateB.compareTo(dateA); 
         });
         
-        int docIndex = daysSinceEpoch % docsList.length;
+        int docIndex = slotSeed % docsList.length;
         var doc = docsList[docIndex];
         List<dynamic> questionsData = doc.get('questions');
         
         if (questionsData.isNotEmpty) {
-          int qIndex = daysSinceEpoch % questionsData.length;
+          int qIndex = slotSeed % questionsData.length;
           var selectedQMap = Map<String, dynamic>.from(questionsData[qIndex] as Map);
           selectedQMap['quiz_type'] = targetType;
           selectedQMap['subject'] = targetType; 
@@ -398,7 +398,6 @@ class FirestoreService {
       }
 
       // 2. Fallback: If no quiz of that type found, try any recent daily quiz
-      String targetTypeFallback = types[daysSinceEpoch % types.length];
       AppLog.d("FirestoreService: No quiz found for rotation. Falling back to type=daily_quiz...");
       QuerySnapshot fallbackSnap = await _db
           .collection('quizzes')
@@ -415,23 +414,20 @@ class FirestoreService {
           String dateB = b.get('date') ?? "";
           return dateB.compareTo(dateA); // Descending
         });
-        int docIndex = daysSinceEpoch % docsList.length;
+        int docIndex = slotSeed % docsList.length;
         var doc = docsList[docIndex];
         List<dynamic> questionsData = doc.get('questions');
         
         if (questionsData.isNotEmpty) {
-          int qIndex = daysSinceEpoch % questionsData.length;
+          int qIndex = slotSeed % questionsData.length;
           var selectedQMap = Map<String, dynamic>.from(questionsData[qIndex] as Map);
           
-          // Try to get quiz_type from doc or fallback to targetType
-          String qType = targetTypeFallback;
+          String qType = targetType;
           try { 
-            qType = doc.get('quiz_type') ?? targetTypeFallback;
+            qType = doc.get('quiz_type') ?? targetType;
           } catch (_) {}
 
           selectedQMap['quiz_type'] = qType;
-          AppLog.d("FirestoreService: Fallback question selected with type: $qType");
-
           return [Question.fromMap(selectedQMap)];
         }
       }
@@ -439,17 +435,14 @@ class FirestoreService {
       AppLog.e("Error fetching daily rotating quiz: $e");
     }
 
-    // 3. Final Fallback to today's standard daily quiz
-    AppLog.d("FirestoreService: All specific queries failed. Fetching standard Daily Quiz...");
+    // 3. Final Fallback to standard daily quiz logic
     try {
       List<Question> dailyQuiz = await getDailyQuiz();
       if (dailyQuiz.isNotEmpty) {
-        // Deterministically pick one question
-        int daysSinceEpoch = AppDate.getISTNow().difference(DateTime(1970, 1, 1)).inDays;
-        int qIndex = daysSinceEpoch % dailyQuiz.length;
+        int slotSeed = AppDate.getSlotSeed();
+        int qIndex = slotSeed % dailyQuiz.length;
         Question q = dailyQuiz[qIndex];
         
-        // Manual override for display
         return [Question(
           id: q.id,
           question: q.question,
@@ -457,7 +450,7 @@ class FirestoreService {
           correctOptionIndex: q.correctOptionIndex,
           explanation: q.explanation,
           subject: q.subject,
-          quizType: 'general_tamil', // Default fallback type
+          quizType: 'general_tamil', 
           questionEn: q.questionEn,
           questionTa: q.questionTa,
           optionsEn: q.optionsEn,
@@ -1356,7 +1349,8 @@ class FirestoreService {
   }
 
   // Fetch random quizzes by topic/subject for promotion
-  Future<List<Question>> getRandomQuizzesByTopic(String topic, {int limit = 3}) async {
+  // Accepts an optional seed for deterministic synchronized shuffling
+  Future<List<Question>> getRandomQuizzesByTopic(String topic, {int limit = 3, int? seed}) async {
     try {
       // 1. Try subject_questions collection first (static/master questions)
       String safeId = topic.replaceAll('/', '-');
@@ -1389,7 +1383,11 @@ class FirestoreService {
       }
 
       if (pool.isNotEmpty) {
-        pool.shuffle();
+        if (seed != null) {
+          pool.shuffle(Random(seed));
+        } else {
+          pool.shuffle();
+        }
         return pool.take(limit).toList();
       }
     } catch (e) {

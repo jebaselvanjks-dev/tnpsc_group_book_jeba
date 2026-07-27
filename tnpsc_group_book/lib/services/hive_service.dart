@@ -17,9 +17,13 @@ class HiveService {
     if (isInitialized) return;
     
     await Hive.initFlutter();
-    await Hive.openBox(userBoxName);
-    await Hive.openBox(questionsBoxName);
-    await Hive.openBox(studyMaterialBoxName);
+    
+    // Parallelize opening boxes for faster startup
+    await Future.wait([
+      Hive.openBox(userBoxName),
+      Hive.openBox(questionsBoxName),
+      Hive.openBox(studyMaterialBoxName),
+    ]);
     
     isInitialized = true;
     

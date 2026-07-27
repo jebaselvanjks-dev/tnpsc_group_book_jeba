@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import '../models/question.dart';
@@ -10,6 +11,9 @@ class SharePoster extends StatefulWidget {
   final Subject subject;
   final int dayIndex;
   final bool showCorrectAnswer;
+  final int? timerSeconds;
+  final int? maxTimerSeconds;
+  final bool showFooter;
 
   const SharePoster({
     super.key,
@@ -17,6 +21,9 @@ class SharePoster extends StatefulWidget {
     required this.subject,
     required this.dayIndex,
     this.showCorrectAnswer = false,
+    this.timerSeconds,
+    this.maxTimerSeconds,
+    this.showFooter = false,
   });
 
   @override
@@ -61,8 +68,8 @@ class _SharePosterState extends State<SharePoster> with SingleTickerProviderStat
     const Color goldColor = Color(0xFFFFD700);
 
     return Container(
-      width: 450,
-      height: 800,
+      width: 475,
+      height: 900,
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(color: Colors.black),
       child: Stack(
@@ -109,12 +116,121 @@ class _SharePosterState extends State<SharePoster> with SingleTickerProviderStat
                       ],
                     ),
                   ),
+                  if (widget.timerSeconds != null && !widget.showCorrectAnswer)
+                    Padding(
+                      padding: const EdgeInsets.all(15.0),
+                      child: _buildPosterTimer(),
+                    ),
+                  if (widget.showFooter)
+                    Padding(
+                      padding: const EdgeInsets.all(15.0),
+                      child: _buildPosterFooter(),
+                    ),
                 ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPosterTimer() {
+    final int seconds = widget.timerSeconds ?? 0;
+    final int maxSeconds = widget.maxTimerSeconds ?? 10;
+    final double progress = seconds / maxSeconds;
+
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "TIME REMAINING",
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: seconds < 4 ? Colors.red.withValues(alpha: 0.2) : Colors.white10,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                "0:0$seconds",
+                style: TextStyle(
+                  color: seconds < 4 ? Colors.redAccent : Colors.amber,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  fontFeatures: const [ui.FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Stack(
+          children: [
+            Container(
+              height: 8,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            TweenAnimationBuilder<double>(
+              duration: const Duration(seconds: 1),
+              tween: Tween<double>(begin: progress, end: progress),
+              curve: Curves.linear,
+              builder: (context, value, child) {
+                return Container(
+                  width: 370 * value, // Based on design width
+                  height: 8,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: value < 0.4
+                          ? [Colors.redAccent, Colors.orangeAccent]
+                          : [Colors.amber, Colors.orange],
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (value < 0.4 ? Colors.redAccent : Colors.orange)
+                            .withValues(alpha: 0.5),
+                        blurRadius: 8,
+                      )
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPosterFooter() {
+    return Column(
+      children: [
+        const Text(
+          "DOWNLOAD TNPSC MASTER APP",
+          style: TextStyle(
+              color: Colors.white70,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              letterSpacing: 3),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          "LINK IN BIO / PLAY STORE",
+          style: AppTheme.getStyle(
+              color: Colors.amber, fontWeight: FontWeight.w900, fontSize: 24, ignoreScale: true),
+        ),
+      ],
     );
   }
 
@@ -303,7 +419,7 @@ class _SharePosterState extends State<SharePoster> with SingleTickerProviderStat
                             height: 1.3,
                             ignoreScale: true,
                           ),
-                          speed: const Duration(milliseconds: 30),
+                          speed: const Duration(milliseconds: 20),
                         ),
                       ],
                       totalRepeatCount: 1,
@@ -323,7 +439,7 @@ class _SharePosterState extends State<SharePoster> with SingleTickerProviderStat
                                 height: 1.3,
                                 ignoreScale: true,
                               ),
-                              speed: const Duration(milliseconds: 30),
+                              speed: const Duration(milliseconds: 20),
                             ),
                           ],
                           totalRepeatCount: 1,
@@ -381,7 +497,7 @@ class _SharePosterState extends State<SharePoster> with SingleTickerProviderStat
                           width: highlight ? 2 : 1,
                         ),
                         boxShadow: highlight ? [
-                          BoxShadow(color: Colors.green.withOpacity(0.2), blurRadius: 8)
+                          BoxShadow(color: Colors.green.withValues(alpha: 0.2), blurRadius: 8)
                         ] : null,
                       ),
                       child: Row(

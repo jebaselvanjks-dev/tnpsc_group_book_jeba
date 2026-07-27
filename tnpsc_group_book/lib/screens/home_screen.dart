@@ -116,78 +116,80 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Header Section (Greeting & Stats)
-                          Container(
-                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                          RepaintBoundary(
+                            child: Container(
+                              padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "${AppLanguage.getString('greeting')}, \n$userName! 👋",
+                                          style: AppTheme.getStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.white : AppTheme.textMainColor,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          AppLanguage.getString('ready_to_crack'),
+                                          style: AppTheme.getStyle(
+                                            fontSize: 14,
+                                            color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Text(
-                                        "${AppLanguage.getString('greeting')}, \n$userName! 👋",
-                                        style: AppTheme.getStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark ? Colors.white : AppTheme.textMainColor,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                      ValueListenableBuilder(
+                                        valueListenable: Hive.box(HiveService.userBoxName).listenable(),
+                                        builder: (context, box, child) {
+                                          int s = box.get('streak', defaultValue: streak) as int;
+                                          // Broken streak check for real-time Hive listener
+                                          String lastActive = box.get('lastActiveDate', defaultValue: "") as String;
+                                          String today = AppDate.getTodayString();
+                                          if (lastActive != "" && lastActive != today) {
+                                            try {
+                                              DateTime lastDate = AppDate.parse(lastActive);
+                                              DateTime istNow = AppDate.getISTNow();
+                                              int diff = DateTime(istNow.year, istNow.month, istNow.day).difference(lastDate).inDays;
+                                              if (diff > 1) s = 0;
+                                            } catch (_) {}
+                                          }
+
+                                          return _buildHeaderStat(
+                                            icon: Icons.local_fire_department_rounded,
+                                            label: "$s ${AppLanguage.getString('days')}",
+                                            colors: [Colors.orange, Colors.deepOrange],
+                                          );
+                                        },
                                       ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        AppLanguage.getString('ready_to_crack'),
-                                        style: AppTheme.getStyle(
-                                          fontSize: 14,
-                                          color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
-                                        ),
-                                      ),
+                                      const SizedBox(height: 12),
+                                      ValueListenableBuilder(
+                                          valueListenable: Hive.box(
+                                            HiveService.userBoxName,
+                                          ).listenable(),
+                                          builder: (context, box, child) {
+                                            int points =
+                                            box.get('totalScore', defaultValue: totalPoints) as int;
+                                            return _buildHeaderStat(
+                                              icon: Icons.stars_rounded,
+                                              label: "$points pts",
+                                              colors: [Colors.blue, Colors.indigo],
+                                            );})
                                     ],
                                   ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    ValueListenableBuilder(
-                                      valueListenable: Hive.box(HiveService.userBoxName).listenable(),
-                                      builder: (context, box, child) {
-                                        int s = box.get('streak', defaultValue: streak) as int;
-                                        // Broken streak check for real-time Hive listener
-                                        String lastActive = box.get('lastActiveDate', defaultValue: "") as String;
-                                        String today = AppDate.getTodayString();
-                                        if (lastActive != "" && lastActive != today) {
-                                          try {
-                                            DateTime lastDate = AppDate.parse(lastActive);
-                                            DateTime istNow = AppDate.getISTNow();
-                                            int diff = DateTime(istNow.year, istNow.month, istNow.day).difference(lastDate).inDays;
-                                            if (diff > 1) s = 0;
-                                          } catch (_) {}
-                                        }
-
-                                        return _buildHeaderStat(
-                                          icon: Icons.local_fire_department_rounded,
-                                          label: "$s ${AppLanguage.getString('days')}",
-                                          colors: [Colors.orange, Colors.deepOrange],
-                                        );
-                                      },
-                                    ),
-                                    const SizedBox(height: 12),
-                                    ValueListenableBuilder(
-                                        valueListenable: Hive.box(
-                                          HiveService.userBoxName,
-                                        ).listenable(),
-                                        builder: (context, box, child) {
-                                          int points =
-                                          box.get('totalScore', defaultValue: totalPoints) as int;
-                                          return _buildHeaderStat(
-                                            icon: Icons.stars_rounded,
-                                            label: "$points pts",
-                                            colors: [Colors.blue, Colors.indigo],
-                                          );})
-                                  ],
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
 

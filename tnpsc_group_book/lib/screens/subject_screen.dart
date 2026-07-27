@@ -294,7 +294,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
                               columnCount: 2,
                               child: ScaleAnimation(
                                 child: FadeInAnimation(
-                                  child: _SubjectCard(subject: subject),
+                                  child: RepaintBoundary(child: _SubjectCard(subject: subject)),
                                 ),
                               ),
                             );
