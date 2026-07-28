@@ -367,67 +367,16 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Future<void> _unlockHint(int index) async {
-    final int cost = 40;
+    final int cost = 30;
     final int currentPoints = Hive.box(HiveService.userBoxName).get('totalScore', defaultValue: 0) as int;
 
     if (currentPoints < cost) {
-      // Show dialog to watch ad if points are insufficient
-      final bool? watchAd = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(
-            AppLanguage.languageNotifier.value == 'ta' ? 'புள்ளிகள் போதவில்லை' : 'Insufficient Points',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: Text(
-            AppLanguage.languageNotifier.value == 'ta' 
-              ? 'விளக்கத்தைக் காண ஒரு விளம்பரத்தைப் பார்க்க விரும்புகிறீர்களா?' 
-              : 'Would you like to watch an ad to unlock the explanation for free?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(AppLanguage.getString('cancel'), style: TextStyle(color: Colors.grey[600])),
-            ),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.pop(context, true),
-              icon: const Icon(Icons.play_circle_fill, color: Colors.white),
-              label: Text(
-                AppLanguage.languageNotifier.value == 'ta' ? 'விளம்பரம் பார்' : 'Watch Ad',
-                style: const TextStyle(color: Colors.white),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-          ],
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLanguage.getString('insufficient_points')),
+          backgroundColor: Colors.redAccent,
         ),
       );
-
-      if (watchAd == true) {
-        RewardService.showRewardAd(
-          onRewardEarned: () {
-            setState(() {
-              _unlockedHints[index] = true;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(AppLanguage.languageNotifier.value == 'ta' ? "விளக்கம் திறக்கப்பட்டது!" : "Explanation Unlocked!"),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          },
-          onFailure: () {
-            // Unlock anyway if ad fails to load, to be user friendly
-            setState(() {
-              _unlockedHints[index] = true;
-            });
-          }
-        );
-      }
       return;
     }
 
@@ -436,11 +385,7 @@ class _QuizScreenState extends State<QuizScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(AppLanguage.getString('show_hint'), style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Text(
-          AppLanguage.languageNotifier.value == 'ta'
-            ? 'விளக்கத்தைக் காண 40 புள்ளிகள் கழிக்கப்படும்.'
-            : '40 points will be deducted to view the explanation.'
-        ),
+        content: Text(AppLanguage.getString('hint_cost_desc')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -1029,7 +974,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                                 onPressed: () => _unlockHint(_currentQuestionIndex),
                                                 icon: const Icon(Icons.lightbulb_outline_rounded, size: 20),
                                                 label: Text(
-                                                  "${AppLanguage.getString('show_hint')} (40 pts)",
+                                                  "${AppLanguage.getString('show_hint')} (30 pts)",
                                                   style: const TextStyle(fontWeight: FontWeight.bold),
                                                 ),
                                                 style: ElevatedButton.styleFrom(
