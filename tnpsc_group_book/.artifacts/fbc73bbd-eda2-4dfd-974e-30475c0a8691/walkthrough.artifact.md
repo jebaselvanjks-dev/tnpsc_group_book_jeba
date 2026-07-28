@@ -1,34 +1,25 @@
-# Walkthrough - App Size Optimization
+# Walkthrough - Updated Explanation Unlocking Logic
 
-I have implemented several changes to reduce the app's size and remove unnecessary dependencies.
+I have updated the logic for viewing question explanations during a quiz. This change encourages point usage while providing a free alternative via ads.
 
 ## Changes Made
 
-### 1. Removed `font_awesome_flutter` Dependency
-- Removed the `font_awesome_flutter` package from `pubspec.yaml`. This package was only used for a single Google icon, but it adds several hundred KBs to the final binary because it includes the entire icon set.
-- **Login Screen Update**: Replaced the FontAwesome Google icon with a standard high-quality network image logo. I also added a fallback `Icons.login` in case of network issues.
+### 1. Updated Unlock Cost
+- Increased the cost to view an explanation from 30 points to **40 points**.
+- Updated the button label in the quiz screen to reflect this: **Show Hint (40 pts)**.
 
-### 2. Large Asset Analysis
-I identified that the following images are the primary cause of your large app size:
-- `asset/images/sharequiz1.png` to `7.png`: Each is ~1.8 MB (Total **~12.5 MB**).
-- `asset/images/logo.png`: ~534 KB.
-
-## Impact
-- **Installation Size**: By removing FontAwesome, we've saved roughly **500KB - 1MB** of binary size.
-- **Resource Management**: The app bundle size is currently **69MB**.
-
-## Recommended Next Steps
-
-> [!IMPORTANT]
-> To reduce the app size by another **10MB+**, you should convert the `sharequiz` PNG images to **WebP**.
->
-> **How to do it:**
-> 1. Use a tool like [Squoosh](https://squoosh.app/) or [Cloudinary](https://cloudinary.com/console).
-> 2. Convert `sharequiz1.png` to `sharequiz1.webp`.
-> 3. Replace the files in `asset/images/`.
-> 4. Update the file extensions in your code (I can help with this once you convert the files).
+### 2. Smart Fallback Logic
+- **With 40+ Points**: Users are asked to confirm spending 40 points to see the explanation.
+- **With < 40 Points**: Instead of blocking the user, the app now shows an "Insufficient Points" dialog.
+- **Rewarded Ad Option**: From this dialog, users can choose to **watch a rewarded ad** to unlock the explanation for free.
+- **Resilience**: If the ad fails to load, the explanation is unlocked anyway to ensure a smooth user experience.
 
 ## Verification Results
-- **`flutter pub get`**: Successfully removed the dependency.
-- **`flutter analyze`**: Verified that no code is still trying to use FontAwesome.
-- **Login Screen**: The Google Sign-In button now uses a professional logo without the heavy library.
+
+### Code Integrity
+- **`flutter analyze`**: Confirmed no syntax errors or broken references were introduced.
+- **Logic Check**: Verified the `_unlockHint` method correctly handles both the point deduction path and the rewarded ad path.
+
+## User Experience Impact
+- **Point Economy**: Strengthens the value of earning points through quizzes.
+- **Accessibility**: Users can still access explanations even if they run out of points, provided they are willing to watch a short ad.

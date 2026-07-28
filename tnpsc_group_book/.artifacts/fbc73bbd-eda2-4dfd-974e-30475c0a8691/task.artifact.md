@@ -1,10 +1,7 @@
-# Task List - Final Optimization
+# Task List - Update Explanation Unlocking Logic
 
-- [ ] Smoothness Improvements
-    - [x] Add `RepaintBoundary` to `HomeScreen` (Done)
-    - [ ] Add `RepaintBoundary` to `SubjectScreen` components
-- [ ] Remove `lottie` (Pending Approval)
-    - [ ] Update `pubspec.yaml`
-    - [ ] Update `result_screen.dart`
-- [ ] Final Verification
-    - [ ] Run `flutter analyze`
+- [x] Update `_unlockHint` in `quiz_screen.dart`
+    - [x] Change cost to 40
+    - [x] Implement ad fallback logic
+- [x] Update UI labels in `quiz_screen.dart`
+- [ ] Verify changes

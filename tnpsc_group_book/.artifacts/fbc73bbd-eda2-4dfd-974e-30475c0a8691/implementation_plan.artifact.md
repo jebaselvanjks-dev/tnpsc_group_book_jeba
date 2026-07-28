@@ -1,49 +1,26 @@
-# Final App Size and Smoothness Optimization Plan
+# Update Explanation Unlocking Logic
 
-This plan focuses on making the app even smaller and smoother after the initial improvements.
+Update the cost of unlocking explanations in the quiz screen and provide a fallback rewarded ad option if the user has insufficient points.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> I am proposing to remove the **`lottie`** package (~3MB impact) and replace the confetti animation with a much lighter alternative.
->
-> I also strongly recommend converting your large images to **WebP** manually. I've provided the exact steps below.
+> [!NOTE]
+> The unlock cost is increasing from 30 to 40 points. Users with fewer than 40 points will now see an option to watch a rewarded ad to unlock the explanation for free.
 
 ## Proposed Changes
 
-### 1. Smoothness Optimizations
+### Quiz Screen
 
-#### [MODIFY] [subject_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/subject_screen.dart)
-- Wrap `_SubjectCard` and the Daily Mock Card in `RepaintBoundary`. This significantly reduces GPU work during scrolling.
-
-#### [MODIFY] [result_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/result_screen.dart)
-- Remove `Lottie` usage.
-- (Optional) Replace with a simple `CustomPainter` confetti or just a static high-quality "Victory" icon.
-
-### 2. Dependency Removal
-
-#### [MODIFY] [pubspec.yaml](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/pubspec.yaml)
-- Remove `lottie`.
-
-### 3. Asset Optimization (User Action Required)
-
-The following 7 files are taking up **12.5 MB** of your 69MB app bundle:
-- `asset/images/sharequiz1.png` to `sharequiz7.png`
-
-**Instruction for User:**
-1. Go to [Squoosh.app](https://squoosh.app/).
-2. Upload `sharequiz1.png`, select "WebP" and set quality to 75%.
-3. Download as `sharequiz1.webp`.
-4. Repeat for all 7 files.
-5. Replace the PNGs in your project.
+#### [MODIFY] [quiz_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/quiz_screen.dart)
+- Update `_unlockHint` method:
+    - Change `cost` from 30 to 40.
+    - If user points < 40, show a dialog offering to watch a Rewarded Ad.
+    - If the ad is watched (or skipped by failure), unlock the hint.
+    - Update the UI label to show `(40 pts)`.
 
 ## Verification Plan
 
-### Automated Tests
-- Run `flutter analyze` to ensure no broken references.
-- Run `flutter pub get`.
-
 ### Manual Verification
-1. **Cold Start**: Verify startup speed.
-2. **Scrolling**: Verify list smoothness in Subjects and Home.
-3. **Build Size**: Check the new `.aab` size.
+1.  **With 40+ Points**: Tap "Show Hint". Verify it asks for 40 points and deducts them upon confirmation.
+2.  **With < 40 Points**: Tap "Show Hint". Verify it informs you that you need 40 points and offers a "Watch Ad" button.
+3.  **Ad Flow**: Watch the ad. Verify the explanation appears immediately after the ad is dismissed.
