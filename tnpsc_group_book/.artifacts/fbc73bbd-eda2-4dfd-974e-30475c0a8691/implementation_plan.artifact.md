@@ -1,26 +1,33 @@
-# Update Explanation Unlocking Logic
+# Final Smoothness and Android Cleanup Plan
 
-Update the cost of unlocking explanations in the quiz screen and provide a fallback rewarded ad option if the user has insufficient points.
+This plan targets the 3-second "freeze" during app launch and cleans up deprecated Android configurations.
 
 ## User Review Required
 
-> [!NOTE]
-> The unlock cost is increasing from 30 to 40 points. Users with fewer than 40 points will now see an option to watch a rewarded ad to unlock the explanation for free.
+> [!IMPORTANT]
+> I will be moving the initialization of **Google Mobile Ads** and **Notifications** to happen 1.2 seconds after the app is fully visible. This eliminates the startup lag but means ads and notifications might take an extra second to be ready once the Home Screen appears.
 
 ## Proposed Changes
 
-### Quiz Screen
+### 1. Eliminate Launch Freeze
 
-#### [MODIFY] [quiz_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/quiz_screen.dart)
-- Update `_unlockHint` method:
-    - Change `cost` from 30 to 40.
-    - If user points < 40, show a dialog offering to watch a Rewarded Ad.
-    - If the ad is watched (or skipped by failure), unlock the hint.
-    - Update the UI label to show `(40 pts)`.
+#### [MODIFY] [main.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/main.dart)
+- Increase the delay in `_initServicesInBackground` from 500ms to **1200ms**.
+- Move `MobileAds.instance.initialize()` and `NotificationService.init()` deeper into this background task.
+
+### 2. Android Manifest Cleanup
+
+#### [MODIFY] [AndroidManifest.xml](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/android/app/src/main/AndroidManifest.xml)
+- Remove `io.flutter.embedding.android.AOTSharedLibraryName`.
+- Remove `io.flutter.embedding.android.FlutterAssetsDir`.
+- Remove `io.flutter.embedding.android.EnableImpeller`.
+- *Note: These are now handled automatically by the Flutter engine or are deprecated. Removing them prevents "unsafe AOT path" errors seen in your logs.*
 
 ## Verification Plan
 
+### Automated Tests
+- Run `flutter analyze` to ensure no errors.
+
 ### Manual Verification
-1.  **With 40+ Points**: Tap "Show Hint". Verify it asks for 40 points and deducts them upon confirmation.
-2.  **With < 40 Points**: Tap "Show Hint". Verify it informs you that you need 40 points and offers a "Watch Ad" button.
-3.  **Ad Flow**: Watch the ad. Verify the explanation appears immediately after the ad is dismissed.
+1.  **Cold Start**: Verify the app logo stays visible and the "Typewriter" animation on the Splash Screen is smooth (no freezing).
+2.  **Log Check**: Check Logcat to ensure the "External path rejected" and "Skipped frames" errors are gone or significantly reduced.

@@ -89,20 +89,25 @@ Future<void> initializeServices() async {
 
 // Lazy initializations to speed up startup
 Future<void> _initServicesInBackground() async {
-  // Small delay to allow the app to actually reach the first screen
-  await Future.delayed(const Duration(milliseconds: 500));
+  // AI_DEBUG: Increased delay to ensure UI is fully interactive before heavy init
+  await Future.delayed(const Duration(milliseconds: 1200));
 
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
 
-  // Non-blocking services
-  NotificationService.init();
-  MobileAds.instance.initialize();
-  TtsService.init();
-  RewardService.loadRewardedAd();
-  DeepLinkService().init();
+  // Non-blocking services initialized one after another to avoid thread contention
+  try {
+    await NotificationService.init();
+    await MobileAds.instance.initialize();
+    TtsService.init();
+    RewardService.loadRewardedAd();
+    DeepLinkService().init();
+    AppLog.d("AI_DEBUG: Background services initialized.");
+  } catch (e) {
+    AppLog.e("AI_DEBUG: Error in background service init: $e");
+  }
 }
 
 class TNPSCPrepApp extends StatelessWidget {

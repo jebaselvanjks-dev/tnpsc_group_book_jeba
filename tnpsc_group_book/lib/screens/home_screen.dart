@@ -5,7 +5,9 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:tnpsc_group_book/services/deep_link_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/subject.dart';
+import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
 import '../utils/app_date.dart';
@@ -45,8 +47,21 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _userDataFuture = _firestoreService.getUserData();
     _checkInitialSync();
+    _ensurePointsRestored();
     // AI_DEBUG: Check clipboard on home screen entry for room codes
     DeepLinkService().checkClipboard();
+  }
+
+  Future<void> _ensurePointsRestored() async {
+    // If local points are 0, try a background refresh to see if user has cloud points
+    final userBox = Hive.box(HiveService.userBoxName);
+    int localPoints = userBox.get('totalScore', defaultValue: 0) as int;
+    
+    if (localPoints == 0 && FirebaseAuth.instance.currentUser != null) {
+      AppLog.d("AI_DEBUG: Local points are 0. Triggering background restoration...");
+      await _firestoreService.getUserData(forceRefresh: true);
+      if (mounted) setState(() {});
+    }
   }
 
   Future<void> _checkInitialSync() async {

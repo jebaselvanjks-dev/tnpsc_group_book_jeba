@@ -1,25 +1,28 @@
-# Walkthrough - Updated Explanation Unlocking Logic
+# Walkthrough - User Data Recovery & Restoration
 
-I have updated the logic for viewing question explanations during a quiz. This change encourages point usage while providing a free alternative via ads.
+I have implemented a robust system to ensure that your reward points and progress are never lost, even if the app is uninstalled and reinstalled.
 
 ## Changes Made
 
-### 1. Updated Unlock Cost
-- Increased the cost to view an explanation from 30 points to **40 points**.
-- Updated the button label in the quiz screen to reflect this: **Show Hint (40 pts)**.
+### 1. Restoration on Login
+- **Login Screen**: Immediately after a user logs in via Google, the app now performs a **force-refresh** of their user data from Firestore.
+- This ensures that on a fresh installation, the local database (Hive) is instantly populated with the user's correct `totalScore`, `streak`, and other stats.
 
-### 2. Smart Fallback Logic
-- **With 40+ Points**: Users are asked to confirm spending 40 points to see the explanation.
-- **With < 40 Points**: Instead of blocking the user, the app now shows an "Insufficient Points" dialog.
-- **Rewarded Ad Option**: From this dialog, users can choose to **watch a rewarded ad** to unlock the explanation for free.
-- **Resilience**: If the ad fails to load, the explanation is unlocked anyway to ensure a smooth user experience.
+### 2. Automatic Startup Recovery
+- **Home Screen**: Added a safety check in `initState`. If the app starts up and finds that local points are `0` but the user is already logged in, it triggers a background sync with the cloud to recover any missing data.
+- This handles edge cases where local storage might be cleared without the user being logged out.
+
+### 3. Verified Firestore to Hive Sync
+- Confirmed that `FirestoreService.getUserData` correctly maps the `totalScore` from the cloud directly into the local Hive box for immediate UI feedback.
 
 ## Verification Results
 
 ### Code Integrity
-- **`flutter analyze`**: Confirmed no syntax errors or broken references were introduced.
-- **Logic Check**: Verified the `_unlockHint` method correctly handles both the point deduction path and the rewarded ad path.
+- **Static Analysis**: Verified imports and types in `HomeScreen` and `LoginScreen`.
+- **Logic**: The recovery flow is non-intrusive (runs in the background) and ensures data consistency between the cloud and the local device.
 
-## User Experience Impact
-- **Point Economy**: Strengthens the value of earning points through quizzes.
-- **Accessibility**: Users can still access explanations even if they run out of points, provided they are willing to watch a short ad.
+## How to Test
+1.  Make sure you have some points in your account.
+2.  **Uninstall** the app.
+3.  **Reinstall** and log in with the same Google account.
+4.  Your points should appear automatically on the Home Screen.

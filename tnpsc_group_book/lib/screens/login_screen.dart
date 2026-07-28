@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../services/firestore_service.dart';
 import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
@@ -69,6 +70,10 @@ class _LoginScreenState extends State<LoginScreen> {
         'lastActive': FieldValue.serverTimestamp(),
       });
     }
+
+    // Force refresh user data from Firestore to populate Hive on fresh install
+    final fs = FirestoreService();
+    await fs.getUserData(forceRefresh: true);
 
     await NotificationService.saveFCMToken();
   }
