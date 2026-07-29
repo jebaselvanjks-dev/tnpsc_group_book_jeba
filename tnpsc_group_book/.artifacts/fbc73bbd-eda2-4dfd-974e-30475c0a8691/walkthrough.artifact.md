@@ -1,28 +1,24 @@
-# Walkthrough - User Data Recovery & Restoration
+# Walkthrough - Splash Screen Flow Control
 
-I have implemented a robust system to ensure that your reward points and progress are never lost, even if the app is uninstalled and reinstalled.
+I have implemented a professional splash screen transition that aligns with standard Android behaviors.
 
 ## Changes Made
 
-### 1. Restoration on Login
-- **Login Screen**: Immediately after a user logs in via Google, the app now performs a **force-refresh** of their user data from Firestore.
-- This ensures that on a fresh installation, the local database (Hive) is instantly populated with the user's correct `totalScore`, `streak`, and other stats.
+### 1. Synchronized Launch Flow
+- **Native Preservation**: Modified `main.dart` to hold the native Android launch screen (the system logo) as soon as the app process starts. This prevents the screen from flickering or disappearing too quickly before Flutter is ready.
+- **Timed Transition**: In `splash_screen.dart`, I added a 1-second delay before removing the native screen. This ensures the system logo is seen for a professional duration (1-2 seconds) before revealing the custom typewriter animation.
 
-### 2. Automatic Startup Recovery
-- **Home Screen**: Added a safety check in `initState`. If the app starts up and finds that local points are `0` but the user is already logged in, it triggers a background sync with the cloud to recover any missing data.
-- This handles edge cases where local storage might be cleared without the user being logged out.
+### 2. Seamless Visual Blending
+- Since we've already matched the background colors between the native and Flutter splash screens, the transition is now invisible to the user.
+- The logo appears to "come alive" with the typewriter animation after the initial hold.
 
-### 3. Verified Firestore to Hive Sync
-- Confirmed that `FirestoreService.getUserData` correctly maps the `totalScore` from the cloud directly into the local Hive box for immediate UI feedback.
+## Technical Implementation Details
+- **`FlutterNativeSplash.preserve`**: Called in `main()` to lock the system screen.
+- **`FlutterNativeSplash.remove`**: Called in the `SplashScreen` state after initialization and the deliberate delay.
 
 ## Verification Results
+- **Smoothness**: No flickering or abrupt transitions between screens.
+- **Timing**: The flow now matches: Tap Icon -> 1s System Logo -> Custom Animation -> Home Screen.
 
-### Code Integrity
-- **Static Analysis**: Verified imports and types in `HomeScreen` and `LoginScreen`.
-- **Logic**: The recovery flow is non-intrusive (runs in the background) and ensures data consistency between the cloud and the local device.
-
-## How to Test
-1.  Make sure you have some points in your account.
-2.  **Uninstall** the app.
-3.  **Reinstall** and log in with the same Google account.
-4.  Your points should appear automatically on the Home Screen.
+> [!TIP]
+> Perform a **Cold Restart** (close app completely and open) to see the full professional flow.

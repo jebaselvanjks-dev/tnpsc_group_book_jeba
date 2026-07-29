@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
@@ -36,8 +37,13 @@ class _SplashScreenState extends State<SplashScreen> {
         const Duration(seconds: 5),
         onTimeout: () => AppLog.e("AI_DEBUG: Service initialization timed out!"),
       );
+
+      // AI_DEBUG: Wait a moment for the system splash to feel "fitted" before removing
+      await Future.delayed(const Duration(seconds: 1));
+      FlutterNativeSplash.remove();
     } catch (e) {
       AppLog.e("AI_DEBUG: Error during splash initialization: $e");
+      FlutterNativeSplash.remove();
     }
 
     if (!mounted) return;
@@ -74,21 +80,42 @@ class _SplashScreenState extends State<SplashScreen> {
     return ValueListenableBuilder<String>(
       valueListenable: AppLanguage.languageNotifier,
       builder: (context, lang, child) {
+        // AI_DEBUG: Using a solid color that matches the logo background for a "fitted" look
+        // The logo has a very dark navy background.
         return Scaffold(
           body: Container(
             width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppTheme.darkBgColor, AppTheme.darkSurfaceColor],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
+            color: const Color(0xFF02091A), // Exact navy from logo background
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const AppLogo(size: 120),
-                const SizedBox(height: 30),
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Golden Background / Glow
+                    Container(
+                      width: 150,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        
+                        gradient: RadialGradient(
+                          colors: [
+                            AppTheme.secondaryColor.withValues(alpha: 0.2),
+                            AppTheme.secondaryColor.withValues(alpha: 0.05),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                    const AppLogo(
+                      size: 150,
+                      borderRadius: 0, 
+                      showShadow: false
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
                 AnimatedTextKit(
                   animatedTexts: [
                     TypewriterAnimatedText(

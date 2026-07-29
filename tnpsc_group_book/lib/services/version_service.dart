@@ -9,31 +9,42 @@ import '../utils/app_log.dart';
 class VersionService {
   static const String _playStoreUrl = "https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book";
   static int? _requiredVersion;
+  static DateTime? _lastCheckTime;
 
   static Future<bool> isUpdateRequired() async {
     try {
-      if (_requiredVersion == null) {
-        final doc = await FirebaseFirestore.instance.collection('settings').doc('app_config').get();
-        if (doc.exists) {
-          _requiredVersion = doc.data()?['required_version_code'] as int?;
+      // AI_OPTIMIZATION: Cache the version check for 1 hour to save Reads
+      if (_requiredVersion != null && _lastCheckTime != null) {
+        if (DateTime.now().difference(_lastCheckTime!).inHours < 1) {
+          AppLog.d("FIRESTORE_OPT: Using cached version info.");
+          return _checkVersionMatch();
         }
       }
-      
-      if (_requiredVersion == null) return false;
 
-      PackageInfo packageInfo = await PackageInfo.fromPlatform();
-      // Using buildNumber (int) for reliable comparison
-      int currentVersion = int.parse(packageInfo.version.replaceAll(".", ""));
+      final doc = await FirebaseFirestore.instance.collection('settings').doc('app_config').get();
+      if (doc.exists) {
+        _requiredVersion = doc.data()?['required_version_code'] as int?;
+        _lastCheckTime = DateTime.now();
+      }
       
-      AppLog.d("API: Version Check: $_requiredVersion");
-      AppLog.d("CURRENT: Version Check: $currentVersion");
-      AppLog.d("CURRENT: Version Check: ${currentVersion != _requiredVersion}");
-      // Returns true if versions are NOT equal
-      return currentVersion != _requiredVersion;
+      return _checkVersionMatch();
     } catch (e) {
       AppLog.d("AI_DEBUG: Version check error: $e");
       return false; 
     }
+  }
+
+  static Future<bool> _checkVersionMatch() async {
+    if (_requiredVersion == null) return false;
+
+    PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    // Using buildNumber (int) for reliable comparison
+    int currentVersion = int.parse(packageInfo.version.replaceAll(".", ""));
+    
+    AppLog.d("API: Version Check: $_requiredVersion");
+    AppLog.d("CURRENT: Version Check: $currentVersion");
+    
+    return currentVersion != _requiredVersion;
   }
 
   static Future<void> checkForUpdate(BuildContext context) async {

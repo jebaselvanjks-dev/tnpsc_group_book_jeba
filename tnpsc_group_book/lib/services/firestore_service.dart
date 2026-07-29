@@ -712,16 +712,24 @@ class FirestoreService {
   }) async {
     String? uid = _auth.currentUser?.uid;
     if (uid != null) {
-      // Fetch user name for leaderboard
-      DocumentSnapshot? userDoc = await getUserData();
-      String userName = AppLanguage.getString('user_fallback');
-      if (userDoc != null && userDoc.exists) {
-        userName = (userDoc.data() as Map<String, dynamic>)['name'] ?? AppLanguage.getString('user_fallback');
-      }
+      // 1. Update local Hive immediately for real-time UI update (Fast & Free)
+      final userBox = Hive.box(HiveService.userBoxName);
+      int currentTotalPoints = userBox.get('totalScore', defaultValue: 0) as int;
+      int currentQuizzes = userBox.get('quizzesCompleted', defaultValue: 0) as int;
+      await userBox.put('totalScore', currentTotalPoints + score);
+      await userBox.put('quizzesCompleted', currentQuizzes + 1);
+
+      // AI_OPTIMIZATION: Check if this is the best score for today using Hive
+      String today = AppDate.getTodayString();
+      String bestKey = isDaily ? 'best_score_daily_$today' : 'best_score_mock_$today';
+      int previousBest = userBox.get(bestKey, defaultValue: -1) as int;
+
+      bool isNewBest = score > previousBest;
 
       WriteBatch batch = _db.batch();
 
-      // 1. Save to results collection (For My History screen)
+      // 2. Save to results collection (For My History screen)
+      // This is 1 Write per quiz.
       batch.set(_db.collection('results').doc(), {
         'userId': uid,
         'subject': subject,
@@ -730,98 +738,54 @@ class FirestoreService {
         'timeTaken': timeTaken,
         'timestamp': FieldValue.serverTimestamp(),
       });
-      AppLog.d("AI_DEBUG: BATCH: Quiz result added to history");
       
-      // AI_DEBUG: Only update leaderboard if score is better than previous best today
-      Map<String, dynamic>? bestResult = await getUserBestResultToday(isDaily: isDaily);
-      int existingBest = (bestResult?['score'] as num?)?.toInt() ?? -1;
+      // 3. Update Leaderboard ONLY if it's a new best score (Saves huge amount of Writes)
+      if (score > 0 && (isDaily || isMock) && isNewBest) {
+        String userName = AppLanguage.getString('user_fallback');
+        var cachedData = HiveService.getCachedUserData();
+        if (cachedData != null) {
+          userName = cachedData['name'] ?? userName;
+        }
 
-       // Update Daily and Weekly Leaderboards if score > existingBest AND it's a Daily Quiz
-       if (score > 0 && isDaily && score > existingBest) {
-         String today = AppDate.getTodayString();
-         String monday = _getMondayDateString();
-
-         var scoreData = {
-           'userId': uid,
-           'userName': userName,
-           'score': score, // OVERWRITE: User's latest BEST attempt for the day
-           'totalQuestions': totalQuestions,
-           'timeTaken': timeTaken,
-           'timestamp': FieldValue.serverTimestamp(),
-           'expiresAt': AppDate.getISTNow().add(const Duration(days: 7)), // For TTL Auto Delete
-         };
-
-         // Update Daily (Subcollection format for TTL)
-         batch.set(_db.collection('leaderboards').doc('daily_$today').collection('scores').doc(uid), scoreData, SetOptions(merge: true));
-         AppLog.d("AI_DEBUG: BATCH: Daily Score updated (New Best: $score > $existingBest)");
-
-         // Update Weekly (Subcollection format for TTL)
-         batch.set(_db.collection('leaderboards').doc('weekly_$monday').collection('scores').doc(uid), scoreData, SetOptions(merge: true));
-         
-         // AI_DEBUG: Reset daily leaderboard fetch tracking to force refresh on next visit
-         await HiveService.saveLeaderboardData(true, []); // Clear local cache
-       } else if (isDaily) {
-         AppLog.d("AI_DEBUG: Daily Leaderboard write SKIPPED (Score $score <= Best $existingBest)");
-       }
-
-       // --- NEW: Save Mock Quiz Result to Scheduled Leaderboard ---
-       if (score > 0 && isMock && score > existingBest) {
-         String docId = _getMockLeaderboardDocId();
-         var scoreData = {
-           'userId': uid,
-           'userName': userName,
-           'score': score, // OVERWRITE
-           'totalQuestions': totalQuestions,
-           'timeTaken': timeTaken,
-           'timestamp': FieldValue.serverTimestamp(),
-           'expiresAt': AppDate.getISTNow().add(const Duration(days: 7)), 
-         };
-
-         batch.set(_db.collection('leaderboards').doc(docId).collection('scores').doc(uid), scoreData, SetOptions(merge: true));
-         AppLog.d("AI_DEBUG: BATCH: Mock Score updated (New Best: $score > $existingBest)");
-
-         // AI_DEBUG: Reset mock leaderboard fetch tracking
-         await HiveService.saveLeaderboardData(false, []);
-       } else if (isMock) {
-         AppLog.d("AI_DEBUG: Mock Leaderboard write SKIPPED (Score $score <= Best $existingBest)");
-       }
-
-      if (isDaily) {
-        String today = AppDate.getTodayString();
-
-        batch.set(_db.collection('users').doc(uid), {
-          'completedDailyQuizzes': today,
-          'dailyquiz_complete': true,
-        }, SetOptions(merge: true));
-        AppLog.d("AI_DEBUG: BATCH: Completed quiz date $today");
-      } else if (isMock) {
-        String today = AppDate.getTodayString();
+        String docId = isDaily ? 'daily_$today' : _getMockLeaderboardDocId();
         
-        batch.set(_db.collection('users').doc(uid), {
-          'completedMockQuizzes': today,
-        }, SetOptions(merge: true));
-        AppLog.d("AI_DEBUG: BATCH: Completed mock quiz date $today");
+        var scoreData = {
+          'userId': uid,
+          'userName': userName,
+          'score': score, 
+          'totalQuestions': totalQuestions,
+          'timeTaken': timeTaken,
+          'timestamp': FieldValue.serverTimestamp(),
+          'expiresAt': AppDate.getISTNow().add(const Duration(days: 7)), 
+        };
+
+        batch.set(_db.collection('leaderboards').doc(docId).collection('scores').doc(uid), scoreData, SetOptions(merge: true));
+        
+        // Update weekly if daily
+        if (isDaily) {
+          String monday = _getMondayDateString();
+          batch.set(_db.collection('leaderboards').doc('weekly_$monday').collection('scores').doc(uid), scoreData, SetOptions(merge: true));
+        }
+
+        await userBox.put(bestKey, score);
+        AppLog.d("FIRESTORE_OPT: New Best Score! Syncing to Leaderboard.");
+      } else if (isDaily || isMock) {
+        AppLog.d("FIRESTORE_OPT: Score $score not better than $previousBest. Leaderboard Write skipped.");
       }
 
-      // Update local Hive stats immediately for real-time UI update
-      final userBox = Hive.box(HiveService.userBoxName);
-      int currentPoints = userBox.get('totalScore', defaultValue: 0) as int;
-      int currentQuizzes = userBox.get('quizzesCompleted', defaultValue: 0) as int;
-      await userBox.put('totalScore', currentPoints + score);
-      await userBox.put('quizzesCompleted', currentQuizzes + 1);
-
-      // Update user overall stats in Firestore
+      // 4. Update user overall stats in Firestore
       batch.set(_db.collection('users').doc(uid), {
         'totalScore': FieldValue.increment(score),
         'quizzesCompleted': FieldValue.increment(1),
+        if (isDaily) 'completedDailyQuizzes': today,
+        if (isMock) 'completedMockQuizzes': today,
       }, SetOptions(merge: true));
       
-      // Commit the batch
       await batch.commit();
-      AppLog.d("AI_DEBUG: Quiz result saved via WriteBatch");
+      AppLog.d("FIRESTORE_OPT: Batch commit completed.");
 
-      // Refresh user data immediately after save to sync all stats
-      await getUserData(forceRefresh: true);
+      // Refresh user data in background with Source.cache first
+      getUserData();
     }
   }
 
@@ -833,17 +797,17 @@ class FirestoreService {
     final userBox = Hive.box(HiveService.userBoxName);
     String today = AppDate.getTodayString();
 
-    // 1. Local check to prevent double execution in same session/device
+    // AI_OPTIMIZATION: Exit immediately if already updated today to save Writes
     String localLastActive = userBox.get('lastActiveDate', defaultValue: "") as String;
     if (localLastActive == today) {
-      AppLog.d("AI_DEBUG: Streak already updated today (Local Hive Check)");
+      AppLog.d("FIRESTORE_OPT: Streak already synced today. Skipping Write.");
       return;
     }
 
     try {
       DocumentReference userRef = _db.collection('users').doc(uid);
       
-      // Try cache first for streak logic to speed up startup
+      // Try cache first for streak logic to speed up startup and save Reads
       DocumentSnapshot userDoc;
       try {
         userDoc = await userRef.get(const GetOptions(source: Source.cache));

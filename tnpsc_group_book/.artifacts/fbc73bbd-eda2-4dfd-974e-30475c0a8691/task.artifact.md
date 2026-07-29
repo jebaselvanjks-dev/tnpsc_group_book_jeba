@@ -1,5 +1,7 @@
-# Task List - Smoothness & Cleanup
+# Task List - Native Splash Padding Fix
 
-- [ ] Optimize `main.dart` background loading
-- [ ] Clean up `AndroidManifest.xml`
-- [ ] Verify build integrity
+- [ ] Add padding to logo in `drawable/launch_background.xml`
+- [ ] Add padding to logo in `drawable-v21/launch_background.xml`
+- [ ] Add padding to logo in `drawable-night/launch_background.xml`
+- [ ] Add padding to logo in `drawable-night-v21/launch_background.xml`
+- [ ] Verify visual alignment

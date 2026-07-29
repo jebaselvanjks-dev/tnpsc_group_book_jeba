@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:tnpsc_group_book/screens/subject_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
@@ -34,7 +35,10 @@ final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<Scaffol
 
 void main() {
   // 1. Core Flutter initialization (Instant)
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
+
+  // AI_DEBUG: Preserve native splash until Flutter is ready and we manually remove it
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
 
   // 2. Global Error Handling (Crash Prevention)
   FlutterError.onError = (FlutterErrorDetails details) {

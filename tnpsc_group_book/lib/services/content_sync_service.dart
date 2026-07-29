@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/subject.dart';
 import '../utils/app_log.dart';
 import 'firestore_service.dart';
@@ -14,8 +15,30 @@ class ContentSyncService {
 
   static Future<void> performInitialSync() async {
     try {
-      AppLog.d("AI_DEBUG: Starting Silent Background Content Sync...");
       var userBox = Hive.box(HiveService.userBoxName);
+      
+      // AI_OPTIMIZATION: Check content version before syncing 20 docs
+      // If version matches, we skip all reads.
+      try {
+        final configDoc = await FirebaseFirestore.instance.collection('settings').doc('content_metadata').get();
+        if (configDoc.exists) {
+          int serverVersion = configDoc.data()?['version'] ?? 0;
+          int localVersion = userBox.get('local_content_version', defaultValue: -1) as int;
+          
+          if (serverVersion <= localVersion) {
+            AppLog.d("FIRESTORE_OPT: Content is already up to date (v$localVersion). Skipping Sync.");
+            await userBox.put('is_initial_sync_done', true);
+            return;
+          }
+          
+          // Store the new version to skip future syncs
+          await userBox.put('local_content_version', serverVersion);
+        }
+      } catch (e) {
+        AppLog.d("FIRESTORE_OPT: Could not fetch content_metadata, proceeding with full sync.");
+      }
+
+      AppLog.d("AI_DEBUG: Starting Silent Background Content Sync...");
       
       for (var subject in tnpscSubjects) {
         // 1. Sync Questions

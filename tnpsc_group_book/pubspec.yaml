@@ -51,14 +51,14 @@ dev_dependencies:
   flutter_native_splash: ^2.4.4
 
 flutter_native_splash:
-  color: "#F4F6F9"
+  color: "#02091A"
   image: asset/images/logo.png
-  color_dark: "#030611"
+  color_dark: "#02091A"
   android_12:
     image: asset/images/logo.png
-    color: "#F4F6F9"
-    color_dark: "#030611"
-  fullscreen: true
+    color: "#02091A"
+    color_dark: "#02091A"
+  fullscreen: false
 
 flutter:
   uses-material-design: true
