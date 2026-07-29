@@ -94,8 +94,8 @@ class _SplashScreenState extends State<SplashScreen> {
                   children: [
                     // Golden Background / Glow
                     Container(
-                      width: 150,
-                      height: 150,
+                      width: 160,
+                      height: 160,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         

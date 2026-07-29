@@ -3,7 +3,7 @@ description: "TNPSC Master Flutter application"
 publish_to: 'none' # private package
 
 # Version Change
-version: 1.1.1+14
+version: 1.1.2+15
 
 environment:
   sdk: ">=3.11.0 <4.0.0"
@@ -52,10 +52,10 @@ dev_dependencies:
 
 flutter_native_splash:
   color: "#02091A"
-  image: asset/images/logo.png
+  image: asset/images/logo_splash.png
   color_dark: "#02091A"
   android_12:
-    image: asset/images/logo.png
+    image: asset/images/logo_splash.png
     color: "#02091A"
     color_dark: "#02091A"
   fullscreen: false
