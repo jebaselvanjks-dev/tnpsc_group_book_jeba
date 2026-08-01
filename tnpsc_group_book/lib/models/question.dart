@@ -128,6 +128,8 @@ class Question {
     );
   }
 
+  String get uniqueId => id ?? question.hashCode.toString();
+
   // Getters to simplify UI usage with language selection
   String get displayQuestion {
     final lang = AppLanguage.languageNotifier.value;

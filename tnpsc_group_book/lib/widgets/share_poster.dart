@@ -328,7 +328,7 @@ class _SharePosterState extends State<SharePoster> with SingleTickerProviderStat
                   children: [
                     Expanded(
                       child: Text(
-                        "தினமும் படி, வெற்றியை வெல்லு!",
+                        "தினமும் படித்து, வெற்றியை வெல்லுங்கள்!",
                         style: AppTheme.getStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,

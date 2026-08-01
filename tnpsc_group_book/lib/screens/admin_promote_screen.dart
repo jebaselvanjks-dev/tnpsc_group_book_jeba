@@ -43,13 +43,23 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
   late AnimationController _fadeController;
   late AnimationController _revealController;
 
+  bool _imagesPrecached = false;
+
   @override
   void initState() {
     super.initState();
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
     _revealController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
     _loadQuizzes();
-    _preCacheImages();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_imagesPrecached) {
+      _preCacheImages();
+      _imagesPrecached = true;
+    }
   }
 
   void _preCacheImages() {
@@ -164,6 +174,11 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
       }
     }
 
+    // 1. Cancel existing sequence and reset everything for a clean start
+    _timer?.cancel(); 
+    _fadeController.reset();
+    _revealController.reset();
+
     AppLog.d("VideoRec: Starting recording process...");
     setState(() {
       _isRecording = true;
@@ -179,7 +194,7 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
       );
       AppLog.d("VideoRec: Recording started successfully");
       
-      // Professional 1-second "Intro" pause before sequence begins
+      // 2. Professional 1-second "Intro" pause before sequence begins
       Future.delayed(const Duration(seconds: 1), () {
         if (mounted && _isRecording) _startSequence();
       });
@@ -453,8 +468,10 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
                   "Restart", 
                   Colors.white,
                   onTap: () {
+                    _timer?.cancel();
                     setState(() {
                       _currentIndex = 0;
+                      _showAnswer = false;
                       _startSequence();
                     });
                   },

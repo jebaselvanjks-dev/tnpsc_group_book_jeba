@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -60,6 +61,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _firestoreService.getUserData(),
       _firestoreService.getUserGlobalRank(),
     ]);
+    if (_isAdmin) {
+      if (HiveService.shouldRefreshSharePool()) {
+        _refreshShareQuizPool();
+      } else {
+        AppLog.d("AI_DEBUG: Share Pool is up to date. Skipping refresh.");
+      }
+    }
+  }
+
+  Future<void> _refreshShareQuizPool() async {
+    try {
+      final pool = await _firestoreService.fetchLargeShareQuizPool(200);
+      if (pool.isNotEmpty) {
+        await HiveService.saveShareQuizPool(pool);
+      }
+    } catch (e) {
+      AppLog.e("Error refreshing share quiz pool: $e");
+    }
   }
 
   Future<void> _loadAppVersion() async {
@@ -670,27 +689,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isSharing = true);
     
     try {
-      final now = AppDate.getISTNow();
-      final daysSinceEpoch = now.difference(DateTime(1970, 1, 1)).inDays;
-      List<Question> pool = [];
+      // 1. Weekly reset check for shared history (Cleanup)
+      await HiveService.resetSharedQuizHistoryIfNeeded();
 
-      // 1. Try to fetch from a daily rotating quiz
-      try {
-        pool = await _firestoreService.getDailyRotatingQuiz(isAdmin: _isAdmin);
-      } catch (e) {
-        AppLog.e("Error fetching daily rotating quiz for share: $e");
-      }
-
-      // 2. Fallback to today's Daily Quiz from Firestore
-      if (pool.isEmpty) {
-        try {
-          pool = await _firestoreService.getDailyQuiz();
-        } catch (e) {
-          AppLog.e("Error fetching daily quiz for share: $e");
-        }
-      }
-
-      // 3. Final fallback to default questions
+      // 2. Load Pool from Hive (Zero Read usage for normal users)
+      List<Question> pool = HiveService.getShareQuizPool();
+      
+      // 3. Fallback to default questions if pool is empty
       if (pool.isEmpty) {
         pool = defaultRoomQuestions;
       }
@@ -700,7 +705,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
-      // 4. Deterministic selection: Pick one question that stays the same for 6 hours
+      // 4. Deterministic Slot Selection (Restoring Old Function for Synchronization)
+      // Every 6 hours, the slotSeed increments. 
+      // With a pool of 200, it takes 50 days to repeat a question.
       int slotSeed = AppDate.getSlotSeed();
       final question = pool[slotSeed % pool.length];
 
@@ -718,7 +725,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // Stay with fallback subject
       }
 
-      // 6. Capture the poster with high quality settings
+      // 9. Capture the poster with high quality settings
       final Uint8List? imageBytes = await _screenshotController.captureFromWidget(
         Material(
           color: Colors.black, // Dark base to match poster theme

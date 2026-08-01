@@ -1390,4 +1390,57 @@ class FirestoreService {
       rethrow;
     }
   }
+
+  // Fetch a large pool of questions for Share feature (Admin-only refresh)
+  Future<List<Question>> fetchLargeShareQuizPool(int limit) async {
+    try {
+      AppLog.d("AI_DEBUG: Admin Refresh: Fetching large share quiz pool (limit: $limit)...");
+      List<Question> pool = [];
+      List<String> types = ['general_tamil', 'general_studies', 'aptitude'];
+      
+      int perType = (limit * 0.7 ~/ types.length); // 70% from specific types
+
+      for (String type in types) {
+        QuerySnapshot snap = await _db.collection('quizzes')
+            .where('quiz_type', isEqualTo: type)
+            .limit(10) // Get 10 documents, each has ~10 questions
+            .get();
+            
+        for (var doc in snap.docs) {
+          List<dynamic> qData = doc.get('questions');
+          pool.addAll(qData.map((q) {
+             var map = Map<String, dynamic>.from(q as Map);
+             map['quiz_type'] = type;
+             map['subject'] = type;
+             return Question.fromMap(map);
+          }));
+          if (pool.length > limit) break;
+        }
+      }
+
+      // Fallback/Variety from general daily quizzes
+      if (pool.length < limit) {
+         QuerySnapshot dailySnap = await _db.collection('quizzes')
+            .where('type', isEqualTo: 'daily_quiz')
+            .limit(15)
+            .get();
+            
+         for (var doc in dailySnap.docs) {
+           List<dynamic> qData = doc.get('questions');
+           pool.addAll(qData.map((q) {
+             var map = Map<String, dynamic>.from(q as Map);
+             map['quiz_type'] = 'general_studies';
+             return Question.fromMap(map);
+           }));
+           if (pool.length > limit) break;
+         }
+      }
+
+      pool.shuffle();
+      return pool.take(limit).toList();
+    } catch (e) {
+      AppLog.e("Error fetching large share quiz pool: $e");
+      return [];
+    }
+  }
 }

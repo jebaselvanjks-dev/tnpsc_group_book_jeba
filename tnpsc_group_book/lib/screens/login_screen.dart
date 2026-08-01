@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../services/firestore_service.dart';
+import '../services/hive_service.dart';
 import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_language.dart';
@@ -74,6 +75,21 @@ class _LoginScreenState extends State<LoginScreen> {
     // Force refresh user data from Firestore to populate Hive on fresh install
     final fs = FirestoreService();
     await fs.getUserData(forceRefresh: true);
+
+    // AI_DEBUG: Admin pool refresh logic for Share quizzes (Weekly Once)
+    if ((user.email == 'adminjeba@gmail.com' || 
+        user.email == 'kjebaselvan987@gmail.com' || 
+        user.phoneNumber == '+918754236411') && HiveService.shouldRefreshSharePool()) {
+       AppLog.d("AI_DEBUG: Admin Logged in. Refreshing Share Quiz Pool...");
+       try {
+         final pool = await fs.fetchLargeShareQuizPool(200);
+         if (pool.isNotEmpty) {
+           await HiveService.saveShareQuizPool(pool);
+         }
+       } catch (e) {
+         AppLog.e("Error refreshing admin share pool", e);
+       }
+    }
 
     await NotificationService.saveFCMToken();
   }

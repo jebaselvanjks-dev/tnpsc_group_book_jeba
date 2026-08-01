@@ -587,4 +587,79 @@ class HiveService {
     String today = _todayDate();
     await box.put('share_reward_earned_$today', true);
   }
+
+  // ------------------- Share Quiz Pool & History (Optimization) -------------------
+  static const String _shareQuizPoolKey = 'share_quiz_pool';
+  static const String _sharedQuizIdsKey = 'shared_quiz_ids';
+  static const String _lastShareHistoryResetKey = 'last_share_history_reset_date';
+  static const String _lastSharePoolRefreshKey = 'last_share_pool_refresh_date';
+
+  static Future<void> saveShareQuizPool(List<Question> pool) async {
+    var box = Hive.box(questionsBoxName);
+    List<Map<String, dynamic>> poolJson = pool.map((q) => q.toMap()).toList();
+    await box.put(_shareQuizPoolKey, jsonEncode(poolJson));
+    
+    // Mark the refresh date
+    await Hive.box(userBoxName).put(_lastSharePoolRefreshKey, _todayDate());
+    AppLog.d("AI_DEBUG: Saved ${pool.length} quizzes to Share Pool cache.");
+  }
+
+  static bool shouldRefreshSharePool() {
+    var box = Hive.box(userBoxName);
+    String? lastRefresh = box.get(_lastSharePoolRefreshKey) as String?;
+    if (lastRefresh == null) return true;
+
+    DateTime now = AppDate.getISTNow();
+    DateTime last = AppDate.parse(lastRefresh);
+    return now.difference(last).inDays >= 7;
+  }
+
+  static List<Question> getShareQuizPool() {
+    var box = Hive.box(questionsBoxName);
+    String? data = box.get(_shareQuizPoolKey);
+    if (data != null) {
+      List<dynamic> decoded = jsonDecode(data);
+      return decoded.map((q) => Question.fromMap(Map<String, dynamic>.from(q))).toList();
+    }
+    return [];
+  }
+
+  static List<String> getSharedQuizIds() {
+    var box = Hive.box(userBoxName);
+    return List<String>.from(box.get(_sharedQuizIdsKey, defaultValue: []) as List);
+  }
+
+  static Future<void> markQuizAsShared(String id) async {
+    var box = Hive.box(userBoxName);
+    List<String> sharedIds = getSharedQuizIds();
+    if (!sharedIds.contains(id)) {
+      sharedIds.add(id);
+      // Cap at 300 to prevent local storage growth while covering at least 1 week
+      if (sharedIds.length > 300) {
+        sharedIds.removeAt(0);
+      }
+      await box.put(_sharedQuizIdsKey, sharedIds);
+    }
+  }
+
+  static Future<void> resetSharedQuizHistoryIfNeeded() async {
+    var box = Hive.box(userBoxName);
+    String today = _todayDate();
+    String? lastReset = box.get(_lastShareHistoryResetKey) as String?;
+
+    if (lastReset == null) {
+      await box.put(_lastShareHistoryResetKey, today);
+      return;
+    }
+
+    DateTime now = AppDate.getISTNow();
+    DateTime last = AppDate.parse(lastReset);
+    
+    // Reset every 7 days
+    if (now.difference(last).inDays >= 7) {
+      await box.put(_sharedQuizIdsKey, <String>[]);
+      await box.put(_lastShareHistoryResetKey, today);
+      AppLog.d("AI_DEBUG: Weekly Share History Reset completed.");
+    }
+  }
 }
