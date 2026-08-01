@@ -914,6 +914,12 @@ class AppLanguage {
         return ta ? 'இணைய இணைப்பு துண்டிக்கப்பட்டுள்ளது. உங்கள் சிக்னலைச் சரிபார்க்கவும்.' : 'Internet connection lost. Please check your signal.';
       case 'error_launch_url':
         return ta ? 'மன்னிக்கவும், இந்த இணைப்பைத் திறக்க முடியவில்லை.' : 'Sorry, we couldn\'t open this link.';
+      case 'streak_7':
+        return ta ? '7+ நாட்கள் தொடர்ச்சி' : '7+ Days Streak';
+      case 'streak_14':
+        return ta ? '14+ நாட்கள் தொடர்ச்சி' : '14+ Days Streak';
+      case 'streak_30':
+        return ta ? '30+ நாட்கள் தொடர்ச்சி' : '30+ Days Streak';
       default:
         return key;
     }

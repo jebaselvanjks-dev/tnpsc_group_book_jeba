@@ -5,6 +5,7 @@ import '../utils/app_icons.dart';
 import '../utils/app_language.dart';
 import '../services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/streak_badge.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -33,6 +34,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Color _getRankColor(int index) {
+    if (index == 0) return Colors.amber;
+    if (index == 1) return Colors.blueGrey;
+    if (index == 2) return Colors.orangeAccent;
+    return AppTheme.primaryColor;
   }
 
   @override
@@ -147,6 +155,13 @@ class _MyRankStickyCardState extends State<_MyRankStickyCard> {
     });
   }
 
+  Color _getRankColor(int index) {
+    if (index == 0) return Colors.amber;
+    if (index == 1) return Colors.blueGrey;
+    if (index == 2) return Colors.orangeAccent;
+    return AppTheme.primaryColor;
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -186,6 +201,23 @@ class _MyRankStickyCardState extends State<_MyRankStickyCard> {
                     top: false,
                     child: Row(
                       children: [
+                        if (data['rank'] != null && data['rank'] > 0)
+                          Container(
+                            margin: const EdgeInsets.only(right: 12),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              "#${data['rank']}",
+                              style: AppTheme.getStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         Expanded(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -209,6 +241,8 @@ class _MyRankStickyCardState extends State<_MyRankStickyCard> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
+                              if (data['streak'] != null)
+                                StreakBadge(streak: data['streak']),
                             ],
                           ),
                         ),
@@ -303,6 +337,13 @@ class _LeaderboardListState extends State<_LeaderboardList> {
     });
     // Wait for the future to complete
     await _future;
+  }
+
+  Color _getRankColor(int index) {
+    if (index == 0) return Colors.amber;
+    if (index == 1) return Colors.blueGrey;
+    if (index == 2) return Colors.orangeAccent;
+    return AppTheme.primaryColor;
   }
 
   @override
@@ -428,6 +469,8 @@ class _LeaderboardListState extends State<_LeaderboardList> {
                                   color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppTheme.textMainColor,
                                 ),
                               ),
+                              if (user['streak'] != null)
+                                StreakBadge(streak: user['streak']),
                               const SizedBox(height: 4),
                               Row(
                                 children: [

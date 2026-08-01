@@ -226,6 +226,9 @@ class FirestoreService {
       int currentPoints = userBox.get('totalScore', defaultValue: 0) as int;
       await userBox.put('totalScore', currentPoints + points);
       
+      // Invalidate global rank cache
+      await HiveService.invalidateGlobalRankCache();
+      
       // 2. Update Firestore
       await _db.collection('users').doc(uid).set({
         'totalScore': FieldValue.increment(points),
@@ -656,6 +659,19 @@ class FirestoreService {
         AppLog.d("AI_DEBUG: Found User: ${d['userName']} with Score: ${d['score']}");
         return d;
       }).toList();
+
+      // AI_DEBUG: Perform local sorting to handle cases where 'streak' field might be missing in old records
+      // This ensures NO ONE is hidden from the leaderboard while still giving preference to streaks.
+      data.sort((a, b) {
+        int scoreA = a['score'] ?? 0;
+        int scoreB = b['score'] ?? 0;
+        if (scoreB != scoreA) return scoreB.compareTo(scoreA);
+        
+        // If scores are equal, sort by streak
+        int streakA = a['streak'] ?? 0;
+        int streakB = b['streak'] ?? 0;
+        return streakB.compareTo(streakA);
+      });
       
       // Update Hive cache
       await HiveService.saveLeaderboardData(isDaily, data);
@@ -693,7 +709,39 @@ class FirestoreService {
           .get();
       if (doc.exists) {
         AppLog.d("AI_DEBUG: User ${isDaily ? 'daily' : 'mock'} score fetched from SERVER");
-        return doc.data() as Map<String, dynamic>;
+        var userData = doc.data() as Map<String, dynamic>;
+        int myScore = userData['score'] ?? 0;
+
+        // READ_OPT: Check Hive first for cached rank to avoid count() costs
+        var cachedRank = HiveService.getCachedRank(isDaily, myScore);
+        if (cachedRank != null) {
+          userData['rank'] = cachedRank['rank'];
+          AppLog.d("FIRESTORE_OPT: Using cached rank from HIVE: ${userData['rank']}");
+          return userData;
+        }
+        
+        // AI_DEBUG: Calculate current user's rank for today's leaderboard
+        try {
+          // Count how many users have a higher score
+          AggregateQuerySnapshot higherScoresCount = await _db
+              .collection('leaderboards')
+              .doc(docId)
+              .collection('scores')
+              .where('score', isGreaterThan: myScore)
+              .count()
+              .get();
+          
+          int finalRank = (higherScoresCount.count ?? 0) + 1;
+          userData['rank'] = finalRank;
+
+          // Save to Hive
+          await HiveService.saveCachedRank(isDaily, myScore, finalRank);
+        } catch (e) {
+          AppLog.e("Error calculating daily rank", e);
+          userData['rank'] = 0;
+        }
+
+        return userData;
       }
     } catch (e) {
       AppLog.d("AI_DEBUG: Error fetching user's score: $e");
@@ -721,10 +769,15 @@ class FirestoreService {
 
       // AI_OPTIMIZATION: Check if this is the best score for today using Hive
       String today = AppDate.getTodayString();
-      String bestKey = isDaily ? 'best_score_daily_$today' : 'best_score_mock_$today';
-      int previousBest = userBox.get(bestKey, defaultValue: -1) as int;
+      String bestScoreKey = isDaily ? 'best_score_daily_$today' : 'best_score_mock_$today';
+      String bestStreakKey = isDaily ? 'best_streak_daily_$today' : 'best_streak_mock_$today';
+      
+      int previousBestScore = userBox.get(bestScoreKey, defaultValue: -1) as int;
+      int previousBestStreak = userBox.get(bestStreakKey, defaultValue: -1) as int;
+      int currentStreak = userBox.get('streak', defaultValue: 0) as int;
 
-      bool isNewBest = score > previousBest;
+      // WRITE_OPT: Only update leaderboard if score is better OR if score is same but streak improved (badge update)
+      bool isNewBest = score > previousBestScore || (score == previousBestScore && currentStreak > previousBestStreak);
 
       WriteBatch batch = _db.batch();
 
@@ -755,6 +808,7 @@ class FirestoreService {
           'score': score, 
           'totalQuestions': totalQuestions,
           'timeTaken': timeTaken,
+          'streak': userBox.get('streak', defaultValue: 0) as int,
           'timestamp': FieldValue.serverTimestamp(),
           'expiresAt': AppDate.getISTNow().add(const Duration(days: 7)), 
         };
@@ -767,10 +821,16 @@ class FirestoreService {
           batch.set(_db.collection('leaderboards').doc('weekly_$monday').collection('scores').doc(uid), scoreData, SetOptions(merge: true));
         }
 
-        await userBox.put(bestKey, score);
-        AppLog.d("FIRESTORE_OPT: New Best Score! Syncing to Leaderboard.");
+        await userBox.put(bestScoreKey, score);
+        await userBox.put(bestStreakKey, currentStreak);
+        
+        // READ_OPT: Invalidate rank cache because a new best score means rank needs recalculation
+        await HiveService.invalidateRankCache(isDaily || isMock);
+        await HiveService.invalidateGlobalRankCache();
+        
+        AppLog.d("FIRESTORE_OPT: New Best Score/Streak! Syncing to Leaderboard.");
       } else if (isDaily || isMock) {
-        AppLog.d("FIRESTORE_OPT: Score $score not better than $previousBest. Leaderboard Write skipped.");
+        AppLog.d("FIRESTORE_OPT: Result not better than $previousBestScore score / $previousBestStreak streak. Leaderboard Write skipped.");
       }
 
       // 4. Update user overall stats in Firestore
@@ -880,18 +940,38 @@ class FirestoreService {
     if (uid == null) return 0;
 
     try {
-      // Get current user's score
-      DocumentSnapshot userDoc = await _db.collection('users').doc(uid).get();
-      if (!userDoc.exists) return 0;
-      
-      int myScore = (userDoc.data() as Map<String, dynamic>)['totalScore'] ?? 0;
+      // READ_OPT: Use Hive totalScore to avoid a document read
+      final userBox = Hive.box(HiveService.userBoxName);
+      int myScore = userBox.get('totalScore', defaultValue: -1) as int;
 
-      // Count how many users have a higher score
-      QuerySnapshot higherScorers = await _db.collection('users')
+      if (myScore == -1) {
+        // Fallback: Get current user's score from server if hive is empty
+        DocumentSnapshot userDoc = await _db.collection('users').doc(uid).get();
+        if (!userDoc.exists) return 0;
+        myScore = (userDoc.data() as Map<String, dynamic>)['totalScore'] ?? 0;
+        await userBox.put('totalScore', myScore);
+      }
+      
+      // READ_OPT: Check Hive cache for global rank
+      var cached = HiveService.getCachedGlobalRank(myScore);
+      if (cached != null) {
+        AppLog.d("FIRESTORE_OPT: Using cached GLOBAL rank from HIVE: ${cached['rank']}");
+        return cached['rank'] ?? 0;
+      }
+
+      // FIRESTORE_OPT: Use count() aggregation instead of fetching all docs (CHEAP & FAST)
+      AppLog.d("FIRESTORE_OPT: Calculating global rank using count()...");
+      AggregateQuerySnapshot snapshot = await _db.collection('users')
           .where('totalScore', isGreaterThan: myScore)
+          .count()
           .get();
       
-      return higherScorers.docs.length + 1;
+      int rank = (snapshot.count ?? 0) + 1;
+
+      // Cache the result
+      await HiveService.saveCachedGlobalRank(myScore, rank);
+      
+      return rank;
     } catch (e) {
       AppLog.e("Error calculating rank", e);
       return 0;

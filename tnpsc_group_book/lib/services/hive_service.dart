@@ -662,4 +662,56 @@ class HiveService {
       AppLog.d("AI_DEBUG: Weekly Share History Reset completed.");
     }
   }
+
+  // ------------------- Rank Caching (Read Optimization) -------------------
+  static Future<void> saveCachedRank(bool isDaily, int score, int rank) async {
+    final box = Hive.box(userBoxName);
+    final today = _todayDate();
+    final key = isDaily ? 'cached_rank_daily_$today' : 'cached_rank_mock_$today';
+    await box.put(key, {'score': score, 'rank': rank});
+  }
+
+  static Map<String, int>? getCachedRank(bool isDaily, int currentScore) {
+    final box = Hive.box(userBoxName);
+    final today = _todayDate();
+    final key = isDaily ? 'cached_rank_daily_$today' : 'cached_rank_mock_$today';
+    final data = box.get(key);
+    
+    if (data != null && data is Map) {
+      int cachedScore = data['score'] ?? -1;
+      if (cachedScore == currentScore) {
+        return {'score': cachedScore, 'rank': data['rank'] ?? 0};
+      }
+    }
+    return null;
+  }
+
+  static Future<void> saveCachedGlobalRank(int score, int rank) async {
+    final box = Hive.box(userBoxName);
+    await box.put('cached_global_rank', {'score': score, 'rank': rank});
+  }
+
+  static Map<String, int>? getCachedGlobalRank(int currentScore) {
+    final box = Hive.box(userBoxName);
+    final data = box.get('cached_global_rank');
+    if (data != null && data is Map) {
+      int cachedScore = data['score'] ?? -1;
+      if (cachedScore == currentScore) {
+        return {'score': cachedScore, 'rank': data['rank'] ?? 0};
+      }
+    }
+    return null;
+  }
+
+  static Future<void> invalidateRankCache(bool isDaily) async {
+    final box = Hive.box(userBoxName);
+    final today = _todayDate();
+    final key = isDaily ? 'cached_rank_daily_$today' : 'cached_rank_mock_$today';
+    await box.delete(key);
+  }
+
+  static Future<void> invalidateGlobalRankCache() async {
+    final box = Hive.box(userBoxName);
+    await box.delete('cached_global_rank');
+  }
 }

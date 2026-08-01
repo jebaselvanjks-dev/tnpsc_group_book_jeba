@@ -1,0 +1,7 @@
+- [x] Add localization strings for badges in `app_language.dart`
+- [x] Update `FirestoreService.saveQuizResult` to include streak in leaderboard data
+- [x] Implement `_buildBadge` and badge display logic in `leaderboard_screen.dart`
+- [x] Update `FirestoreService.getLeaderboard` sorting logic (Hybrid Sort: Score desc first, then Streak desc)
+- [x] Verify no users are hidden by using Local Sorting instead of Server-side composite index
+- [x] Implement real-time rank calculation for current user in `_MyRankStickyCard`
+- [x] Implement Read/Write controls (Hive caching for Rank, Conditional Leaderboard Updates)
