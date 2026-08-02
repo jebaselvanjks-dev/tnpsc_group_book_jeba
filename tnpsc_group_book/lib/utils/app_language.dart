@@ -206,6 +206,10 @@ class AppLanguage {
         return ta ? 'நீங்கள் குறித்த கேள்விகளைத் திருப்புதல் செய்யுங்கள்' : 'Revise your bookmarked questions';
       case 'support':
         return ta ? 'ஆதரவு' : 'Support';
+      case 'join_telegram':
+        return ta ? 'டெலிகிராமில் இணையுங்கள்' : 'Join Telegram';
+      case 'telegram_desc':
+        return ta ? 'முக்கிய அறிவிப்புகள் மற்றும் டிப்ஸ் பெற' : 'Get important updates and study tips';
       case 'feedback_support':
         return ta ? 'கருத்து & ஆதரவு' : 'Feedback & Support';
       case 'report_bugs':

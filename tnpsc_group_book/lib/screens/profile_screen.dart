@@ -545,6 +545,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 const Divider(height: 1),
                                 ListTile(
                                   leading: const AppIcon(
+                                    Icons.send_rounded,
+                                    color: Colors.lightBlue,
+                                  ),
+                                  title: Text(
+                                    AppLanguage.getString('join_telegram'),
+                                    style: AppTheme.getStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.lightBlue,
+                                    ),
+                                  ),
+                                  trailing: const AppIcon(
+                                    Icons.chevron_right_rounded,
+                                    color: Colors.grey,
+                                  ),
+                                  onTap: () => _launchURL('https://t.me/tnpscmaster'),
+                                ),
+                                const Divider(height: 1),
+                                ListTile(
+                                  leading: const AppIcon(
                                     Icons.share_rounded,
                                     color: Colors.blueAccent,
                                   ),

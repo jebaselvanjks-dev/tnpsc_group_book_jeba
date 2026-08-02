@@ -13,6 +13,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:tnpsc_group_book/screens/bookmark_screen.dart';
 import 'package:tnpsc_group_book/screens/feedback_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/hive_service.dart';
 import 'package:tnpsc_group_book/services/reward_service.dart';
 
@@ -26,6 +27,25 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String _userName = "";
   final FirestoreService _firestoreService = FirestoreService();
+
+  Future<void> _launchURL(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLanguage.getString('error_launch_url'))),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLanguage.getString('error_generic'))),
+        );
+      }
+    }
+  }
 
   bool get _isAdmin {
     final user = FirebaseAuth.instance.currentUser;
@@ -380,18 +400,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Card(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 2,
-                    child: ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), shape: BoxShape.circle),
-                        child: const AppIcon(AppIcons.feedback, color: Colors.blue),
-                      ),
-                      title: Text(AppLanguage.getString('feedback_support')),
-                      subtitle: Text(AppLanguage.getString('report_bugs')),
-                      trailing: const AppIcon(Icons.chevron_right_rounded),
-                      onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => const FeedbackScreen()));
-                      },
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), shape: BoxShape.circle),
+                            child: const AppIcon(AppIcons.feedback, color: Colors.blue),
+                          ),
+                          title: Text(AppLanguage.getString('feedback_support')),
+                          subtitle: Text(AppLanguage.getString('report_bugs')),
+                          trailing: const AppIcon(Icons.chevron_right_rounded),
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => const FeedbackScreen()));
+                          },
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: Colors.lightBlue.withOpacity(0.1), shape: BoxShape.circle),
+                            child: const AppIcon(Icons.send_rounded, color: Colors.lightBlue),
+                          ),
+                          title: Text(AppLanguage.getString('join_telegram')),
+                          subtitle: Text(AppLanguage.getString('telegram_desc')),
+                          trailing: const AppIcon(Icons.chevron_right_rounded),
+                          onTap: () => _launchURL('https://t.me/tnpscmaster'),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 24),
