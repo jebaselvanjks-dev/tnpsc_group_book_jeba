@@ -11,6 +11,7 @@ import '../utils/app_icons.dart';
 import '../utils/app_date.dart';
 import '../utils/app_language.dart';
 import '../services/firestore_service.dart';
+import '../services/notification_service.dart';
 import 'result_screen.dart';
 import '../services/hive_service.dart';
 import '../services/analytics_service.dart';
@@ -512,6 +513,8 @@ class _QuizScreenState extends State<QuizScreen> {
 
       if (isDaily) {
         HiveService.setDailyQuizDone();
+        // Update reminders since quiz is done
+        NotificationService.reschedulePersonalizedReminders();
       } else if (isMock) {
         HiveService.setMockQuizDone();
       }

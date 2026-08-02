@@ -425,7 +425,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           title: Text(AppLanguage.getString('join_telegram')),
                           subtitle: Text(AppLanguage.getString('telegram_desc')),
                           trailing: const AppIcon(Icons.chevron_right_rounded),
-                          onTap: () => _launchURL('https://t.me/tnpscmaster'),
+                          onTap: () => _launchURL('https://t.me/+HDW2ssG3H9s4MzM1'),
                         ),
                       ],
                     ),

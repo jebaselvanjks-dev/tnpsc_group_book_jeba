@@ -190,6 +190,7 @@ class _MainWrapperState extends State<MainWrapper> with WidgetsBindingObserver {
   void _runPeriodicChecks() {
     VersionService.checkForUpdate(context);
     FirestoreService().updateStreak();
+    NotificationService.reschedulePersonalizedReminders();
     _lastBackgroundCheck = DateTime.now();
   }
 

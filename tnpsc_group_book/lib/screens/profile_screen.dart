@@ -560,7 +560,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     Icons.chevron_right_rounded,
                                     color: Colors.grey,
                                   ),
-                                  onTap: () => _launchURL('https://t.me/tnpscmaster'),
+                                  onTap: () => _launchURL('https://t.me/+HDW2ssG3H9s4MzM1'),
                                 ),
                                 const Divider(height: 1),
                                 ListTile(

@@ -2,7 +2,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
+import 'hive_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:tnpsc_group_book/utils/app_date.dart';
@@ -120,25 +121,86 @@ class NotificationService {
       });
 
       // 5. Schedule Automatic Reminders
-      // Morning 10:10 AM - Daily Quiz Reminder
-      await scheduleDailyReminder(
-        id: 100,
-        hour: 08,
-        minute: 0,
-        titleKey: 'notif_daily_quiz_ready_title',
-        bodyKey: 'notif_daily_quiz_ready_body',
-      );
-
-      // Evening 8:00 PM - Group Test Reminder
-      await scheduleDailyReminder(
-        id: 200,
-        hour: 20,
-        minute: 0,
-        titleKey: 'reminder_title',
-        bodyKey: 'reminder_body',
-      );
+      await reschedulePersonalizedReminders();
     } catch (e) {
       AppLog.d("AI_DEBUG: Error initializing NotificationService: $e");
+    }
+  }
+
+  /// Reschedules daily reminders based on user performance and status
+  static Future<void> reschedulePersonalizedReminders() async {
+    try {
+      final box = Hive.box(HiveService.userBoxName);
+      final bool isTa = AppLanguage.languageNotifier.value == 'ta';
+
+      // --- 1. Morning Reminder (8:00 AM) - Score Based ---
+      DateTime yesterday = AppDate.getISTNow().subtract(const Duration(days: 1));
+      String yesterdayStr = AppDate.format(yesterday);
+      int lastScore = box.get('best_score_daily_$yesterdayStr', defaultValue: 0) as int;
+
+      String morningTitle = AppLanguage.getString('notif_daily_quiz_ready_title');
+      String morningBody;
+
+      if (lastScore > 0) {
+        morningBody = AppLanguage.getString('notif_yesterday_score').replaceAll('{score}', lastScore.toString());
+      } else {
+        morningBody = AppLanguage.getString('notif_daily_quiz_ready_body');
+      }
+
+      await _notificationsPlugin.cancel(id: 100);
+      await _notificationsPlugin.zonedSchedule(
+        id: 100,
+        title: morningTitle,
+        body: morningBody,
+        scheduledDate: _nextInstanceOfTime(8, 0),
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'daily_reminder_channel',
+            'Daily Reminders',
+            channelDescription: 'Scheduled study reminders',
+            importance: Importance.max,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+
+      // --- 2. Evening Reminder (8:00 PM) - Streak Warning ---
+      bool isDoneToday = HiveService.isDailyQuizDone();
+      int streak = box.get('streak', defaultValue: 0) as int;
+
+      // Only show streak warning if quiz is not done AND user has an active streak
+      if (!isDoneToday && streak > 0) {
+        await _notificationsPlugin.cancel(id: 200);
+        await _notificationsPlugin.zonedSchedule(
+          id: 200,
+          title: AppLanguage.getString('reminder_title'),
+          body: AppLanguage.getString('notif_streak_warning'),
+          scheduledDate: _nextInstanceOfTime(20, 0),
+          notificationDetails: const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'daily_reminder_channel',
+              'Daily Reminders',
+              channelDescription: 'Scheduled study reminders',
+              importance: Importance.max,
+              priority: Priority.high,
+            ),
+            iOS: DarwinNotificationDetails(),
+          ),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+      } else {
+        // If already done, we can either cancel or schedule a generic one for tomorrow
+        // For now, let's keep it scheduled but maybe generic or just cancel to not annoy
+        await _notificationsPlugin.cancel(id: 200);
+      }
+
+      AppLog.d("AI_DEBUG: Personalized reminders rescheduled.");
+    } catch (e) {
+      AppLog.e("AI_DEBUG: Error rescheduling reminders: $e");
     }
   }
 

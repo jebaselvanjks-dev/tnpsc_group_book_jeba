@@ -560,6 +560,10 @@ class AppLanguage {
         return ta ? 'இன்றைய குவிஸ் தயார்! 🧠' : "Today's Quiz Ready! 🧠";
       case 'notif_daily_quiz_ready_body':
         return ta ? 'இன்றைய TNPSC சவாலில் கலந்துகொண்டு உங்கள் அறிவைச் சோதியுங்கள்!' : "Test your knowledge by joining today's TNPSC challenge!";
+      case 'notif_yesterday_score':
+        return ta ? 'நேற்று {score}/20 எடுத்தீர்கள். இன்று 20/20 எடுக்க முடியுமா? 🎯' : 'You scored {score}/20 yesterday. Can you score 20/20 today? 🎯';
+      case 'notif_streak_warning':
+        return ta ? 'உங்கள் streak இன்று முடிவடைகிறது. Quiz எழுதுங்கள். 🔥' : 'Your streak ends today. Play the quiz now! 🔥';
       case 'students_access_desc':
         return ta ? 'மாணவர்கள் இந்த நாளிலிருந்து அணுகலாம்' : 'Students can access from this day';
       case 'generation_time_desc':
