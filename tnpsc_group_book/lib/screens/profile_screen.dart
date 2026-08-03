@@ -22,6 +22,7 @@ import '../services/firestore_service.dart';
 import 'settings_screen.dart';
 import 'login_screen.dart';
 import 'admin_panel_screen.dart';
+import '../widgets/streak_badge.dart';
 import '../widgets/share_poster.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -224,15 +225,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 16),
-                                Text(
-                                  name,
-                                  style: AppTheme.getStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? Colors.white
-                                        : AppTheme.textMainColor,
-                                  ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        name,
+                                        style: AppTheme.getStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark
+                                              ? Colors.white
+                                              : AppTheme.textMainColor,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if ((userData?['streak'] ?? 0) >= 7) ...[
+                                      const SizedBox(width: 3),
+                                      Padding(
+                                        padding: const EdgeInsets.only(bottom: 4.0),
+                                        child: StreakBadge(streak: userData?['streak'] ?? 0),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                                 const SizedBox(height: 4),
                                 Text(

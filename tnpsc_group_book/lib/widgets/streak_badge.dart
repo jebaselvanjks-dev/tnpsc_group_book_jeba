@@ -25,26 +25,17 @@ class StreakBadge extends StatelessWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.only(right: 6, top: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+      // decoration: BoxDecoration(
+      //   color: color.withValues(alpha: 0.1),
+      //   borderRadius: BorderRadius.circular(12),
+      //   border: Border.all(color: color.withValues(alpha: 0.3)),
+      // ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(icon, style: AppTheme.getStyle(fontSize: 12)),
-          const SizedBox(width: 4),
-          Text(
-            AppLanguage.getString(labelKey),
-            style: AppTheme.getStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
+          Text(icon, style: AppTheme.getStyle(fontSize: 15)),
         ],
       ),
     );

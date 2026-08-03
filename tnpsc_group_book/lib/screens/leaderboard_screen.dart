@@ -231,18 +231,26 @@ class _MyRankStickyCardState extends State<_MyRankStickyCard> {
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              Text(
-                                "${AppLanguage.getString('you_label')}: ${data['userName'] ?? AppLanguage.getString('anonymous')}",
-                                style: AppTheme.getStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      "${AppLanguage.getString('you_label')}: ${data['userName'] ?? AppLanguage.getString('anonymous')}",
+                                      style: AppTheme.getStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (data['streak'] != null) ...[
+                                    const SizedBox(width: 2),
+                                    StreakBadge(streak: data['streak']),
+                                  ],
+                                ],
                               ),
-                              if (data['streak'] != null)
-                                StreakBadge(streak: data['streak']),
                             ],
                           ),
                         ),
@@ -461,16 +469,26 @@ class _LeaderboardListState extends State<_LeaderboardList> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                user["userName"] ?? AppLanguage.getString('anonymous'),
-                                style: AppTheme.getStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppTheme.textMainColor,
-                                ),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      user["userName"] ?? AppLanguage.getString('anonymous'),
+                                      style: AppTheme.getStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppTheme.textMainColor,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (user['streak'] != null) ...[
+                                    const SizedBox(width: 2),
+                                    StreakBadge(streak: user['streak']),
+                                  ],
+                                ],
                               ),
-                              if (user['streak'] != null)
-                                StreakBadge(streak: user['streak']),
                               const SizedBox(height: 4),
                               Row(
                                 children: [

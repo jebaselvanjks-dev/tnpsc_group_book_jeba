@@ -23,6 +23,7 @@ import 'ai_smart_prep_screen.dart';
 import 'ai_tutor_screen.dart';
 import 'topic_detail_screen.dart';
 import 'leaderboard_screen.dart';
+import '../widgets/streak_badge.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../widgets/ad_banner.dart';
@@ -142,14 +143,35 @@ class _HomeScreenState extends State<HomeScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "${AppLanguage.getString('greeting')}, \n$userName! 👋",
+                                          "${AppLanguage.getString('greeting')},",
                                           style: AppTheme.getStyle(
                                             fontSize: 22,
                                             fontWeight: FontWeight.bold,
                                             color: isDark ? Colors.white : AppTheme.textMainColor,
                                           ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Row(
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                "$userName! 👋",
+                                                style: AppTheme.getStyle(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isDark ? Colors.white : AppTheme.textMainColor,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            if (streak >= 7) ...[
+                                              const SizedBox(width: 2),
+                                              Padding(
+                                                padding: const EdgeInsets.only(bottom: 4.0),
+                                                child: StreakBadge(streak: streak),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                         const SizedBox(height: 8),
                                         Text(

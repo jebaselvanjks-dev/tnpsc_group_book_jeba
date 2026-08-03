@@ -12,6 +12,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:tnpsc_group_book/screens/bookmark_screen.dart';
 import 'package:tnpsc_group_book/screens/feedback_screen.dart';
+import '../widgets/streak_badge.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/hive_service.dart';
@@ -26,6 +27,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _userName = "";
+  int _streak = 0;
   final FirestoreService _firestoreService = FirestoreService();
 
   Future<void> _launchURL(String urlString) async {
@@ -63,24 +65,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadUserData() async {
     // 1. Check Hive first
     String? name = HiveService.getUserName();
-    if (name == null || name.isEmpty) {
-      final cachedData = HiveService.getCachedUserData();
-      if (cachedData != null) {
-        name = cachedData['name'] ?? "";
-      }
+    int streak = 0;
+
+    final cachedData = HiveService.getCachedUserData();
+    if (cachedData != null) {
+      if (name == null || name.isEmpty) name = cachedData['name'] ?? "";
+      streak = cachedData['streak'] ?? 0;
     }
 
-    // 2. If still empty, check Firestore
-    if (name == null || name.isEmpty) {
+    // 2. If still empty/need more, check Firestore
+    if (name == null || name.isEmpty || streak == 0) {
       final userDoc = await _firestoreService.getUserData();
       if (userDoc != null && userDoc.exists) {
-        name = (userDoc.data() as Map<String, dynamic>)['name'] ?? "";
+        final data = userDoc.data() as Map<String, dynamic>;
+        if (name == null || name.isEmpty) name = data['name'] ?? "";
+        streak = data['streak'] ?? 0;
       }
     }
 
     if (mounted) {
       setState(() {
         _userName = name ?? AppLanguage.getString('user_fallback');
+        _streak = streak;
       });
     }
   }
@@ -177,11 +183,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   AppLanguage.languageNotifier.value == 'ta' ? 'வணக்கம்,' : 'Hello,',
                   style: AppTheme.getStyle(fontSize: 14, color: Colors.grey),
                 ),
-                Text(
-                  _userName.isEmpty ? AppLanguage.getString('user_fallback') : _userName,
-                  style: AppTheme.getStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _userName.isEmpty ? AppLanguage.getString('user_fallback') : _userName,
+                        style: AppTheme.getStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textMainColor),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (_streak >= 7) ...[
+                      const SizedBox(width: 2),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4.0),
+                        child: StreakBadge(streak: _streak),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
