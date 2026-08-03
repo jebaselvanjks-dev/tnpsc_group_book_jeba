@@ -1,0 +1,4 @@
+- `[x]` Refactor `_createRoom` in `room_setup_screen.dart` to validate time before ads
+- `[x]` Implement date anchoring in `room_setup_screen.dart`
+- `[x]` Add strict past-time validation in `room_service.dart`
+- `[x]` Verify time validation and date consistency

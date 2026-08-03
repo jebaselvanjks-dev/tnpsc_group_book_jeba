@@ -140,6 +140,11 @@ class RoomService {
         return 'invalid_player_limit';
       }
 
+      // Strict validation: Prevent creating rooms with past start time
+      if (startTime != null && startTime.isBefore(AppDate.getISTNow().subtract(const Duration(minutes: 1)))) {
+        return 'past_time_error';
+      }
+
       bool canPlay = await canPlayToday();
       if (!canPlay) return 'limit_reached';
 

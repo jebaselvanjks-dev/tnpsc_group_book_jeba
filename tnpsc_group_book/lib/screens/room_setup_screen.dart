@@ -272,7 +272,49 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
       return;
     }
 
-    // 5. If all checks pass, proceed with Rewarded Ad
+    // 5. If all checks pass, validate time BEFORE showing ad
+    final nowAtClick = AppDate.getISTNow();
+    final startDateTime = AppDate.getISTTodayWithTime(_startTime.hour, _startTime.minute);
+    final endDateTime = AppDate.getISTTodayWithTime(_endTime.hour, _endTime.minute);
+    
+    // Validation: Start time must be in future (at least 2 mins from now)
+    if (startDateTime.isBefore(nowAtClick.add(const Duration(minutes: 2)))) {
+      _showError(AppLanguage.languageNotifier.value == 'ta' 
+        ? "தொடக்க நேரம் குறைந்தது 2 நிமிடங்கள் எதிர்காலத்தில் இருக்க வேண்டும்" 
+        : "Start time must be at least 2 minutes in the future");
+      setState(() => _isCreatingProcess = false);
+      return;
+    }
+
+    // Validation: End time cannot be before start time
+    if (endDateTime.isBefore(startDateTime)) {
+      _showError(AppLanguage.languageNotifier.value == 'ta' 
+        ? "முடிவு நேரம் தொடக்க நேரத்திற்குப் பிறகு இருக்க வேண்டும்" 
+        : "End time must be after start time");
+      setState(() => _isCreatingProcess = false);
+      return;
+    }
+
+    final diffInMinutes = endDateTime.difference(startDateTime).inMinutes;
+
+    // Validation: At least 1 hour difference
+    if (diffInMinutes < 60) {
+      _showError(AppLanguage.languageNotifier.value == 'ta' 
+        ? "குறைந்தது 1 மணிநேர இடைவெளி தேவை (எ.கா: 5:40 PM - 6:40 PM)" 
+        : "Minimum 1 hour duration required (e.g., 5:40 PM - 6:40 PM)");
+      setState(() => _isCreatingProcess = false);
+      return;
+    }
+
+    // Validation: Maximum 24 hours
+    if (diffInMinutes > 1440) {
+      _showError(AppLanguage.languageNotifier.value == 'ta' 
+        ? "அதிகபட்சம் 24 மணிநேரம் மட்டுமே அனுமதிக்கப்படுகிறது" 
+        : "Maximum duration is 24 hours");
+      setState(() => _isCreatingProcess = false);
+      return;
+    }
+
     setState(() => _isLoading = true);
     _startSpinnerTimer();
     
@@ -282,58 +324,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         // Ad successful - Unlock the attempt
         await HiveService.incrementRoomAdWatchCount();
         
-        // Prepare dates
-        final startDateTime = AppDate.getISTTodayWithTime(_startTime.hour, _startTime.minute);
-        final endDateTime = AppDate.getISTTodayWithTime(_endTime.hour, _endTime.minute);
-        
-        // Validation: Start time must be in future (at least 2 mins from now)
-        final nowAtCreation = AppDate.getISTNow();
-        if (startDateTime.isBefore(nowAtCreation.add(const Duration(minutes: 2)))) {
-          if (mounted) {
-            _showError(AppLanguage.languageNotifier.value == 'ta' 
-              ? "தொடக்க நேரம் குறைந்தது 2 நிமிடங்கள் எதிர்காலத்தில் இருக்க வேண்டும்" 
-              : "Start time must be at least 2 minutes in the future");
-            setState(() => _isLoading = false);
-          }
-          return;
-        }
-
-        // Validation: End time cannot be before start time
-        if (endDateTime.isBefore(startDateTime)) {
-          if (mounted) {
-            _showError(AppLanguage.languageNotifier.value == 'ta' 
-              ? "முடிவு நேரம் தொடக்க நேரத்திற்குப் பிறகு இருக்க வேண்டும்" 
-              : "End time must be after start time");
-            setState(() => _isLoading = false);
-          }
-          return;
-        }
-
-        final diffInMinutes = endDateTime.difference(startDateTime).inMinutes;
-
-        // Validation: At least 1 hour difference
-        if (diffInMinutes < 60) {
-          if (mounted) {
-            _showError(AppLanguage.languageNotifier.value == 'ta' 
-              ? "குறைந்தது 1 மணிநேர இடைவெளி தேவை (எ.கா: 5:40 PM - 6:40 PM)" 
-              : "Minimum 1 hour duration required (e.g., 5:40 PM - 6:40 PM)");
-            setState(() => _isLoading = false);
-          }
-          return;
-        }
-
-        // Validation: Maximum 24 hours
-        if (diffInMinutes > 1440) {
-          if (mounted) {
-            _showError(AppLanguage.languageNotifier.value == 'ta' 
-              ? "அதிகபட்சம் 24 மணிநேரம் மட்டுமே அனுமதிக்கப்படுகிறது" 
-              : "Maximum duration is 24 hours");
-            setState(() => _isLoading = false);
-          }
-          return;
-        }
-
-        // Start creating the room on Firestore
+        // Start creating the room on Firestore using the PRE-VALIDATED anchored dates
         String? code = await _roomService.createRoom(
           _selectedSubject, 
           _selectedMaxPlayers,
@@ -346,6 +337,8 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
       if (code == 'limit_reached') {
         _showRoomLimitDialog(context);
+      } else if (code == 'past_time_error') {
+        _showError(AppLanguage.languageNotifier.value == 'ta' ? "தொடக்க நேரம் செல்லாது (முடிந்துவிட்டது)" : "Invalid start time (already passed)");
       } else if (code == 'insufficient_points') {
         _showNeedPointsMessage();
       } else if (code == 'no_questions') {
