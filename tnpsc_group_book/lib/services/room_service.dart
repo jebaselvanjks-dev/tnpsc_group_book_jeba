@@ -140,16 +140,29 @@ class RoomService {
         return 'invalid_player_limit';
       }
 
+      // Check for any active room membership (Hosting or Joined)
+      final existingHost = await getActiveHostRoom();
+      if (existingHost != null) return 'room_exists_error';
+      
+      final existingJoined = await getActiveJoinedRoom();
+      if (existingJoined != null) return 'room_exists_error';
+
       // Strict validation: Prevent creating rooms with past start time
-      if (startTime != null && startTime.isBefore(AppDate.getISTNow().subtract(const Duration(minutes: 1)))) {
+      DateTime now = AppDate.getISTNow();
+      if (startTime != null && startTime.isBefore(now.subtract(const Duration(minutes: 1)))) {
         return 'past_time_error';
+      }
+
+      // Ensure creation is for TODAY IST
+      String today = AppDate.getTodayString();
+      if (startTime != null && AppDate.format(startTime) != today) {
+        return 'invalid_date_error';
       }
 
       bool canPlay = await canPlayToday();
       if (!canPlay) return 'limit_reached';
 
       String roomCode = _generateRoomCode();
-      String today = AppDate.getTodayString();
       currentRoomDate = today;
 
       // Ensure unique room code
@@ -440,6 +453,13 @@ class RoomService {
     if (uid == null) return 'auth_error';
 
     try {
+      // Check for any active room membership first
+      final existingHost = await getActiveHostRoom();
+      if (existingHost != null && existingHost['roomCode'] != roomCode) return 'already_in_room';
+      
+      final existingJoined = await getActiveJoinedRoom();
+      if (existingJoined != null && existingJoined['roomCode'] != roomCode) return 'already_in_room';
+
       String today = AppDate.getTodayString();
       currentRoomDate = today;
       DocumentReference roomRef = _getRoomRef(roomCode);
@@ -799,6 +819,46 @@ class RoomService {
       });
     } catch (e) {
       AppLog.e("Error updating room time range", e);
+    }
+  }
+
+  /// Checks if the user is currently a player in any active or waiting room today.
+  Future<Map<String, dynamic>?> getActiveJoinedRoom() async {
+    String? uid = _auth.currentUser?.uid;
+    if (uid == null) return null;
+
+    try {
+      String today = AppDate.getTodayString();
+      final userDoc = await _db.collection('users').doc(uid).get();
+      final lastRoomPlayed = userDoc.data()?['last_room_played'] as String?;
+      
+      if (lastRoomPlayed != null) {
+        final roomDoc = await _getRoomRef(lastRoomPlayed).get();
+        if (roomDoc.exists) {
+          final roomData = roomDoc.data() as Map<String, dynamic>;
+          final status = roomData['status'];
+          
+          if (status == 'waiting' || status == 'active') {
+             // Verify user is actually a player
+             final playerDoc = await roomDoc.reference.collection('players').doc(uid).get();
+             if (playerDoc.exists) {
+                final playerData = playerDoc.data() as Map<String, dynamic>;
+                if (playerData['hasFinished'] != true) {
+                   return {
+                     'roomCode': lastRoomPlayed,
+                     'status': status,
+                     'subject': roomData['subject'],
+                     'isHost': roomData['hostId'] == uid,
+                   };
+                }
+             }
+          }
+        }
+      }
+      return null;
+    } catch (e) {
+      AppLog.e("Error in getActiveJoinedRoom", e);
+      return null;
     }
   }
 }

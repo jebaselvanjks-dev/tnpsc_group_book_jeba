@@ -56,7 +56,20 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     // Initialize with a safe future time (5 mins from now) to avoid immediate validation error
     final now = AppDate.getISTNow().add(const Duration(minutes: 5));
     _startTime = AppDate.getISTTimeOfDay(now);
-    _endTime = AppDate.getISTTimeOfDay(now.add(const Duration(hours: 1)));
+    
+    // Load persisted end time or default to +1 hour
+    final prefEnd = HiveService.getRoomTimePreference();
+    if (prefEnd != null) {
+      _endTime = prefEnd;
+      // Safety: Ensure end time is at least 1 hour after start
+      final startDT = AppDate.getISTTodayWithTime(_startTime.hour, _startTime.minute);
+      final endDT = AppDate.getISTTodayWithTime(_endTime.hour, _endTime.minute);
+      if (endDT.isBefore(startDT.add(const Duration(hours: 1)))) {
+         _endTime = TimeOfDay(hour: (_startTime.hour + 1) % 24, minute: _startTime.minute);
+      }
+    } else {
+      _endTime = TimeOfDay(hour: (_startTime.hour + 1) % 24, minute: _startTime.minute);
+    }
 
     _loadTeaserQuestions();
     _refreshExistingRoom();
@@ -249,7 +262,11 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
       _isCreatingProcess = true;
     });
     _startSpinnerTimer();
+    
+    // Check both Hosting and Joined rooms
     final activeData = await _roomService.getActiveHostRoom();
+    final joinedData = await _roomService.getActiveJoinedRoom();
+    
     setState(() => _isLoading = false);
 
     if (activeData != null) {
@@ -261,6 +278,19 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => WaitingRoomScreen(roomCode: code, isHost: true)),
+      );
+      return;
+    }
+
+    if (joinedData != null) {
+       final code = joinedData['roomCode'];
+       final isHost = joinedData['isHost'] ?? false;
+       _showError(AppLanguage.languageNotifier.value == 'ta' 
+          ? "நீங்கள் ஏற்கனவே ஒரு தேர்வில் இணைந்துள்ளீர்கள் ($code)" 
+          : "You are already in an active room ($code)");
+       Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => WaitingRoomScreen(roomCode: code, isHost: isHost)),
       );
       return;
     }
@@ -339,6 +369,8 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
         _showRoomLimitDialog(context);
       } else if (code == 'past_time_error') {
         _showError(AppLanguage.languageNotifier.value == 'ta' ? "தொடக்க நேரம் செல்லாது (முடிந்துவிட்டது)" : "Invalid start time (already passed)");
+      } else if (code == 'invalid_date_error') {
+        _showError(AppLanguage.languageNotifier.value == 'ta' ? "இன்றைய தேதியில் மட்டுமே ரூம் உருவாக்க முடியும்" : "Rooms can only be created for today");
       } else if (code == 'insufficient_points') {
         _showNeedPointsMessage();
       } else if (code == 'no_questions') {
@@ -397,6 +429,10 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
       _showError(isTamil ? "இந்த தேர்வு ஏற்கனவே முடிந்துவிட்டது" : "This test has already finished");
     } else if (result == 'already_started') {
       _showError(AppLanguage.getString('room_already_started'));
+    } else if (result == 'already_in_room') {
+      _showError(AppLanguage.languageNotifier.value == 'ta' 
+        ? "நீங்கள் ஏற்கனவே மற்றொரு தேர்வில் இணைந்துள்ளீர்கள்" 
+        : "You are already in another active room");
     } else if (result == 'room_full') {
       _showError(AppLanguage.getString('room_full'));
     } else if (result == 'not_found') {
@@ -1327,11 +1363,16 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
                                 setState(() {
                                   _startTime = picked;
-                                  // Auto increment end time by 1 hour
+                                  // Auto increment end time by 1 hour and save preference
                                   _endTime = TimeOfDay(
                                     hour: (picked.hour + 1) % 24,
                                     minute: picked.minute,
                                   );
+                                  // If end time reaches next day (00:xx), cap at 23:59
+                                  if (_endTime.hour == 0 && picked.hour > 0) {
+                                    _endTime = const TimeOfDay(hour: 23, minute: 59);
+                                  }
+                                  HiveService.saveRoomTimePreference(_endTime.hour, _endTime.minute);
                                 });
                               }
                             },
@@ -1421,7 +1462,10 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                   return;
                                 }
 
-                                setState(() => _endTime = picked);
+                                setState(() {
+                                  _endTime = picked;
+                                  HiveService.saveRoomTimePreference(picked.hour, picked.minute);
+                                });
                               }
                             },
                             child: Container(

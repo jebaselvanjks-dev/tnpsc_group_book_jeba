@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -42,6 +43,35 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   TimeOfDay? _customTime;
   DateTime? _roomStartTime;
   DateTime? _roomEndTime;
+  Timer? _timeCheckTimer;
+  bool _canSelfStart = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimeCheckTimer();
+  }
+
+  void _startTimeCheckTimer() {
+    _timeCheckTimer?.cancel();
+    _timeCheckTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_roomStartTime != null && _roomEndTime != null) {
+        final now = AppDate.getISTNow();
+        final bool shouldEnable = now.isAfter(_roomStartTime!) && now.isBefore(_roomEndTime!);
+        if (shouldEnable != _canSelfStart) {
+          setState(() {
+            _canSelfStart = shouldEnable;
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timeCheckTimer?.cancel();
+    super.dispose();
+  }
 
   _PosterTheme _getDailyTheme() {
     final int day = DateTime.now().day;
@@ -75,21 +105,21 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
       ),
       // 4. Slate Silver (Charcoal)
       _PosterTheme(
-        backgroundStart: const Color(0xFF121212),
-        backgroundMid: const Color(0xFF37474F),
-        accentColor: const Color(0xFFCFD8DC),
-        glassColor: const Color(0xFF263238).withOpacity(0.5),
-        mascotColor: Colors.blueGrey,
-        stripeColor: Colors.grey,
+        backgroundStart: const Color(0xFFB09A04),
+        backgroundMid: const Color(0xFFDCCB59),
+        accentColor: const Color(0xFFD9AA36),
+        glassColor: const Color(0xFFEECD6B).withOpacity(0.5),
+        mascotColor: Colors.yellow.shade200,
+        stripeColor: Colors.yellowAccent.shade700,
       ),
       // 5. Royal Crimson (Maroon)
       _PosterTheme(
-        backgroundStart: const Color(0xFF1B0000),
-        backgroundMid: const Color(0xFF4A0000),
-        accentColor: const Color(0xFFFF8A80),
-        glassColor: const Color(0xFF880E4F).withOpacity(0.3),
-        mascotColor: Colors.redAccent,
-        stripeColor: Colors.pinkAccent,
+        backgroundStart: const Color(0xFF00051B),
+        backgroundMid: const Color(0xFF323957),
+        accentColor: const Color(0xFFCED3DC),
+        glassColor: const Color(0xFF1C2C77).withOpacity(0.3),
+        mascotColor: Colors.blueGrey,
+        stripeColor: Colors.blueAccent,
       ),
     ];
     return themes[day % themes.length];
@@ -2094,46 +2124,46 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                               ],
                             ),
                           ),
-                          if (_roomStartTime != null && _roomEndTime != null)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 5,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  AppIcon(
-                                    Icons.access_time_rounded,
-                                    size: 14,
-                                    color: isDark
-                                        ? Colors.white60
-                                        : Colors.black45,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    "${DateFormat('hh:mm a').format(_roomStartTime!)} - ${DateFormat('hh:mm a').format(_roomEndTime!)}",
-                                    style: AppTheme.getStyle(
-                                      fontSize: 12,
-                                      color: isDark
-                                          ? Colors.white60
-                                          : Colors.black45,
-                                    ),
-                                  ),
-                                  if (isCurrentUserHost)
-                                    IconButton(
-                                      icon: const AppIcon(
-                                        AppIcons.edit,
-                                        size: 14,
-                                      ),
-                                      onPressed: _editRoomTime,
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          const SizedBox(height: 10),
+                          // if (_roomStartTime != null && _roomEndTime != null)
+                          //   Padding(
+                          //     padding: const EdgeInsets.symmetric(
+                          //       horizontal: 20,
+                          //       vertical: 5,
+                          //     ),
+                          //     child: Row(
+                          //       mainAxisAlignment: MainAxisAlignment.center,
+                          //       children: [
+                          //         AppIcon(
+                          //           Icons.access_time_rounded,
+                          //           size: 14,
+                          //           color: isDark
+                          //               ? Colors.white60
+                          //               : Colors.black45,
+                          //         ),
+                          //         const SizedBox(width: 4),
+                          //         Text(
+                          //           "${DateFormat('hh:mm a').format(_roomStartTime!)} - ${DateFormat('hh:mm a').format(_roomEndTime!)}",
+                          //           style: AppTheme.getStyle(
+                          //             fontSize: 12,
+                          //             color: isDark
+                          //                 ? Colors.white60
+                          //                 : Colors.black45,
+                          //           ),
+                          //         ),
+                          //         if (isCurrentUserHost)
+                          //           IconButton(
+                          //             icon: const AppIcon(
+                          //               AppIcons.edit,
+                          //               size: 14,
+                          //             ),
+                          //             onPressed: _editRoomTime,
+                          //             padding: EdgeInsets.zero,
+                          //             constraints: const BoxConstraints(),
+                          //           ),
+                          //       ],
+                          //     ),
+                          //   ),
+                          // const SizedBox(height: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 20,
@@ -2371,83 +2401,140 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                       ),
                     ),
                     child: SafeArea(
-                      child: isCurrentUserHost
-                          ? StreamBuilder<QuerySnapshot>(
-                              stream: _roomService.playersStream(
-                                widget.roomCode,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_canSelfStart)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                AppLanguage.languageNotifier.value == 'ta'
+                                    ? "தேர்வு நேரம் தொடங்கிவிட்டது! இப்போதே விளையாடுங்கள்."
+                                    : "Match time is open! You can start now.",
+                                textAlign: TextAlign.center,
+                                style: AppTheme.getStyle(
+                                  fontSize: 13,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              builder: (context, ps) {
-                                final count = ps.data?.docs.length ?? 0;
-                                final canStart = count >= 2;
-                                return Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      canStart
-                                          ? 'All $count players will attempt the same quiz.'
-                                          : 'Need at least 2 players to start ($count joined)',
-                                      textAlign: TextAlign.center,
-                                      style: AppTheme.getStyle(
-                                        fontSize: 13,
-                                        color: canStart
-                                            ? AppTheme.secondaryColor
-                                            : Colors.orange,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: ElevatedButton(
-                                        onPressed: canStart
-                                            ? () async {
-                                                final confirmed =
-                                                    await _showStartConfirmation(
-                                                      count,
-                                                    );
-                                                if (confirmed) {
-                                                  _startExam();
-                                                }
-                                              }
-                                            : null,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor:
-                                              AppTheme.secondaryColor,
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 16,
+                            ),
+                          isCurrentUserHost
+                              ? StreamBuilder<QuerySnapshot>(
+                                  stream: _roomService.playersStream(
+                                    widget.roomCode,
+                                  ),
+                                  builder: (context, ps) {
+                                    final count = ps.data?.docs.length ?? 0;
+                                    final canStart = count >= 2;
+                                    return Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (!_canSelfStart)
+                                          Text(
+                                            canStart
+                                                ? 'All $count players will attempt the same quiz.'
+                                                : 'Need at least 2 players to start ($count joined)',
+                                            textAlign: TextAlign.center,
+                                            style: AppTheme.getStyle(
+                                              fontSize: 13,
+                                              color: canStart
+                                                  ? AppTheme.secondaryColor
+                                                  : Colors.orange,
+                                            ),
                                           ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              12,
+                                        const SizedBox(height: 12),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton(
+                                            onPressed: (canStart || _canSelfStart)
+                                                ? () async {
+                                                    if (_canSelfStart) {
+                                                       _startExam();
+                                                       return;
+                                                    }
+                                                    final confirmed =
+                                                        await _showStartConfirmation(
+                                                          count,
+                                                        );
+                                                    if (confirmed) {
+                                                      _startExam();
+                                                    }
+                                                  }
+                                                : null,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  AppTheme.secondaryColor,
+                                              padding: const EdgeInsets.symmetric(
+                                                vertical: 16,
+                                              ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(
+                                                  12,
+                                                ),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              _canSelfStart 
+                                                ? (AppLanguage.languageNotifier.value == 'ta' ? "தேர்வைத் தொடங்கு" : "Start Quiz")
+                                                : AppLanguage.getString('start_group_test'),
+                                              style: AppTheme.getStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                              ),
                                             ),
                                           ),
                                         ),
-                                        child: Text(
-                                          AppLanguage.getString(
-                                            'start_group_test',
+                                      ],
+                                    );
+                                  },
+                                )
+                              : Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (_canSelfStart)
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton(
+                                          onPressed: _startExam,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppTheme.secondaryColor,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(
+                                                12,
+                                              ),
+                                            ),
                                           ),
-                                          style: AppTheme.getStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 18,
+                                          child: Text(
+                                            AppLanguage.languageNotifier.value == 'ta' ? "தேர்வைத் தொடங்கு" : "Start Quiz Now",
+                                            style: AppTheme.getStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 18,
+                                            ),
                                           ),
                                         ),
+                                      )
+                                    else
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        child: Text(
+                                          AppLanguage.getString('waiting_for_host'),
+                                          textAlign: TextAlign.center,
+                                          style: AppTheme.getStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey,
+                                          ).copyWith(fontStyle: FontStyle.italic),
+                                        ),
                                       ),
-                                    ),
                                   ],
-                                );
-                              },
-                            )
-                          : Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              child: Text(
-                                AppLanguage.getString('waiting_for_host'),
-                                textAlign: TextAlign.center,
-                                style: AppTheme.getStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                ).copyWith(fontStyle: FontStyle.italic),
-                              ),
-                            ),
+                                ),
+                        ],
+                      ),
                     ),
                   )
                 : null,

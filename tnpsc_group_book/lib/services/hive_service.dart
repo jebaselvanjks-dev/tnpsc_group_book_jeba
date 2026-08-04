@@ -714,4 +714,18 @@ class HiveService {
     final box = Hive.box(userBoxName);
     await box.delete('cached_global_rank');
   }
+
+  // ------------------- Room Preferences -------------------
+  static Future<void> saveRoomTimePreference(int hour, int minute) async {
+    await Hive.box(userBoxName).put('pref_room_end_time', '$hour:$minute');
+  }
+
+  static TimeOfDay? getRoomTimePreference() {
+    String? val = Hive.box(userBoxName).get('pref_room_end_time') as String?;
+    if (val != null && val.contains(':')) {
+      final parts = val.split(':');
+      return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    }
+    return null;
+  }
 }

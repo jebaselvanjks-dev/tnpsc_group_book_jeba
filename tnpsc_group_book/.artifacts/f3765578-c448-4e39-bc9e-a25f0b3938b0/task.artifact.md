@@ -1,0 +1,6 @@
+- [x] Add time preference persistence to `HiveService`
+- [x] Implement membership check `getActiveJoinedRoom` in `RoomService`
+- [x] Update `RoomService.createRoom` and `joinRoom` with membership and IST validation
+- [x] Update `RoomSetupScreen` to persist preferences and enforce single-room constraint
+- [x] Update `WaitingRoomScreen` with self-start logic and time window checks
+- [x] Verify time window calculations and UI updates
