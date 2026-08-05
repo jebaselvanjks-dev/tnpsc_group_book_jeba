@@ -15,6 +15,7 @@ class RoomService {
   static const int baseMaxPlayers = 10;
   static const int maxRoomPlayers = 100;
   static const int roomCreateCostPoints = 200;
+  static const int roomJoinCostPoints = 100;
   static const int extraPlayersCostPoints = 100;
 
   /// Centralized logic to calculate room creation cost.
@@ -452,6 +453,11 @@ class RoomService {
     String? uid = _auth.currentUser?.uid;
     if (uid == null) return 'auth_error';
 
+    // Admin check logic matching RoomSetupScreen
+    bool isAdmin = _auth.currentUser?.phoneNumber == '+918754236411' || 
+                   _auth.currentUser?.email == 'adminjeba@gmail.com' || 
+                   _auth.currentUser?.email == 'kjebaselvan987@gmail.com';
+
     try {
       // Check for any active room membership first
       final existingHost = await getActiveHostRoom();
@@ -463,45 +469,90 @@ class RoomService {
       String today = AppDate.getTodayString();
       currentRoomDate = today;
       DocumentReference roomRef = _getRoomRef(roomCode);
-      DocumentSnapshot roomDoc = await roomRef.get();
+      
+      final userRef = _db.collection('users').doc(uid);
+      
+      int cost = 0;
 
-      if (!roomDoc.exists) {
-        return 'not_found';
+      final transactionResult = await _db.runTransaction((transaction) async {
+        final roomSnap = await transaction.get(roomRef);
+        if (!roomSnap.exists) return 'not_found';
+        
+        Room room = Room.fromMap(roomSnap.data() as Map<String, dynamic>, roomCode);
+        if (room.status == 'finished') return 'finished';
+        if (room.status == 'active') return 'already_started';
+
+        // Check if user is already a member
+        final playerRef = roomRef.collection('players').doc(uid);
+        final playerSnap = await transaction.get(playerRef);
+        bool isAlreadyMember = playerSnap.exists;
+
+        if (!isAlreadyMember) {
+           // Check players count
+           QuerySnapshot players = await roomRef.collection('players').get();
+           if (players.docs.length >= room.maxPlayers) {
+             return 'room_full';
+           }
+           
+           // Only charge if not admin
+           if (!isAdmin) {
+             cost = roomJoinCostPoints;
+           }
+        }
+
+        final userSnap = await transaction.get(userRef);
+        int currentPoints = 0;
+        int currentPointsAlt = 0;
+        if (userSnap.exists) {
+          currentPoints = (userSnap.data()?['totalScore'] as num?)?.toInt() ?? 0;
+          currentPointsAlt = (userSnap.data()?['points'] as num?)?.toInt() ?? 0;
+        }
+
+        if (currentPoints < cost) {
+          return 'insufficient_points';
+        }
+
+        // 1. Get user name
+        String name = 'Player';
+        if (userSnap.exists) {
+          name = (userSnap.data()?['name']) ?? 'Player';
+        }
+
+        // 2. Deduct points & Update room history
+        transaction.set(userRef, {
+          'totalScore': currentPoints - cost,
+          'points': currentPointsAlt - cost,
+          'room_history': "$roomCode|$today",
+          'last_room_played': roomCode,
+          'last_room_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        // 3. Add player to room
+        RoomPlayer player = RoomPlayer(uid: uid, name: name);
+        transaction.set(playerRef, player.toMap());
+
+        return 'success';
+      });
+
+      if (transactionResult == 'success') {
+         // Update Hive local state for points
+         if (cost > 0) {
+            final userBox = Hive.box(HiveService.userBoxName);
+            int newScore = (userBox.get('totalScore', defaultValue: 0) as int) - cost;
+            await userBox.put('totalScore', newScore);
+
+            Map<String, dynamic> cachedData = HiveService.getCachedUserData() ?? {};
+            cachedData['totalScore'] = newScore;
+            cachedData['points'] = (cachedData['points'] ?? 0) - cost;
+            await HiveService.cacheUserData(cachedData);
+         }
+         
+         // Force refresh user data from Firestore
+         await _firestoreService.getUserData(forceRefresh: true);
+         AppLog.d("AI_DEBUG: Joined room and deducted $cost points");
       }
-      
-      Room room = Room.fromMap(roomDoc.data() as Map<String, dynamic>, roomCode);
-      
-      if (room.status == 'finished') return 'finished';
-      if (room.status == 'active') return 'already_started';
-      
-      // Check players count
-      QuerySnapshot players = await roomRef.collection('players').get();
-      if (players.docs.length >= room.maxPlayers && !players.docs.any((d) => d.id == uid)) {
-        return 'room_full';
-      }
 
-      // Get user name
-      DocumentSnapshot userDoc = await _firestoreService.getUserData() ?? await _db.collection('users').doc(uid).get();
-      String name = 'Player';
-      if (userDoc.exists) {
-        name = (userDoc.data() as Map<String, dynamic>?)?['name'] ?? 'Player';
-      }
-
-      WriteBatch batch = _db.batch();
-      RoomPlayer player = RoomPlayer(uid: uid, name: name);
-      batch.set(roomRef.collection('players').doc(uid), player.toMap());
-      
-      // Update room history field in user document
-      batch.set(_db.collection('users').doc(uid), {
-        'room_history': "$roomCode|$today",
-        'last_room_played': roomCode,
-        'last_room_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      await batch.commit();
-      AppLog.d("AI_DEBUG: Joined room and updated history in one batch");
-      
-      return 'success';
+      return transactionResult as String;
     } catch (e) {
       AppLog.e("Error joining room", e);
       return 'error';

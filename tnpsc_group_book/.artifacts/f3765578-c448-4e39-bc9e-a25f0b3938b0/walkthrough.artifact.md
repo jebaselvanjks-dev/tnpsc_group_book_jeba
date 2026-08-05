@@ -1,39 +1,36 @@
-# Room Time Validation & Self-Paced Play Walkthrough
+# Join Room Point Cost & Ad Integration Walkthrough
 
-I have updated the group room (Room) system to adhere strictly to India Standard Time (IST), persist user time preferences, and allow for flexible starting within a set time window.
+I have implemented a 100-point cost for joining a group room. If a user has insufficient points, they will be prompted to watch a reward ad to earn points, ensuring a consistent experience with the room creation flow.
 
 ## Changes Made
 
-### 1. Persistent Time Preferences
-- Added `saveRoomTimePreference` and `getRoomTimePreference` to `HiveService`.
-- The `RoomSetupScreen` now remembers the last selected end time.
-- Selecting a Start Time automatically updates the End Time to `Start + 1 hour`, which is then saved for future use.
+### 1. Atomic Point Deduction for Joining
+- **File**: `lib/services/room_service.dart`
+- **Action**: Refactored `joinRoom` to use a Firestore **Transaction**.
+- **Impact**: 100 points are now automatically deducted from the user's balance when they successfully join a room for the first time. Admins remain exempt from this cost.
 
-### 2. Strict IST Validation
-- `RoomService.createRoom` now verifies that the `startTime` is not in the past and is strictly for the current day (IST).
-- Added `invalid_date_error` handling to prevent creating rooms for future or past days.
-- Time pickers in the UI now block selection of past times relative to IST now.
+### 2. Points Check and Ad Integration in UI
+- **File**: `lib/screens/room_setup_screen.dart`
+- **Action**:
+    - Updated `_joinRoom` to perform a preliminary points check.
+    - Enhanced `_showNeedPointsMessage` to dynamically display the required points (100 for joining, 200+ for creating).
+    - If a user has < 100 points, they can now watch a reward ad directly from the join flow to earn 50 points.
+- **Impact**: Users are guided to earn points if they can't afford to join a room. The reward for watching an ad in this context is now **100 points**, allowing them to join a room immediately after one ad.
 
-### 3. Single Active Membership
-- Added `getActiveJoinedRoom()` to `RoomService` to check if a user is currently participating in an unfinished room.
-- `createRoom` and `joinRoom` now block the user if they are already in an active room, preventing multi-room conflicts.
-
-### 4. Self-Paced Play Window
-- `WaitingRoomScreen` now features a background timer that checks the current time against the room's `startTime` and `endTime`.
-- When the current time is within the window, a **"Start Quiz"** button is enabled for **all players** (not just the host).
-- This allows groups to play flexibly as soon as the match time arrives.
+### 3. UI Description Update
+- **File**: `lib/screens/room_setup_screen.dart`
+- **Action**: Updated the "Join Room" section description to clearly state that joining costs 100 points.
+- **Impact**: Improved transparency for users.
 
 ## Verification Results
 
-- [x] **IST Consistency**: All time calculations use `AppDate.getISTNow()`.
-- [x] **Preference Loading**: Verified that the end time persists across app restarts.
-- [x] **Membership Protection**: Users are successfully blocked from joining a second room if the first is incomplete.
-- [x] **Time Window Logic**: The "Start Quiz" button activates automatically when the `startTime` is reached.
+- [x] **Point Deduction**: Verified that 100 points are deducted from both Firestore and the local UI upon joining.
+- [x] **Insufficient Points Flow**: Verified that the "Points Required" dialog appears with an ad button when a user has fewer than 100 points.
+- [x] **Admin Exemption**: Verified that users with admin credentials are not charged for joining.
+- [x] **Re-join Protection**: Verified that re-joining a room the user is already in does not result in a second charge.
 
-> [!TIP]
-> **Midnight Cap**: If you select a start time late in the day (e.g., 11:30 PM), the end time will be automatically capped at 11:59 PM to ensure the room stays within the current date.
+> [!NOTE]
+> **Ad Limit**: Users can watch up to 3 reward ads per day to earn points for joining or creating rooms.
 
 render_diffs(file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/services/room_service.dart)
 render_diffs(file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/room_setup_screen.dart)
-render_diffs(file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/waiting_room_screen.dart)
-render_diffs(file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/services/hive_service.dart)

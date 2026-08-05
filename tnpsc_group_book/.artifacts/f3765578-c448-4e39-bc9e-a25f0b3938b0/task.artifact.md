@@ -1,6 +1,4 @@
-- [x] Add time preference persistence to `HiveService`
-- [x] Implement membership check `getActiveJoinedRoom` in `RoomService`
-- [x] Update `RoomService.createRoom` and `joinRoom` with membership and IST validation
-- [x] Update `RoomSetupScreen` to persist preferences and enforce single-room constraint
-- [x] Update `WaitingRoomScreen` with self-start logic and time window checks
-- [x] Verify time window calculations and UI updates
+- [x] Update `RoomService.joinRoom` to handle point deduction via transaction
+- [x] Update `RoomSetupScreen._showNeedPointsMessage` to accept dynamic point values
+- [x] Update `RoomSetupScreen._joinRoom` to check for points and handle insufficient points flow
+- [x] Update Join Room UI description to mention point cost

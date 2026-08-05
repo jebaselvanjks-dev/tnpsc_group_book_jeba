@@ -141,7 +141,8 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   bool _hasEnoughPointsForRoom() =>
     (Hive.box(HiveService.userBoxName).get('totalScore', defaultValue: 0) as int) >= _requiredRoomPoints();
 
-  void _showNeedPointsMessage() {
+  void _showNeedPointsMessage({int? requiredPoints}) {
+    int points = requiredPoints ?? _requiredRoomPoints();
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     bool isTamil = AppLanguage.languageNotifier.value == 'ta';
     bool canWatch = HiveService.canWatchRewardAdToday();
@@ -167,15 +168,15 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              AppLanguage.getString('insufficient_points_create').replaceAll('{points}', '${_requiredRoomPoints()}'),
+              AppLanguage.getString('insufficient_points_create').replaceAll('{points}', '$points'),
               style: AppTheme.getStyle(fontSize: 15, color: isDark ? Colors.white70 : AppTheme.textSecondaryColor),
             ),
             if (canWatch) ...[
               const SizedBox(height: 16),
               Text(
                 isTamil 
-                  ? "விளம்பரம் பார்த்து 50 பாயிண்ட்டுகளை உடனே பெறுங்கள்."
-                  : "Watch an ad to get 50 points instantly.",
+                  ? "விளம்பரம் பார்த்து 100 பாயிண்ட்டுகளை உடனே பெறுங்கள்."
+                  : "Watch an ad to get 100 points instantly.",
                 style: AppTheme.getStyle(fontSize: 13, color: Colors.orange, fontWeight: FontWeight.bold),
               ),
               Text(
@@ -200,14 +201,14 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                _earnPointsForRoom();
+                _earnPointsForRoom(amount: 100);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
-                isTamil ? "50 பாயிண்ட்ஸ் பெற" : "Earn 50 Points",
+                isTamil ? "100 பாயிண்ட்ஸ் பெற" : "Earn 100 Points",
                 style: AppTheme.getStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
               ),
             ),
@@ -216,15 +217,15 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     );
   }
 
-  void _earnPointsForRoom() {
+  void _earnPointsForRoom({int amount = 100}) {
     RewardService.showRewardAdIfAllowed(
-      fixedRewardAmount: 50,
+      fixedRewardAmount: amount,
       useLimit: true,
       onRewardEarned: () {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLanguage.languageNotifier.value == 'ta' ? "50 பாயிண்ட்டுகள் சேர்க்கப்பட்டன!" : "50 Points added!"),
+              content: Text(AppLanguage.languageNotifier.value == 'ta' ? "$amount பாயிண்ட்டுகள் சேர்க்கப்பட்டன!" : "$amount Points added!"),
               backgroundColor: Colors.green,
             ),
           );
@@ -410,6 +411,12 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
       return;
     }
 
+    int currentPoints = Hive.box(HiveService.userBoxName).get('totalScore', defaultValue: 0) as int;
+    if (!_isAdmin && currentPoints < RoomService.roomJoinCostPoints) {
+      _showNeedPointsMessage(requiredPoints: RoomService.roomJoinCostPoints);
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _isCreatingProcess = false;
@@ -419,11 +426,14 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     setState(() => _isLoading = false);
 
     if (result == 'success') {
+      if (mounted) setState(() {}); // Refresh points
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => WaitingRoomScreen(roomCode: code, isHost: false)),
       );
+    } else if (result == 'insufficient_points') {
+      _showNeedPointsMessage(requiredPoints: RoomService.roomJoinCostPoints);
     } else if (result == 'finished') {
       final isTamil = AppLanguage.languageNotifier.value == 'ta';
       _showError(isTamil ? "இந்த தேர்வு ஏற்கனவே முடிந்துவிட்டது" : "This test has already finished");
@@ -1193,7 +1203,12 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                 children: [
                   Text(AppLanguage.getString('join_room_section'), style: AppTheme.getStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
-                  Text(AppLanguage.getString('join_room_desc'), style: AppTheme.getStyle(fontSize: 14, color: Colors.grey)),
+                  Text(
+                    lang == 'ta' 
+                      ? "மற்றவர்கள் உருவாக்கிய ரூமில் இணைந்து விளையாடலாம். இதற்காக 100 பாயிண்ட்டுகள் கழிக்கப்படும்."
+                      : "Join a room created by others. 100 points will be deducted.",
+                    style: AppTheme.getStyle(fontSize: 14, color: Colors.grey),
+                  ),
                   const SizedBox(height: 20),
                   TextField(
                     controller: _codeController,
