@@ -466,7 +466,14 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
-  void _submitQuiz() {
+  Future<void> _submitQuiz() async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator())
+    );
+
     int score = 0;
     for (int i = 0; i < _visibleQuestions.length; i++) {
       if (_selectedAnswers[i] == _visibleQuestions[i].correctOptionIndex) {
@@ -502,7 +509,7 @@ class _QuizScreenState extends State<QuizScreen> {
         saveTitle = "Mock Quiz";
       }
 
-      _firestoreService.saveQuizResult(
+      await _firestoreService.saveQuizResult(
         subject: saveTitle,
         score: score,
         totalQuestions: _visibleQuestions.length,
@@ -514,7 +521,7 @@ class _QuizScreenState extends State<QuizScreen> {
       if (isDaily) {
         HiveService.setDailyQuizDone();
         // Update reminders since quiz is done
-        NotificationService.reschedulePersonalizedReminders();
+        await NotificationService.reschedulePersonalizedReminders();
       } else if (isMock) {
         HiveService.setMockQuizDone();
       }
@@ -534,6 +541,7 @@ class _QuizScreenState extends State<QuizScreen> {
         widget.isMockTest;
 
     if (isDailyOrMock) {
+      if (mounted) Navigator.pop(context); // Pop loading
       RewardService.showRewardAdIfAllowed(
           useLimit: false,
           onRewardEarned: () {
@@ -557,21 +565,29 @@ class _QuizScreenState extends State<QuizScreen> {
           }
       );
     }else{
+      if (mounted) Navigator.pop(context); // Pop loading
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ResultScreen(
-            score: score,
-            totalQuestions: _visibleQuestions.length,
-            timeTakenSeconds: timeTakenSeconds,
-            questions: _visibleQuestions,
-            selectedAnswers: _selectedAnswers,
-            allTopics: widget.allTopics,
-            currentIndex: widget.currentIndex,
-            subjectTitle: widget.subjectTitle,
-          ),
-        ),
+      
+      // Show Interstitial for Standard Quizzes
+      RewardService.showInterstitialAd(
+        onDismissed: () {
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ResultScreen(
+                score: score,
+                totalQuestions: _visibleQuestions.length,
+                timeTakenSeconds: timeTakenSeconds,
+                questions: _visibleQuestions,
+                selectedAnswers: _selectedAnswers,
+                allTopics: widget.allTopics,
+                currentIndex: widget.currentIndex,
+                subjectTitle: widget.subjectTitle,
+              ),
+            ),
+          );
+        }
       );
     }
   }

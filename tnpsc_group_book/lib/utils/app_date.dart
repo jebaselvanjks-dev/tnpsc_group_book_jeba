@@ -7,6 +7,11 @@ class AppDate {
     return DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
   }
 
+  /// Converts any DateTime to IST (UTC+5:30) value.
+  static DateTime toIST(DateTime date) {
+    return date.toUtc().add(const Duration(hours: 5, minutes: 30));
+  }
+
   /// Returns today's date string in yyyy-MM-dd format based on IST.
   static String getTodayString() {
     return DateFormat('yyyy-MM-dd', 'en_US').format(getISTNow());

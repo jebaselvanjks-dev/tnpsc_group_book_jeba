@@ -779,6 +779,12 @@ class FirestoreService {
       // WRITE_OPT: Only update leaderboard if score is better OR if score is same but streak improved (badge update)
       bool isNewBest = score > previousBestScore || (score == previousBestScore && currentStreak > previousBestStreak);
 
+      // AI_DYNAMIC: Update local Hive immediately so subsequent calls (like notification rescheduling) use the latest score
+      if (isNewBest) {
+        await userBox.put(bestScoreKey, score);
+        await userBox.put(bestStreakKey, currentStreak);
+      }
+
       WriteBatch batch = _db.batch();
 
       // 2. Save to results collection (For My History screen)
@@ -821,9 +827,6 @@ class FirestoreService {
           batch.set(_db.collection('leaderboards').doc('weekly_$monday').collection('scores').doc(uid), scoreData, SetOptions(merge: true));
         }
 
-        await userBox.put(bestScoreKey, score);
-        await userBox.put(bestStreakKey, currentStreak);
-        
         // READ_OPT: Invalidate rank cache because a new best score means rank needs recalculation
         await HiveService.invalidateRankCache(isDaily || isMock);
         await HiveService.invalidateGlobalRankCache();

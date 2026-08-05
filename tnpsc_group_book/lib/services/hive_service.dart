@@ -289,9 +289,9 @@ class HiveService {
   }
 
 
-  /// Unlocked for all users after removing payment system.
+  /// Users are NO LONGER ad-free by default to ensure AdMob revenue.
   static bool isAdFree() {
-    return true;
+    return false; // Changed from true to false to enable ads
   }
 
   /// Pro (₹99) & Elite (₹259).

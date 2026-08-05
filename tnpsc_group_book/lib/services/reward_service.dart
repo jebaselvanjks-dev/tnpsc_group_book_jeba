@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
@@ -8,38 +10,144 @@ import '../utils/app_log.dart';
 
 class RewardService {
   static RewardedAd? _rewardedAd;
-  static bool _isAdLoaded = false;
+  static bool _isRewardedLoaded = false;
+  static bool _isRewardedLoading = false;
 
-  /// Change Ad Id
+  static InterstitialAd? _interstitialAd;
+  static bool _isInterstitialLoaded = false;
+  static bool _isInterstitialLoading = false;
 
-  /// Test Rewarded Ad ID
-  static const String testAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
+  /// Change Ad Ids
 
-  /// REAL Rewarded Ad ID
-  static const String realAdUnitId = 'ca-app-pub-9952621231526514/2142313722';
+  /// Rewarded Ad IDs
+  static const String testRewardedId = 'ca-app-pub-3940256099942544/5224354917';
+  static const String realRewardedId = 'ca-app-pub-9952621231526514/2142313722';
+
+  /// Interstitial Ad IDs
+  static const String testInterstitialId = 'ca-app-pub-3940256099942544/1033173712';
+  static const String realInterstitialId = 'ca-app-pub-9952621231526514/2643599886'; // Replace with real ID later
 
   // Toggle this for testing
   static bool useTestAds = false;
 
-  static String get adUnitId => useTestAds ? testAdUnitId : realAdUnitId;
+  static String get rewardedAdUnitId => useTestAds ? testRewardedId : realRewardedId;
+  static String get interstitialAdUnitId => useTestAds ? testInterstitialId : realInterstitialId;
+
+  /// NEW: Handles User Consent (UMP) and initializes Mobile Ads
+  static Future<void> handleConsentAndInit() async {
+    if (HiveService.isAdFree()) return;
+    
+    final Completer<void> completer = Completer<void>();
+    AppLog.d('AI_DEBUG: [UMP] Requesting consent information update...');
+    
+    final params = ConsentRequestParameters();
+
+    try {
+      ConsentInformation.instance.requestConsentInfoUpdate(
+        params,
+        () async {
+          AppLog.d('AI_DEBUG: [UMP] Consent info update success.');
+          
+          ConsentForm.loadAndShowConsentFormIfRequired(
+            (FormError? formError) async {
+              if (formError != null) {
+                AppLog.e('AI_DEBUG: [UMP] Consent form error: ${formError.message}');
+              } else {
+                AppLog.d('AI_DEBUG: [UMP] Consent gathering completed.');
+              }
+
+              // Check if we can request ads according to the consent gathered
+              if (await ConsentInformation.instance.canRequestAds()) {
+                _initializeMobileAds();
+              } else {
+                AppLog.d('AI_DEBUG: [UMP] Consent gathered but ads NOT allowed by user.');
+              }
+              if (!completer.isCompleted) completer.complete();
+            },
+          );
+        },
+        (FormError error) {
+          AppLog.e('AI_DEBUG: [UMP] Consent info update failed: ${error.message}');
+          _initializeMobileAds(); // Fallback to try loading ads anyway
+          if (!completer.isCompleted) completer.complete();
+        },
+      );
+    } catch (e) {
+      AppLog.e('AI_DEBUG: [UMP] Error in consent flow: $e');
+      _initializeMobileAds();
+      if (!completer.isCompleted) completer.complete();
+    }
+    
+    return completer.future;
+  }
+
+  static void _initializeMobileAds() async {
+    AppLog.d('AI_DEBUG: Initializing MobileAds SDK...');
+    try {
+      await MobileAds.instance.initialize();
+      AppLog.d('AI_DEBUG: MobileAds initialized successfully.');
+      
+      // Load initial ads immediately after initialization
+      loadRewardedAd();
+      loadInterstitialAd();
+    } catch (e) {
+      AppLog.e('AI_DEBUG: MobileAds initialization failed: $e');
+    }
+  }
 
   static void loadRewardedAd() {
-    AppLog.d('AI_DEBUG: Loading Rewarded Ad (ID: $adUnitId)');
+    if (HiveService.isAdFree()) return;
+    if (_isRewardedLoaded || _isRewardedLoading) return;
+
+    _isRewardedLoading = true;
+    AppLog.d('AI_DEBUG: Loading Rewarded Ad (ID: $rewardedAdUnitId)');
+
     RewardedAd.load(
-      adUnitId: adUnitId,
+      adUnitId: rewardedAdUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
           _rewardedAd = ad;
-          _isAdLoaded = true;
+          _isRewardedLoaded = true;
+          _isRewardedLoading = false;
           AppLog.d('AI_DEBUG: Rewarded Ad Loaded Successfully');
         },
         onAdFailedToLoad: (err) {
-          _isAdLoaded = false;
+          _isRewardedLoaded = false;
+          _isRewardedLoading = false;
           AppLog.d('AI_DEBUG: Rewarded Ad failed to load: $err');
-          if (err.message.contains('403')) {
-             AppLog.d('AI_DEBUG: ERROR 403: This usually means the AdMob account is not approved or the Ad Unit ID/Package Name mismatch.');
-          }
+          
+          // Simple retry after 30 seconds
+          Future.delayed(const Duration(seconds: 30), () => loadRewardedAd());
+        },
+      ),
+    );
+  }
+
+  static void loadInterstitialAd() {
+    if (HiveService.isAdFree()) return;
+    if (_isInterstitialLoaded || _isInterstitialLoading) return;
+
+    _isInterstitialLoading = true;
+    AppLog.d('AI_DEBUG: Loading Interstitial Ad (ID: $interstitialAdUnitId)');
+
+    InterstitialAd.load(
+      adUnitId: interstitialAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          _interstitialAd = ad;
+          _isInterstitialLoaded = true;
+          _isInterstitialLoading = false;
+          AppLog.d('AI_DEBUG: Interstitial Ad Loaded Successfully');
+        },
+        onAdFailedToLoad: (err) {
+          _isInterstitialLoaded = false;
+          _isInterstitialLoading = false;
+          AppLog.d('AI_DEBUG: Interstitial Ad failed to load: $err');
+
+          // Simple retry after 30 seconds
+          Future.delayed(const Duration(seconds: 30), () => loadInterstitialAd());
         },
       ),
     );
@@ -74,7 +182,7 @@ class RewardService {
   }
 
   static void showRewardAdIfAllowed({
-    required Function onRewardEarned, 
+    required VoidCallback onRewardEarned, 
     int? fixedRewardAmount, 
     bool useLimit = false
   }) {
@@ -110,66 +218,106 @@ class RewardService {
         if (fixedRewardAmount == null) await HiveService.incrementQuizAdWatchCountToday();
         onRewardEarned();
       },
-      onFailure: () {
-        onRewardEarned();
-      }
+      onFailure: onRewardEarned,
     );
   }
 
-  static void showRewardAd({required Function onRewardEarned, VoidCallback? onFailure}) {
+  static void showRewardAd({required VoidCallback onRewardEarned, VoidCallback? onFailure}) {
     if (HiveService.isAdFree()) {
+      AppLog.d('AI_DEBUG: Ad-Free enabled, granting reward directly.');
       onRewardEarned();
       return;
     }
-    if (_isAdLoaded && _rewardedAd != null) {
+
+    if (_isRewardedLoaded && _rewardedAd != null) {
+      AppLog.d('AI_DEBUG: Showing Rewarded Ad...');
       _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
+          AppLog.d('AI_DEBUG: Rewarded Ad dismissed by user.');
           ad.dispose();
           _rewardedAd = null;
-          _isAdLoaded = false;
-          loadRewardedAd(); // Load next ad
+          _isRewardedLoaded = false;
+          loadRewardedAd(); // Pre-load next ad
         },
         onAdFailedToShowFullScreenContent: (ad, err) {
+          AppLog.d('AI_DEBUG: Rewarded Ad failed to show: $err');
           ad.dispose();
           _rewardedAd = null;
-          _isAdLoaded = false;
+          _isRewardedLoaded = false;
           loadRewardedAd();
           if (onFailure != null) onFailure(); else onRewardEarned(); 
         },
       );
+      
       _rewardedAd!.show(onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
+        AppLog.d('AI_DEBUG: User earned reward from Ad.');
         onRewardEarned();
       });
     } else {
-      AppLog.d('AI_DEBUG: Rewarded Ad not ready yet, loading and will retry once.');
+      AppLog.d('AI_DEBUG: Rewarded Ad not ready yet, attempting to load and show.');
       loadRewardedAd();
       
-      // AI_DEBUG: Use a single retry to avoid infinite recursion
-      Future.delayed(const Duration(seconds: 2), () {
-        if (_isAdLoaded && _rewardedAd != null) {
-          // One final check before giving up
+      Future.delayed(const Duration(milliseconds: 2500), () {
+        if (_isRewardedLoaded && _rewardedAd != null) {
+          AppLog.d('AI_DEBUG: Ad loaded after retry, showing now.');
           _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
               _rewardedAd = null;
-              _isAdLoaded = false;
+              _isRewardedLoaded = false;
               loadRewardedAd();
             },
             onAdFailedToShowFullScreenContent: (ad, err) {
+              AppLog.d('AI_DEBUG: Ad failed to show after retry: $err');
               ad.dispose();
               _rewardedAd = null;
-              _isAdLoaded = false;
+              _isRewardedLoaded = false;
               loadRewardedAd();
+              if (onFailure != null) onFailure(); else onRewardEarned();
             },
           );
           _rewardedAd!.show(onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
             onRewardEarned();
           });
         } else {
-          AppLog.d('AI_DEBUG: Ad still not ready after 2s, proceeding to failure path.');
+          AppLog.d('AI_DEBUG: Ad still not ready after 2.5s delay. Skipping.');
           if (onFailure != null) onFailure(); else onRewardEarned();
         }
       });
+    }
+  }
+
+  static void showInterstitialAd({required VoidCallback onDismissed}) {
+    if (HiveService.isAdFree()) {
+      onDismissed();
+      return;
+    }
+
+    if (_isInterstitialLoaded && _interstitialAd != null) {
+      AppLog.d('AI_DEBUG: Showing Interstitial Ad...');
+      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          AppLog.d('AI_DEBUG: Interstitial Ad dismissed.');
+          ad.dispose();
+          _interstitialAd = null;
+          _isInterstitialLoaded = false;
+          loadInterstitialAd(); // Pre-load next
+          onDismissed();
+        },
+        onAdFailedToShowFullScreenContent: (ad, err) {
+          AppLog.d('AI_DEBUG: Interstitial Ad failed to show: $err');
+          ad.dispose();
+          _interstitialAd = null;
+          _isInterstitialLoaded = false;
+          loadInterstitialAd();
+          onDismissed();
+        },
+      );
+      _interstitialAd!.show();
+    } else {
+      AppLog.d('AI_DEBUG: Interstitial Ad not ready. Pre-loading for next time.');
+      loadInterstitialAd();
+      onDismissed();
     }
   }
 

@@ -134,9 +134,12 @@ class NotificationService {
       final bool isTa = AppLanguage.languageNotifier.value == 'ta';
 
       // --- 1. Morning Reminder (8:00 AM) - Score Based ---
-      DateTime yesterday = AppDate.getISTNow().subtract(const Duration(days: 1));
-      String yesterdayStr = AppDate.format(yesterday);
-      int lastScore = box.get('best_score_daily_$yesterdayStr', defaultValue: 0) as int;
+      // AI_DYNAMIC: Calculate score based on when the notification will actually show
+      final tz.TZDateTime scheduledMorning = _nextInstanceOfTime(8, 0);
+      // If showing tomorrow morning, "yesterday" from its perspective is "today"
+      final DateTime scoreDate = scheduledMorning.subtract(const Duration(days: 1));
+      String scoreDateStr = AppDate.format(scoreDate);
+      int lastScore = box.get('best_score_daily_$scoreDateStr', defaultValue: 0) as int;
 
       String morningTitle = AppLanguage.getString('notif_daily_quiz_ready_title');
       String morningBody;
@@ -152,7 +155,7 @@ class NotificationService {
         id: 100,
         title: morningTitle,
         body: morningBody,
-        scheduledDate: _nextInstanceOfTime(8, 0),
+        scheduledDate: scheduledMorning,
         notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
             'daily_reminder_channel',
@@ -168,17 +171,25 @@ class NotificationService {
       );
 
       // --- 2. Evening Reminder (8:00 PM) - Streak Warning ---
-      bool isDoneToday = HiveService.isDailyQuizDone();
+      final tz.TZDateTime scheduledEvening = _nextInstanceOfTime(20, 0);
+      final String scheduledDateStr = AppDate.format(scheduledEvening);
+      final String todayStr = AppDate.getTodayString();
+      
+      bool isDoneOnTargetDay = false;
+      if (scheduledDateStr == todayStr) {
+        isDoneOnTargetDay = HiveService.isDailyQuizDone();
+      }
+
       int streak = box.get('streak', defaultValue: 0) as int;
 
-      // Only show streak warning if quiz is not done AND user has an active streak
-      if (!isDoneToday && streak > 0) {
+      // Only show streak warning if quiz is not done on the target day AND user has an active streak
+      if (!isDoneOnTargetDay && streak > 0) {
         await _notificationsPlugin.cancel(id: 200);
         await _notificationsPlugin.zonedSchedule(
           id: 200,
           title: AppLanguage.getString('reminder_title'),
           body: AppLanguage.getString('notif_streak_warning'),
-          scheduledDate: _nextInstanceOfTime(20, 0),
+          scheduledDate: scheduledEvening,
           notificationDetails: const NotificationDetails(
             android: AndroidNotificationDetails(
               'daily_reminder_channel',
@@ -193,8 +204,6 @@ class NotificationService {
           matchDateTimeComponents: DateTimeComponents.time,
         );
       } else {
-        // If already done, we can either cancel or schedule a generic one for tomorrow
-        // For now, let's keep it scheduled but maybe generic or just cancel to not annoy
         await _notificationsPlugin.cancel(id: 200);
       }
 

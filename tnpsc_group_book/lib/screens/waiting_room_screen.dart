@@ -863,22 +863,35 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
               ignoreScale: true,
             ),
           ),
-          Text(
-            customTime != null
-                ? DateFormat('hh:mm a').format(
-                    AppDate.getISTTodayWithTime(
-                      customTime.hour,
-                      customTime.minute,
-                    ),
-                  )
-                : '',
-            textAlign: TextAlign.center,
-            style: AppTheme.getStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white70,
-              ignoreScale: true,
-            ),
+          Row(
+            children: [
+              Text('Starting Time',
+                textAlign: TextAlign.center,
+                style: AppTheme.getStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white70,
+                  ignoreScale: true,
+                ),
+              ),
+              Text(
+                customTime != null
+                    ? DateFormat('hh:mm a').format(
+                        AppDate.getISTTodayWithTime(
+                          customTime.hour,
+                          customTime.minute,
+                        ),
+                      )
+                    : '',
+                textAlign: TextAlign.center,
+                style: AppTheme.getStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white70,
+                  ignoreScale: true,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1131,17 +1144,20 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "DOWNLOAD TNPSC Master APP",
+                "DOWNLOAD TNPSC Master: Group 1, 2, 4 APP",
                 style: AppTheme.getStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w900,
                   color: Colors.black,
                   ignoreScale: true,
                 ),
               ),
-              const SizedBox(
-                width: 80,
-                child: Icon(Icons.download_for_offline_rounded, color: Colors.black, size: 25),
+              SizedBox(
+                width: 100,
+                child: Image.network(
+                  'https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png',
+                  height: 35,
+                ),
               ),
             ],
           ),
@@ -1921,8 +1937,13 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
         if (roomExists) {
           roomData = roomSnapshot.data!.data() as Map<String, dynamic>;
           _subject = roomData['subject'] ?? 'General';
-          _roomStartTime = (roomData['startTime'] as Timestamp?)?.toDate();
-          _roomEndTime = (roomData['endTime'] as Timestamp?)?.toDate();
+          
+          // Ensure room times are consistently compared in IST
+          final startTs = roomData['startTime'] as Timestamp?;
+          final endTs = roomData['endTime'] as Timestamp?;
+          
+          if (startTs != null) _roomStartTime = AppDate.toIST(startTs.toDate());
+          if (endTs != null) _roomEndTime = AppDate.toIST(endTs.toDate());
 
           if (roomData['status'] == 'active' ||
               roomData['status'] == 'finished') {
@@ -2163,11 +2184,11 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                           //       ],
                           //     ),
                           //   ),
-                          // const SizedBox(height: 10),
+                           const SizedBox(height: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 20,
-                              vertical: 15,
+                              vertical: 8,
                             ),
                             decoration: BoxDecoration(
                               color: isDark
@@ -2184,10 +2205,10 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                             child: Text(
                               widget.roomCode,
                               style: AppTheme.getStyle(
-                                fontSize: 30,
+                                fontSize: 25,
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.secondaryColor,
-                              ).copyWith(letterSpacing: 8),
+                              ).copyWith(letterSpacing: 5),
                             ),
                           ),
                         ],
@@ -2199,7 +2220,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                   Expanded(
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.only(left: 20,right: 20,top: 5),
                       decoration: BoxDecoration(
                         color: isDark ? Colors.black12 : Colors.grey.shade50,
                         borderRadius: const BorderRadius.only(

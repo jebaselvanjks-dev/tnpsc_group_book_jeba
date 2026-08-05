@@ -1,0 +1,6 @@
+- [x] Update `HiveService.isAdFree()` to return `false`
+- [x] Improve `RewardService` ad loading and error handling
+- [x] Verify AdBanner and RewardedAd logic
+- [x] Implement UMP SDK Consent logic in `RewardService`
+- [x] Update `main.dart` to use new `handleConsentAndInit` flow
+- [x] Verify AdMob initialization happens after consent

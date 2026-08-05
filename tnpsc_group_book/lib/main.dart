@@ -104,9 +104,9 @@ Future<void> _initServicesInBackground() async {
   // Non-blocking services initialized one after another to avoid thread contention
   try {
     await NotificationService.init();
-    await MobileAds.instance.initialize();
+    // UMP Consent flow handles MobileAds.initialize() and loading ads
+    await RewardService.handleConsentAndInit();
     TtsService.init();
-    RewardService.loadRewardedAd();
     DeepLinkService().init();
     AppLog.d("AI_DEBUG: Background services initialized.");
   } catch (e) {
