@@ -18,6 +18,7 @@ import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_date.dart';
 import '../utils/app_language.dart';
+import '../utils/share_utils.dart';
 import '../services/firestore_service.dart';
 import 'settings_screen.dart';
 import 'login_screen.dart';
@@ -729,43 +730,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // 1. Weekly reset check for shared history (Cleanup)
       await HiveService.resetSharedQuizHistoryIfNeeded();
 
-      // 2. Load Pool from Hive (Zero Read usage for normal users)
+      // 2. Load Pool from Hive
       List<Question> pool = HiveService.getShareQuizPool();
-      
-      // 3. Fallback to default questions if pool is empty
-      if (pool.isEmpty) {
-        pool = defaultRoomQuestions;
-      }
+      if (pool.isEmpty) pool = defaultRoomQuestions;
 
       if (pool.isEmpty) {
         if (mounted) setState(() => _isSharing = false);
         return;
       }
 
-      // 4. Deterministic Slot Selection (Restoring Old Function for Synchronization)
-      // Every 6 hours, the slotSeed increments. 
-      // With a pool of 200, it takes 50 days to repeat a question.
+      // 4. Deterministic Slot Selection
       int slotSeed = AppDate.getSlotSeed();
       final question = pool[slotSeed % pool.length];
 
-      // 5. Find the actual Subject object for colors/branding
+      // 5. Find Subject
       Subject subject = tnpscSubjects[0]; 
       String qSub = (question.subject ?? question.quizType ?? "").toLowerCase();
-      
       try {
         subject = tnpscSubjects.firstWhere(
           (s) => s.titleEn.toLowerCase().contains(qSub) ||
                  s.titleTa.toLowerCase().contains(qSub) ||
                  qSub.contains(s.titleEn.toLowerCase())
         );
-      } catch (_) {
-        // Stay with fallback subject
-      }
+      } catch (_) {}
 
-      // 9. Capture the poster with high quality settings
+      // 9. Capture Image
       final Uint8List? imageBytes = await _screenshotController.captureFromWidget(
         Material(
-          color: Colors.black, // Dark base to match poster theme
+          color: Colors.black,
           child: Directionality(
             textDirection: ui.TextDirection.ltr,
             child: MediaQuery(
@@ -781,25 +773,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
-        pixelRatio: 5.0, // Ultra HD (4K equivalent) for extreme clarity
+        pixelRatio: 5.0,
         delay: const Duration(milliseconds: 500),
       );
 
-      if (imageBytes != null) {
-        if (mounted) {
-          _showSharePreviewDialog(imageBytes);
-        }
+      if (imageBytes != null && mounted) {
+        _showSharePreviewDialog(imageBytes, question);
       }
     } catch (e) {
       AppLog.e("Error sharing app: $e");
     } finally {
+      if (mounted) setState(() => _isSharing = false);
+    }
+  }
+
+  void _awardSharePoints() async {
+    if (HiveService.canEarnShareRewardToday()) {
+      await _firestoreService.incrementUserPoints(50);
+      await HiveService.markShareRewardEarnedToday();
+      
       if (mounted) {
-        setState(() => _isSharing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLanguage.languageNotifier.value == 'ta'
+                  ? "வாழ்த்துக்கள்! பகிர்ந்ததற்காக 50 புள்ளிகள் கிடைத்தன!"
+                  : "Congratulations! You earned 50 points for sharing!",
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() {}); 
       }
     }
   }
 
-  Future<void> _showSharePreviewDialog(Uint8List imageBytes) async {
+  Future<void> _showSharePreviewDialog(Uint8List imageBytes, Question question) async {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     String shareText = AppLanguage.languageNotifier.value == 'ta'
         ? "இந்தக் கேள்வியை உங்களால் தீர்க்க முடியுமா? TNPSC தேர்வுகளுக்குத் தயாராக இந்த ஆப்பை உடனே பதிவிறக்கம் செய்யுங்கள்! 📚\n\nபதிவிறக்கம்: https://play.google.com/store/apps/details?id=com.tnpsc.groupbook.tnpsc_group_book"
@@ -871,53 +880,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // Footer
                   Padding(
                     padding: const EdgeInsets.all(20.0),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          Navigator.pop(context);
-                          try {
-                            final directory = await getTemporaryDirectory();
-                            final imagePath = await File('${directory.path}/share_quiz.png').create();
-                            await imagePath.writeAsBytes(imageBytes);
-                            
-                            // Share using Share with high quality params
-                            final result = await Share.shareXFiles(
-                              [XFile(imagePath.path)],
-                              text: shareText,
-                            );
-                            
-                            if (result.status == ShareResultStatus.success) {
-                              // Award points if not already earned today
-                              if (HiveService.canEarnShareRewardToday()) {
-                                await _firestoreService.incrementUserPoints(50);
-                                await HiveService.markShareRewardEarnedToday();
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              Navigator.pop(context);
+                              try {
+                                final directory = await getTemporaryDirectory();
+                                final imagePath = await File('${directory.path}/share_quiz.png').create();
+                                await imagePath.writeAsBytes(imageBytes);
                                 
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        AppLanguage.languageNotifier.value == 'ta'
-                                            ? "வாழ்த்துக்கள்! பகிர்ந்ததற்காக 50 புள்ளிகள் கிடைத்தன!"
-                                            : "Congratulations! You earned 50 points for sharing!",
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                  setState(() {}); // Refresh UI stats
+                                // Share using Share with high quality params
+                                final result = await Share.shareXFiles(
+                                  [XFile(imagePath.path)],
+                                  text: shareText,
+                                );
+                                
+                                if (result.status == ShareResultStatus.success) {
+                                  _awardSharePoints();
                                 }
+                              } catch (e) {
+                                AppLog.e("Error sharing image: $e");
                               }
-                            }
-                          } catch (e) {
-                            AppLog.e("Error sharing from dialog: $e");
-                          }
-                        },
-                        icon: const Icon(Icons.share_rounded, size: 20),
-                        label: Text(
-                          AppLanguage.languageNotifier.value == 'ta' ? "இப்போதே பகிர்க" : "Share Now",
+                            },
+                            icon: const Icon(Icons.image_rounded, size: 20),
+                            label: Text(
+                              AppLanguage.languageNotifier.value == 'ta' ? "Image ஆக பகிர்க" : "Share as Image",
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              Navigator.pop(context);
+                              final pollText = ShareUtils.generateTelegramPollText(question);
+                              final result = await Share.share(pollText, subject: "TNPSC Quiz Poll");
+                              if (result.status == ShareResultStatus.success) {
+                                _awardSharePoints();
+                              }
+                            },
+                            icon: const Icon(Icons.poll_rounded, size: 20),
+                            label: Text(
+                              AppLanguage.languageNotifier.value == 'ta' ? "Poll ஆக பகிர்க (Telegram)" : "Share as Poll (Telegram)",
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

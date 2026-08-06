@@ -1,34 +1,46 @@
-# Implementation Plan - Fix Build & SDK 37 Migration
+# Implementation Plan - Telegram Poll Share Feature
 
-Resolve build failures caused by `flutter_secure_storage` upgrade, SDK 37 requirement, and Kotlin version deprecation.
+Add the ability to share quizzes to Telegram in a text-based "Poll Format" with randomized question selection.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **SDK 37 Upgrade**: We are increasing `compileSdk` and `targetSdk` to 37 to support the latest `flutter_secure_storage`.
-> - **API Change**: `flutter_secure_storage` version 11+ has removed the `encryptedSharedPreferences` parameter as it is now enabled by default. We will update the code to reflect this.
-> - **Kotlin 2.2.20**: Upgrading Kotlin to the recommended version for Flutter 3.44+.
+> - **Poll Format**: Telegram's native share intent only supports text and URLs. We will generate a structured text message with emojis (1️⃣, 2️⃣, etc.) that mimics a poll format, which is standard for Telegram groups.
+> - **Randomization**: We will add a feature to pick a completely random quiz from the pool for sharing, satisfying the "random ah varanum" requirement.
 
 ## Proposed Changes
 
-### [Build Configuration]
+### [Utils/Services]
 
-#### [MODIFY] [settings.gradle.kts](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/android/settings.gradle.kts)
-- Upgrade `org.jetbrains.kotlin.android` version to `2.2.20`.
+#### [NEW] [share_utils.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/utils/share_utils.dart)
+- Create a utility class to handle poll text generation.
+- Method: `generateTelegramPollText(Question q)`:
+    - Formats the question (Tamil & English).
+    - Lists options with number emojis.
+    - Appends the app download link.
 
-#### [MODIFY] [build.gradle.kts (App)](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/android/app/build.gradle.kts)
-- Set `compileSdk = 37`.
-- Set `targetSdk = 37`.
+### [UI Components]
 
-### [Services]
+#### [MODIFY] [admin_promote_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/admin_promote_screen.dart)
+- Add a new side icon button: **"Poll Share"**.
+- Implement `_shareAsTextPoll()`:
+    - Picks a random quiz from the `_quizzes` list or the global pool.
+    - Uses `Share.share` with the formatted poll text.
+- Add a **"New Quiz"** button to refresh the randomized pool manually.
 
-#### [MODIFY] [credential_storage.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/services/credential_storage.dart)
-- Remove `encryptedSharedPreferences: true` from `AndroidOptions` constructor to fix compilation error.
+#### [MODIFY] [profile_screen.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/screens/profile_screen.dart)
+- Update the share dialog (preview) to include a "Share as Text Poll" button alongside the "Share Now" (image) button.
+
+### [Localization]
+
+#### [MODIFY] [app_language.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/utils/app_language.dart)
+- Add keys for "Share as Poll", "Random Quiz", etc.
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `flutter clean` then `flutter run` to verify the build.
+- Unit test for `generateTelegramPollText` to ensure bilingual support and correct emoji indexing.
 
 ### Manual Verification
-- Confirm auth persistence works correctly (token/password reading and writing).
+- Go to Admin Promote Screen -> Click "Poll Share" -> Select Telegram -> Verify text structure.
+- Go to Profile -> Share -> Choose "Text Poll" -> Verify randomization.

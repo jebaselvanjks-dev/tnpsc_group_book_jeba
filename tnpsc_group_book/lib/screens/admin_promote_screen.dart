@@ -9,12 +9,14 @@ import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_widget_recorder/flutter_widget_recorder.dart';
 import 'package:gal/gal.dart';
+import 'package:tnpsc_group_book/utils/app_language.dart';
 import '../models/question.dart';
 import '../models/subject.dart';
 import '../services/firestore_service.dart';
 import '../utils/app_date.dart';
 import '../utils/app_log.dart';
 import '../utils/app_theme.dart';
+import '../utils/share_utils.dart';
 import '../widgets/share_poster.dart';
 
 class AdminPromoteScreen extends StatefulWidget {
@@ -291,6 +293,57 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
     }
   }
 
+  Future<void> _shareAsPoll() async {
+    final question = _quizzes[_currentIndex];
+    final pollText = ShareUtils.generateTelegramPollText(question);
+    
+    try {
+      await Share.share(pollText, subject: "TNPSC Quiz Poll");
+    } catch (e) {
+      AppLog.e("Error sharing poll: $e");
+    }
+  }
+
+  Future<void> _refreshQuizzes() async {
+    setState(() {
+      _isLoading = true;
+      _currentIndex = 0;
+    });
+    // Use a truly random seed for manual refresh
+    int randomSeed = Random().nextInt(10000);
+    
+    try {
+      // 1. Get current topic from rotation but use random seed for content
+      int slotSeed = AppDate.getSlotSeed();
+      final subjects = tnpscSubjects;
+      _currentTopicSubject = subjects[slotSeed % subjects.length];
+      String topicName = _currentTopicSubject!.titleEn;
+
+      List<Question> pool = await _firestoreService.getRandomQuizzesByTopic(
+        topicName, 
+        limit: 3, 
+        seed: randomSeed
+      );
+      
+      if (pool.isEmpty) {
+        final daily = await _firestoreService.getDailyRotatingQuiz(isAdmin: true);
+        pool.addAll(daily);
+      }
+
+      setState(() {
+        _quizzes = pool.take(3).toList();
+        _isLoading = false;
+      });
+
+      if (_quizzes.isNotEmpty) {
+        _startSequence();
+      }
+    } catch (e) {
+      AppLog.e("Error refreshing promote quizzes: $e");
+      setState(() => _isLoading = false);
+    }
+  }
+
   Subject _getSubjectForQuestion(Question q) {
     String qSub = (q.subject ?? q.quizType ?? "").toLowerCase();
     try {
@@ -458,9 +511,23 @@ class _AdminPromoteScreenState extends State<AdminPromoteScreen> with TickerProv
                 const SizedBox(height: 25),
                 _buildSideIcon(
                   Icons.share_rounded, 
-                  "Share", 
+                  "Image", 
                   Colors.white,
                   onTap: _shareCurrentQuiz,
+                ),
+                const SizedBox(height: 25),
+                _buildSideIcon(
+                  Icons.poll_rounded, 
+                  AppLanguage.getString('share_as_poll'), 
+                  Colors.blueAccent,
+                  onTap: _shareAsPoll,
+                ),
+                const SizedBox(height: 25),
+                _buildSideIcon(
+                  Icons.shuffle_rounded, 
+                  AppLanguage.getString('random_quiz'), 
+                  Colors.amber,
+                  onTap: _refreshQuizzes,
                 ),
                 const SizedBox(height: 25),
                 _buildSideIcon(

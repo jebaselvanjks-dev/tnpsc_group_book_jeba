@@ -1,4 +1,6 @@
-- [x] Upgrade Kotlin version to 2.2.20 in `settings.gradle.kts`
-- [x] Update `compileSdk` and `targetSdk` to 37 in `app/build.gradle.kts`
-- [x] Fix `FlutterSecureStorage` initialization in `credential_storage.dart`
-- [ ] Verify build with `flutter clean` and `flutter run`
+- [x] Create `ShareUtils` for Telegram poll text generation.
+- [x] Add "Poll Share" and "Random Quiz" buttons to `AdminPromoteScreen`.
+- [x] Update `ProfileScreen` share dialog with "Share as Poll" option.
+- [x] Add new localization strings to `AppLanguage`.
+- [x] Verify randomization logic for quizzes.
+- [x] Final Walkthrough documentation.

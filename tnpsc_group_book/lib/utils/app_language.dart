@@ -934,6 +934,10 @@ class AppLanguage {
         return ta ? '14+ நாட்கள் தொடர்ச்சி' : '14+ Days Streak';
       case 'streak_30':
         return ta ? '30+ நாட்கள் தொடர்ச்சி' : '30+ Days Streak';
+      case 'share_as_poll':
+        return ta ? 'Poll ஆகப் பகிர்க' : 'Share as Poll';
+      case 'random_quiz':
+        return ta ? 'புதிய வினா' : 'New Quiz';
       default:
         return key;
     }
