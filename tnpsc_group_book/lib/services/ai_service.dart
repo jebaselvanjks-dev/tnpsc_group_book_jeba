@@ -1228,4 +1228,98 @@ Only return the raw JSON array, no other text or markdown formatting.
     }
     return [];
   }
+
+  static Future<bool> generateAndSaveDailyCurrentAffairs(DateTime date) async {
+    final dateStr = AppDate.format(date);
+    AppLog.d("AI_DEBUG: Starting Current Affairs generation for $dateStr");
+
+    final prompt = """
+Generate exactly 10 UNIQUE TNPSC Current Affairs points for $dateStr.
+Requirements:
+- Focus on Tamil Nadu News, National News, International News, Awards, Sports, and Science & Tech.
+- Format: Point-by-point news summary.
+- Each point must be relevant for TNPSC Group exams (Group 1, 2, 4).
+- Each point MUST have a concise 'title' and a detailed 'content' in 2-3 sentences.
+- STRICTLY BILINGUAL (English and Tamil).
+
+Output Format:
+[
+  {
+    "title_en": "...",
+    "title_ta": "...",
+    "content_en": "...",
+    "content_ta": "...",
+    "category": "..."
+  }
+]
+
+Return ONLY the final verified JSON array.
+""";
+
+    try {
+      final res = await _generateWithFallback(prompt);
+      if (res != null) {
+        AppLog.d("AI_DEBUG: Received AI Response for Current Affairs");
+        int start = res.indexOf('[');
+        int end = res.lastIndexOf(']');
+        if (start != -1 && end != -1) {
+          List<dynamic> points = jsonDecode(res.substring(start, end + 1));
+
+          if (points.isEmpty) {
+            AppLog.d("AI_DEBUG: Decoded points list is empty");
+            return false;
+          }
+
+          final colRef = FirebaseFirestore.instance.collection('current_affairs_points');
+
+          // Maintenance: Check if we already have many points for today to avoid flooding (Max 20 per day)
+          final existingToday = await colRef.where('date', isEqualTo: dateStr).limit(20).get();
+          if (existingToday.docs.length >= 20) {
+            AppLog.d("AI_DEBUG: Already have 20 points for $dateStr. Skipping generation.");
+            return true;
+          }
+
+          // Add new points with timestamp
+          final now = DateTime.now();
+          int addedCount = 0;
+          for (var p in points) {
+            if (p['title_en'] != null && p['content_ta'] != null) {
+              await colRef.add({
+                ...p,
+                'date': dateStr,
+                'createdAt': now.toIso8601String(),
+                'timestamp': FieldValue.serverTimestamp(),
+              });
+              addedCount++;
+            }
+          }
+          AppLog.d("AI_DEBUG: Successfully added $addedCount news points to Firestore");
+
+          // Maintenance: Keep only latest 500 points
+          final countSnap = await colRef.count().get();
+          int total = countSnap.count ?? 0;
+          if (total > 500) {
+            AppLog.d("AI_DEBUG: Total points ($total) exceeds 500. Cleaning up...");
+            final oldest = await colRef
+                .orderBy('timestamp', descending: false)
+                .limit(total - 500)
+                .get();
+            
+            for (var doc in oldest.docs) {
+              await doc.reference.delete();
+            }
+          }
+
+          return true;
+        } else {
+          AppLog.d("AI_DEBUG: JSON brackets not found in response: $res");
+        }
+      } else {
+        AppLog.d("AI_DEBUG: AI Response was null");
+      }
+    } catch (e) {
+      AppLog.e("AI_DEBUG: Exception in generateAndSaveDailyCurrentAffairs", e);
+    }
+    return false;
+  }
 }

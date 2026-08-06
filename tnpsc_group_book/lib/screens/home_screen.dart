@@ -31,6 +31,8 @@ import '../services/version_service.dart';
 import '../services/tts_service.dart';
 import 'room_setup_screen.dart';
 import '../services/content_sync_service.dart';
+import '../services/reward_service.dart';
+import 'current_affairs_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -71,6 +73,98 @@ class _HomeScreenState extends State<HomeScreen> {
       // AI_DEBUG: Silent Background Sync - No overlay shown
       ContentSyncService.performInitialSync();
     }
+  }
+
+  void _onCurrentAffairsTap() {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : Colors.black12,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              AppLanguage.getString('current_affairs'),
+              style: AppTheme.getStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : AppTheme.textMainColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              AppLanguage.getString('unlock_ca_desc'),
+              textAlign: TextAlign.center,
+              style: AppTheme.getStyle(
+                fontSize: 14,
+                color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  
+                  // Show feedback that we are trying to open it
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    SnackBar(
+                      content: Text(AppLanguage.languageNotifier.value == 'ta' ? "திறக்கிறது, சிறிது காத்திருக்கவும்..." : "Opening, please wait..."),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+
+                  RewardService.showRewardAd(
+                    onRewardEarned: () {
+                      if (!this.context.mounted) return;
+                      Navigator.push(
+                        this.context,
+                        MaterialPageRoute(builder: (context) => const CurrentAffairsScreen()),
+                      );
+                    },
+                    onFailure: () {
+                      if (!this.context.mounted) return;
+                      // Fallback: If ad fails, open anyway
+                      Navigator.push(
+                        this.context,
+                        MaterialPageRoute(builder: (context) => const CurrentAffairsScreen()),
+                      );
+                    }
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: Text(
+                  AppLanguage.getString('watch_ad_to_view'),
+                  style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -145,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         Text(
                                           "${AppLanguage.getString('greeting')},",
                                           style: AppTheme.getStyle(
-                                            fontSize: 22,
+                                            fontSize: 18,
                                             fontWeight: FontWeight.bold,
                                             color: isDark ? Colors.white : AppTheme.textMainColor,
                                           ),
@@ -154,9 +248,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                           children: [
                                             Flexible(
                                               child: Text(
-                                                "$userName! 👋",
+                                                "$userName!",
                                                 style: AppTheme.getStyle(
-                                                  fontSize: 22,
+                                                  fontSize: 18,
                                                   fontWeight: FontWeight.bold,
                                                   color: isDark ? Colors.white : AppTheme.textMainColor,
                                                 ),
@@ -171,6 +265,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 child: StreakBadge(streak: streak),
                                               ),
                                             ],
+                                            Flexible(
+                                              child: Text(
+                                                " 👋",
+                                                style: AppTheme.getStyle(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isDark ? Colors.white : AppTheme.textMainColor,
+                                                ),
+                                              ),
+                                            ),
                                           ],
                                         ),
                                         const SizedBox(height: 8),
@@ -257,15 +361,29 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 const SizedBox(height: 32),
                                 RepaintBoundary(
-                                  child: Row(
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                            children: [
+                                              _buildQuickActionCard(context, title: AppLanguage.getString('mistake_bank'), icon: "📝", color: Colors.orange, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MistakeBankScreen()))),
+                                              const SizedBox(width: 12),
+                                              _buildQuickActionCard(context, title: AppLanguage.getString('saved_quizzes'), icon: "🔖", color: Colors.blue, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BookmarkScreen()))),
+                                              const SizedBox(width: 12),
+                                              _buildQuickActionCard(context, title: AppLanguage.getString('group_test_lobby'), icon: "👥", color: Colors.green, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RoomSetupScreen()))),
+                                            ],
+                                          ),
+                                      const SizedBox(height: 12),
+                                      Row(
                                         children: [
-                                          _buildQuickActionCard(context, title: AppLanguage.getString('mistake_bank'), icon: "📝", color: Colors.orange, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MistakeBankScreen()))),
+                                          _buildQuickActionCard(context, title: AppLanguage.getString('current_affairs'), icon: "📰", color: Colors.teal, onTap: _onCurrentAffairsTap),
                                           const SizedBox(width: 12),
-                                          _buildQuickActionCard(context, title: AppLanguage.getString('saved_quizzes'), icon: "🔖", color: Colors.blue, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BookmarkScreen()))),
+                                          const Expanded(child: SizedBox()),
                                           const SizedBox(width: 12),
-                                          _buildQuickActionCard(context, title: AppLanguage.getString('group_test_lobby'), icon: "👥", color: Colors.green, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RoomSetupScreen()))),
+                                          const Expanded(child: SizedBox()),
                                         ],
                                       ),
+                                    ],
+                                  ),
                                 ),
                                 const SizedBox(height: 32),
 
@@ -394,7 +512,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Flexible(
                 child: Text(
                   AppLanguage.getString('daily_quiz'),
-                  style: AppTheme.getStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: AppTheme.getStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -402,7 +520,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 10),
           Text(
             AppLanguage.getString('today_quiz_ready'),
-            style: AppTheme.getStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 15),
+            style: AppTheme.getStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -420,7 +538,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Text(
                 HiveService.isDailyQuizDone() ? AppLanguage.getString('completed') : AppLanguage.getString('start_quiz'),
-                style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: AppTheme.getStyle(fontWeight: FontWeight.bold, fontSize: 12),
               ),
             ),
           )
@@ -711,14 +829,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icon(
                   boxIcon, 
                   color: boxColor, 
-                  size: 24
+                  size: 20
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
                     recommendation,
                     style: AppTheme.getStyle(
-                      fontSize: 15,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: isDark ? boxColor.withValues(alpha: 0.9) : boxColor.darken(0.2),
                     ),
@@ -791,14 +909,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(icon, color: color, size: 18),
+                    child: Icon(icon, color: color, size: 15),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       categoryName,
                       style: AppTheme.getStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: isDark ? Colors.white : AppTheme.textMainColor,
                       ),
@@ -818,34 +936,26 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 12),
               // Progress bar (Mastery style)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: value,
-                  minHeight: 6,
-                  backgroundColor: progressColor.withValues(alpha: 0.1),
-                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Sub-info row (Optional detail)
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Flexible(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: value,
+                        minHeight: 6,
+                        backgroundColor: progressColor.withValues(alpha: 0.1),
+                        valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 20,),
                   Text(
                     isTamil ? "$correct / $total சரி" : "$correct / $total Correct",
                     style: AppTheme.getStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: Colors.green,
-                    ),
-                  ),
-                  Text(
-                    isTamil ? "$wrong தவறு" : "$wrong Wrong",
-                    style: AppTheme.getStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.redAccent,
                     ),
                   ),
                 ],

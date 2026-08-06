@@ -28,6 +28,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../widgets/ad_banner.dart';
 import '../services/version_service.dart';
+import 'current_affairs_screen.dart';
 
 class SubjectScreen extends StatefulWidget {
   const SubjectScreen({super.key});
@@ -231,7 +232,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
                                 Text(
                                   "${AppLanguage.getString('greeting')},",
                                   style: AppTheme.getStyle(
-                                    fontSize: 22,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                     color: isDark ? Colors.white : AppTheme.textMainColor,
                                   ),
@@ -240,9 +241,9 @@ class _SubjectScreenState extends State<SubjectScreen> {
                                   children: [
                                     Flexible(
                                       child: Text(
-                                        "$userName!  👋",
+                                        "$userName!",
                                         style: AppTheme.getStyle(
-                                          fontSize: 22,
+                                          fontSize: 18,
                                           fontWeight: FontWeight.bold,
                                           color: isDark ? Colors.white : AppTheme.textMainColor,
                                         ),
@@ -257,6 +258,16 @@ class _SubjectScreenState extends State<SubjectScreen> {
                                         child: StreakBadge(streak: streak),
                                       ),
                                     ],
+                                    Flexible(
+                                      child: Text(
+                                        " 👋",
+                                        style: AppTheme.getStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? Colors.white : AppTheme.textMainColor,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 Padding(
@@ -264,7 +275,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
                                   child: Text(
                                     AppLanguage.getString('ready_to_crack'),
                                     style: AppTheme.getStyle(
-                                      fontSize: 16,
+                                      fontSize: 14,
                                       color: isDark ? Colors.white70 : AppTheme.textSecondaryColor,
                                     ),
                                   ),
@@ -362,14 +373,15 @@ class _SubjectScreenState extends State<SubjectScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text("🧠", style: AppTheme.getStyle(fontSize: 22)),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Flexible(
                 child: Text(
                   AppLanguage.getString('mock_quiz'),
-                  style: AppTheme.getStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: AppTheme.getStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 8),
@@ -382,7 +394,7 @@ class _SubjectScreenState extends State<SubjectScreen> {
                 child: const Icon(
                   Icons.info_outline_rounded,
                   color: Colors.white70,
-                  size: 20,
+                  size: 18,
                 ),
               ),
             ],
@@ -627,7 +639,7 @@ class _SubjectCard extends StatelessWidget {
                                 child: Text(
                                   topic,
                                   style: AppTheme.getStyle(
-                                    fontSize: 18,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: isDark ? Colors.white : AppTheme.textMainColor,
                                   ),
@@ -653,6 +665,13 @@ class _SubjectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
+        if (subject.id == '12' || subject.titleEn == 'Current Affairs') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CurrentAffairsScreen()),
+          );
+          return;
+        }
         if (subject.topics.isNotEmpty) {
           _showTopicsBottomSheet(context);
         } else {
@@ -675,7 +694,7 @@ class _SubjectCard extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: AppTheme.glassWhite(context),
               borderRadius: BorderRadius.circular(24),
@@ -691,9 +710,9 @@ class _SubjectCard extends StatelessWidget {
                     color: subject.color.withAlpha(26),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(subject.icon, color: subject.color, size: 28),
+                  child: Icon(subject.icon, color: subject.color, size: 22),
                 ),
-                const SizedBox(height: 8),
+                // const SizedBox(height: 8),
                 Flexible(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -703,7 +722,7 @@ class _SubjectCard extends StatelessWidget {
                         subject.title,
                         textAlign: TextAlign.center,
                         style: AppTheme.getStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppTheme.textMainColor,
                         ),

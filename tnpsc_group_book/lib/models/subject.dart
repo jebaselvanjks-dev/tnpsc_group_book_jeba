@@ -446,23 +446,23 @@ final List<Subject> tnpscSubjects = [
       ],
     },
   ),
-  // Subject(
-  //   id: '12',
-  //   titleTa: 'நடப்பு நிகழ்வுகள்',
-  //   titleEn: 'Current Affairs',
-  //   subtitleTa: 'தினசரி செய்திகள்',
-  //   subtitleEn: 'Daily Updates',
-  //   icon: Icons.newspaper_rounded,
-  //   color: Colors.teal,
-  //   topicsTa: ['பொதுச் செய்திகள்', 'முக்கிய நிகழ்வுகள்'],
-  //   topicsEn: ['General News', 'Important Events'],
-  //   subTopicsMapTa: {
-  //     'பொதுச் செய்திகள்': ['தமிழ்நாடு நிகழ்வுகள்', 'தேசிய நிகழ்வுகள்', 'சர்வதேச நிகழ்வுகள்'],
-  //     'முக்கிய நிகழ்வுகள்': ['அரசு திட்டங்கள் & கொள்கைகள்', 'அறிவியல் & தொழில்நுட்பம்', 'விளையாட்டு, நூல்கள் & விருதுகள்', 'முக்கிய தினங்கள்'],
-  //   },
-  //   subTopicsMapEn: {
-  //     'General News': ['Tamil Nadu Events', 'National Events', 'International Events'],
-  //     'Important Events': ['Government Schemes & Policies', 'Science & Tech', 'Sports, Books & Awards', 'Important Days'],
-  //   },
-  // ),
+  Subject(
+    id: '12',
+    titleTa: 'நடப்பு நிகழ்வுகள்',
+    titleEn: 'Current Affairs',
+    subtitleTa: 'தினசரி செய்திகள்',
+    subtitleEn: 'Daily Updates',
+    icon: Icons.newspaper_rounded,
+    color: Colors.teal,
+    topicsTa: ['பொதுச் செய்திகள்', 'முக்கிய நிகழ்வுகள்'],
+    topicsEn: ['General News', 'Important Events'],
+    subTopicsMapTa: {
+      'பொதுச் செய்திகள்': ['தமிழ்நாடு நிகழ்வுகள்', 'தேசிய நிகழ்வுகள்', 'சர்வதேச நிகழ்வுகள்'],
+      'முக்கிய நிகழ்வுகள்': ['அரசு திட்டங்கள் & கொள்கைகள்', 'அறிவியல் & தொழில்நுட்பம்', 'விளையாட்டு, நூல்கள் & விருதுகள்', 'முக்கிய தினங்கள்'],
+    },
+    subTopicsMapEn: {
+      'General News': ['Tamil Nadu Events', 'National Events', 'International Events'],
+      'Important Events': ['Government Schemes & Policies', 'Science & Tech', 'Sports, Books & Awards', 'Important Days'],
+    },
+  ),
 ];

@@ -555,7 +555,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
 
           // 5. Group ID Card (Right side)
           Positioned(
-            top: 220,
+            top: 210,
             width: 400,
             child: _buildPosterGroupIDCard(theme, roomData, customTime),
           ),
@@ -705,7 +705,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                 "QUIZ",
                 style:
                     GoogleFonts.kaushanScript(
-                      fontSize: 60,
+                      fontSize: 50,
                       fontWeight: FontWeight.w900,
                       color: theme.accentColor,
                       height: 0.9,
@@ -863,9 +863,11 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
               ignoreScale: true,
             ),
           ),
+          const SizedBox(height: 8),
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Starting Time',
+              Text('Starting Time:  ',
                 textAlign: TextAlign.center,
                 style: AppTheme.getStyle(
                   fontSize: 20,
@@ -885,7 +887,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                     : '',
                 textAlign: TextAlign.center,
                 style: AppTheme.getStyle(
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.white70,
                   ignoreScale: true,

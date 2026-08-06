@@ -756,6 +756,14 @@ class AppLanguage {
         return ta ? 'கணிதத் திறன் & மனத்திறன்' : 'Aptitude & Mental Ability';
       case 'current_affairs':
         return ta ? 'நடப்பு நிகழ்வுகள்' : 'Current Affairs';
+      case 'news_points':
+        return ta ? 'முக்கியச் செய்திகள்' : 'News Points';
+      case 'daily_updates':
+        return ta ? 'தினசரி அறிவிப்புகள்' : 'Daily Updates';
+      case 'unlock_ca_desc':
+        return ta ? 'இன்றைய நடப்பு நிகழ்வுகளைக் காண ஒரு விளம்பரத்தைப் பார்க்கவும்' : 'Watch an ad to view today\'s current affairs';
+      case 'watch_ad_to_view':
+        return ta ? 'விளம்பரத்தைப் பார்த்துத் திறக்கவும்' : 'Watch Ad to Unlock';
       case 'audio_settings':
         return ta ? 'ஆடியோ அமைப்புகள்' : 'Audio Settings';
       case 'voice_speed':
@@ -832,8 +840,6 @@ class AppLanguage {
         return ta ? 'நீங்கள் புதிய குழுவை உருவாக்கலாம்.' : 'You can create a new room.';
       case 'select_subject':
         return ta ? 'பாடத்தை தேர்ந்தெடுக்கவும்' : 'Select Subject';
-      case 'max_players_label':
-        return ta ? 'அதிகபட்ச வீரர்கள்' : 'Max Players';
       case 'extra_player_cost':
         return ta ? 'கூடுதல் வீரர் செலவு: {points} புள்ளிகள்' : 'Extra player cost: {points} points';
       case 'base_room_cost':

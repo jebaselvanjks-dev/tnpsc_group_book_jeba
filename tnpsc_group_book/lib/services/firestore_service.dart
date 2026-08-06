@@ -1268,6 +1268,38 @@ class FirestoreService {
       return [];
     }
   }
+
+  // Fetch Current Affairs Points
+  Future<List<Map<String, dynamic>>> getCurrentAffairs() async {
+    try {
+      // AI_DEBUG: Check if we need to generate today's points first
+      String today = AppDate.getTodayString();
+      final todayCheck = await _db.collection('current_affairs_points')
+          .where('date', isEqualTo: today)
+          .limit(1)
+          .get();
+
+      if (todayCheck.docs.isEmpty) {
+        AppLog.d("AI_DEBUG: Today's Current Affairs not found. Generating...");
+        await AiService.generateAndSaveDailyCurrentAffairs(AppDate.getISTNow())
+            .timeout(const Duration(seconds: 40));
+      }
+
+      final snapshot = await _db.collection('current_affairs_points')
+          .orderBy('timestamp', descending: true)
+          .limit(500)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        var data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      AppLog.e("Error fetching current affairs", e);
+      return [];
+    }
+  }
   // Get Mastery Data (Grouped by subject) - Cache-first optimization
   Future<Map<String, double>> getMasteryData({bool forceRefresh = false}) async {
     try {
