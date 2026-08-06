@@ -1,7 +1,4 @@
-- [/] Upgrade Build Configuration for AGP 9.0
-    - [ ] Update `gradle-wrapper.properties` to Gradle 9.1.0
-    - [ ] Update `settings.gradle.kts` to AGP 9.0.0
-    - [ ] Update `gradle.properties` with R8 Full Mode and optimized shrinking
-- [ ] Verify Build
-    - [ ] Run release build assembly check
-- [ ] Final Walkthrough
+- [x] Upgrade Kotlin version to 2.2.20 in `settings.gradle.kts`
+- [x] Update `compileSdk` and `targetSdk` to 37 in `app/build.gradle.kts`
+- [x] Fix `FlutterSecureStorage` initialization in `credential_storage.dart`
+- [ ] Verify build with `flutter clean` and `flutter run`

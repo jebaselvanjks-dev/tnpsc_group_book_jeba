@@ -1,48 +1,34 @@
-# Implementation Plan - AGP 9.0 & R8 Optimization
+# Implementation Plan - Fix Build & SDK 37 Migration
 
-Improve app performance and memory usage by upgrading to Android Gradle Plugin 9.0 and enabling advanced R8/Resource Shrinking features as recommended by Google Play.
+Resolve build failures caused by `flutter_secure_storage` upgrade, SDK 37 requirement, and Kotlin version deprecation.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **AGP 9.0 Upgrade**: Upgrading to AGP 9.0 requires a minimum Gradle version of 9.1.0.
-> - **R8 Full Mode**: Enabling Full Mode allows R8 to be more aggressive in shrinking and optimization. This might require additional `-keep` rules if reflection is used in ways not already covered. (Hive and Models are already kept in `proguard-rules.pro`).
-> - **Resource Shrinking**: We will enable the latest optimized resource shrinking implementation.
+> - **SDK 37 Upgrade**: We are increasing `compileSdk` and `targetSdk` to 37 to support the latest `flutter_secure_storage`.
+> - **API Change**: `flutter_secure_storage` version 11+ has removed the `encryptedSharedPreferences` parameter as it is now enabled by default. We will update the code to reflect this.
+> - **Kotlin 2.2.20**: Upgrading Kotlin to the recommended version for Flutter 3.44+.
 
 ## Proposed Changes
 
 ### [Build Configuration]
 
 #### [MODIFY] [settings.gradle.kts](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/android/settings.gradle.kts)
-- Upgrade `com.android.application` version from `8.11.1` to `9.0.0`.
-- Upgrade `org.jetbrains.kotlin.android` if needed (keeping `2.2.20` for now as it's AGP 9.0 compatible).
-
-#### [MODIFY] [gradle-wrapper.properties](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/android/gradle/wrapper/gradle-wrapper.properties)
-- Upgrade `distributionUrl` to use Gradle `9.1.0`.
-
-#### [MODIFY] [gradle.properties](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/android/gradle.properties)
-- Add `android.enableR8.fullMode=true`.
-- Ensure `android.r8.optimizedResourceShrinking=true` is present.
-- Set `android.newDsl=true` (or remove the `false` override) to adopt AGP 9.0 standards.
-- Set `android.builtInKotlin=true` (or remove the `false` override).
+- Upgrade `org.jetbrains.kotlin.android` version to `2.2.20`.
 
 #### [MODIFY] [build.gradle.kts (App)](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/android/app/build.gradle.kts)
-- Verify `isMinifyEnabled = true` and `isShrinkResources = true`.
-- Update any DSL if the `newDsl` triggers errors.
+- Set `compileSdk = 37`.
+- Set `targetSdk = 37`.
 
-### [ProGuard]
+### [Services]
 
-#### [MODIFY] [proguard-rules.pro](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/android/app/proguard-rules.pro)
-- Add any necessary keep rules for common Flutter plugins if Full Mode causes issues (though standard rules are usually sufficient).
+#### [MODIFY] [credential_storage.dart](file:///C:/Users/ADMIN/StudioProjects/tnpsc_group_book_jeba/tnpsc_group_book/lib/services/credential_storage.dart)
+- Remove `encryptedSharedPreferences: true` from `AndroidOptions` constructor to fix compilation error.
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `./gradlew assembleRelease` to ensure the project builds correctly with the new plugin and R8 settings.
-- Check build logs for any R8 warnings or errors.
+- Run `flutter clean` then `flutter run` to verify the build.
 
 ### Manual Verification
-- Test the release build on a device to ensure:
-    - App starts normally (no reflection issues with Hive).
-    - Current Affairs and AI features work (Firestore/JSON parsing is fine).
-    - Ads show up (AdMob is kept).
+- Confirm auth persistence works correctly (token/password reading and writing).
