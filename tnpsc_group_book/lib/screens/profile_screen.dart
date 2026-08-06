@@ -912,29 +912,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: OutlinedButton.icon(
-                            onPressed: () async {
-                              Navigator.pop(context);
-                              final pollText = ShareUtils.generateTelegramPollText(question);
-                              final result = await Share.share(pollText, subject: "TNPSC Quiz Poll");
-                              if (result.status == ShareResultStatus.success) {
-                                _awardSharePoints();
-                              }
-                            },
-                            icon: const Icon(Icons.poll_rounded, size: 20),
-                            label: Text(
-                              AppLanguage.languageNotifier.value == 'ta' ? "Poll ஆக பகிர்க (Telegram)" : "Share as Poll (Telegram)",
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -946,5 +923,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
 }
