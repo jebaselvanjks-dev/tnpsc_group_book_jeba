@@ -8,13 +8,72 @@ class GoogleAuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static bool _isInitialized = false;
 
+  /// Initializes the Google Sign-In plugin with the required Web Client ID for Credential Manager.
+  static Future<void> initializePlugin() async {
+    if (_isInitialized) return;
+    try {
+      AppLog.d('AI_DEBUG: Initializing GoogleSignIn instance...');
+      await _googleSignIn.initialize(
+        serverClientId: '384136070006-mk6ul67oeqanp7qe7i61lcdr1k89ac5n.apps.googleusercontent.com',
+      );
+      _isInitialized = true;
+    } catch (e) {
+      AppLog.e('AI_DEBUG: Error initializing GoogleSignIn: $e');
+    }
+  }
+
+  /// Attempts to restore a previous Google session and signs into Firebase if found.
+  /// Mandatory for persistent login in v7.2.0+.
+  static Future<User?> restorePreviousSignIn() async {
+    try {
+      await initializePlugin();
+      AppLog.d('AI_DEBUG: [GoogleAuth] Attempting lightweight authentication...');
+      
+      // Add a strict timeout to prevent hanging the splash screen
+      final future = _googleSignIn.attemptLightweightAuthentication();
+      if (future == null) {
+        AppLog.e('AI_DEBUG: [GoogleAuth] attemptLightweightAuthentication returned null');
+        return null;
+      }
+
+      final GoogleSignInAccount? googleUser = await future.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {
+          AppLog.e('AI_DEBUG: [GoogleAuth] Lightweight authentication TIMED OUT');
+          return null;
+        }
+      );
+      
+      if (googleUser != null) {
+        AppLog.d('AI_DEBUG: [GoogleAuth] Restored Google account: ${googleUser.email}. Signing into Firebase...');
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        
+        if (googleAuth.idToken == null) {
+          AppLog.e('AI_DEBUG: [GoogleAuth] idToken is null. Cannot sign in to Firebase.');
+          return null;
+        }
+
+        final OAuthCredential credential = GoogleAuthProvider.credential(
+          idToken: googleAuth.idToken,
+        );
+        
+        final UserCredential userCredential = await _auth.signInWithCredential(credential);
+        AppLog.d('AI_DEBUG: [GoogleAuth] Firebase sign-in SUCCESS for ${userCredential.user?.email}');
+        return userCredential.user;
+      }
+      
+      AppLog.d('AI_DEBUG: [GoogleAuth] No Google session found to restore.');
+      return null;
+    } catch (e) {
+      AppLog.e('AI_DEBUG: [GoogleAuth] Error during session restoration: $e');
+      return null;
+    }
+  }
+
   static Future<UserCredential?> signInWithGoogle() async {
     try {
-      // Initialize the plugin only once
-      if (!_isInitialized) {
-        await _googleSignIn.initialize();
-        _isInitialized = true;
-      }
+      // Ensure plugin is initialized
+      await initializePlugin();
 
       // Prompt the user to select a Google account
       GoogleSignInAccount? googleUser;
@@ -23,14 +82,13 @@ class GoogleAuthService {
         googleUser = await _googleSignIn.authenticate();
         
         if (googleUser == null) {
-          AppLog.d('AI_DEBUG: Google Sign-In was canceled by the user (result is null).');
+          AppLog.d('AI_DEBUG: Google Sign-In was canceled by the user.');
           return null;
         }
         
-        AppLog.d('AI_DEBUG: Authenticate success: ${googleUser.email}');
+        AppLog.d('AI_DEBUG: Sign-In success: ${googleUser.email}');
       } catch (e) {
-        AppLog.e('AI_DEBUG: Google Sign In Error: $e');
-        AppLog.d('AI_DEBUG: Authenticate error type: ${e.runtimeType}');
+        AppLog.e('AI_DEBUG: Google Sign In Error during authenticate: $e');
         
         if (e is GoogleSignInException && e.code == GoogleSignInExceptionCode.canceled) {
           AppLog.d('AI_DEBUG: User canceled the sign-in flow.');

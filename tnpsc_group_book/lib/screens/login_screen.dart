@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -37,15 +36,17 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final userCredential = await GoogleAuthService.signInWithGoogle();
       if (userCredential != null && userCredential.user != null) {
+        AppLog.d('AI_DEBUG: Google Sign-In success. Initializing user...');
         await _initializeUserInFirestore(userCredential.user);
         _navigateToHome();
       } else {
+        AppLog.d('AI_DEBUG: Google Sign-In result is null (canceled).');
         setState(() => _isLoading = false);
-        // User canceled sign-in
       }
     } catch (e) {
+      AppLog.e('AI_DEBUG: Error in _handleGoogleSignIn: $e');
       setState(() => _isLoading = false);
-      _showError(ta ? 'Google உள்நுழைவு தோல்வியடைந்தது.' : 'Google Sign-In failed.');
+      _showError(ta ? 'Google உள்நுழைவு தோல்வியடைந்தது: $e' : 'Google Sign-In failed: $e');
     }
   }
 
@@ -75,6 +76,9 @@ class _LoginScreenState extends State<LoginScreen> {
     // Force refresh user data from Firestore to populate Hive on fresh install
     final fs = FirestoreService();
     await fs.getUserData(forceRefresh: true);
+
+    // AI_DEBUG: Mark user as logged in locally for session persistence
+    await HiveService.setLoggedIn(true);
 
     // AI_DEBUG: Admin pool refresh logic for Share quizzes (Weekly Once)
     if ((user.email == 'adminjeba@gmail.com' || 

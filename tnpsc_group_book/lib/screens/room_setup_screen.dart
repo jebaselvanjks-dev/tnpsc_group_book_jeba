@@ -37,6 +37,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   late TimeOfDay _endTime;
   bool _isFirstAttempt = true;
   Map<String, dynamic>? _activeRoomData;
+  Map<String, dynamic>? _activeJoinedRoomData;
 
   // Teaser for loading screen
   List<Question> _teaserQuestions = [];
@@ -72,7 +73,7 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     }
 
     _loadTeaserQuestions();
-    _refreshExistingRoom();
+    _checkActiveRoom();
 
     // Listen for deep link codes
     DeepLinkService().pendingRoomCode.addListener(_handleDeepLinkCode);
@@ -116,12 +117,27 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     super.dispose();
   }
 
-  Future<void> _refreshExistingRoom() async {
-    final serverData = await _roomService.getActiveHostRoom();
+  Future<void> _checkActiveRoom() async {
+    // Perform server sync for both Hosting and Joined rooms
+    AppLog.d("AI_DEBUG: [RoomSetup] Performing server sync for active rooms...");
+    setState(() => _isLoading = true);
+    
+    final hostData = await _roomService.getActiveHostRoom();
+    final joinedData = await _roomService.getActiveJoinedRoom();
+    
     if (mounted) {
       setState(() {
-        _activeRoomData = serverData;
+        _isLoading = false;
+        _activeRoomData = hostData;
+        _activeJoinedRoomData = joinedData;
       });
+
+      // AI_DEBUG: Still use cache for performance in Hive where possible
+      if (hostData != null) {
+        await HiveService.saveActiveRoom(hostData['roomCode'], true);
+      } else if (joinedData != null) {
+        await HiveService.saveActiveRoom(joinedData['roomCode'], joinedData['isHost'] ?? false);
+      }
     }
   }
 
@@ -379,7 +395,10 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
       } else if (code != null) {
         // Point deduction and attempt increment are now handled in RoomService.createRoom transaction
         // UI Refresh: Force rebuild to show updated points if they come back to this screen
-        if (mounted) setState(() {}); 
+        if (mounted) {
+          setState(() {}); 
+          _checkActiveRoom();
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -426,7 +445,10 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
     setState(() => _isLoading = false);
 
     if (result == 'success') {
-      if (mounted) setState(() {}); // Refresh points
+      if (mounted) {
+        setState(() {}); // Refresh points
+        _checkActiveRoom(); // Refresh active rooms visibility
+      }
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -1177,6 +1199,101 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.secondaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // 1.1. Active Joined Room (Show if user has joined an active room)
+            if (_activeJoinedRoomData != null && _activeJoinedRoomData?['roomCode'] != _activeRoomData?['roomCode'])
+              Container(
+                padding: const EdgeInsets.all(20),
+                margin: const EdgeInsets.only(bottom: 25),
+                decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.green.withValues(alpha: 0.4), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 5))
+                    ]
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const AppIcon(Icons.group_add_rounded, color: Colors.green, size: 28),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                lang == 'ta' ? "நீங்கள் இணைந்துள்ள தேர்வு" : "Joined Room Available",
+                                style: AppTheme.getStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "${AppLanguage.getString('subject_name_label')}: ${AppLanguage.getString(_activeJoinedRoomData!['subject'] ?? 'general_tamil')}",
+                                style: AppTheme.getStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.black38 : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300, width: 1),
+                        ),
+                        child: Text(
+                          _activeJoinedRoomData!['roomCode'] ?? '',
+                          style: AppTheme.getStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ).copyWith(letterSpacing: 3),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          if (await VersionService.isUpdateRequired()) {
+                            if (mounted) VersionService.showUpdateDialogIfNeeded(context);
+                            return;
+                          }
+                          if (mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => WaitingRoomScreen(roomCode: _activeJoinedRoomData!['roomCode'], isHost: false),
+                              ),
+                            );
+                          }
+                        },
+                        label: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            AppLanguage.getString('enter_waiting_room'),
+                            style: AppTheme.getStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 0,

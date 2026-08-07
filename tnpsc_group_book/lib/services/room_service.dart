@@ -141,13 +141,10 @@ class RoomService {
         return 'invalid_player_limit';
       }
 
-      // Check for any active room membership (Hosting or Joined)
+      // Check for hosting room only - allow joining others
       final existingHost = await getActiveHostRoom();
       if (existingHost != null) return 'room_exists_error';
       
-      final existingJoined = await getActiveJoinedRoom();
-      if (existingJoined != null) return 'room_exists_error';
-
       // Strict validation: Prevent creating rooms with past start time
       DateTime now = AppDate.getISTNow();
       if (startTime != null && startTime.isBefore(now.subtract(const Duration(minutes: 1)))) {
@@ -364,6 +361,7 @@ class RoomService {
       if (transactionResult == 'insufficient_points') return 'insufficient_points';
       if (transactionResult == 'user_not_found') return null;
 
+      await HiveService.saveActiveRoom(roomCode, true);
       await HiveService.saveHostRoom(roomCode, today);
 
       
@@ -459,13 +457,7 @@ class RoomService {
                    _auth.currentUser?.email == 'kjebaselvan987@gmail.com';
 
     try {
-      // Check for any active room membership first
-      final existingHost = await getActiveHostRoom();
-      if (existingHost != null && existingHost['roomCode'] != roomCode) return 'already_in_room';
-      
-      final existingJoined = await getActiveJoinedRoom();
-      if (existingJoined != null && existingJoined['roomCode'] != roomCode) return 'already_in_room';
-
+      // Allow joining multiple rooms, just need to manage history
       String today = AppDate.getTodayString();
       currentRoomDate = today;
       DocumentReference roomRef = _getRoomRef(roomCode);
@@ -535,6 +527,7 @@ class RoomService {
       });
 
       if (transactionResult == 'success') {
+         await HiveService.saveActiveRoom(roomCode, false);
          // Update Hive local state for points
          if (cost > 0) {
             final userBox = Hive.box(HiveService.userBoxName);

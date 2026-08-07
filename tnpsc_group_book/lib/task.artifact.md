@@ -1,0 +1,7 @@
+- [x] Update `main.dart` to initialize services early
+- [x] Add session restoration to `google_auth_service.dart`
+- [x] Improve authentication check in `splash_screen.dart`
+- [x] Fix missing import in `splash_screen.dart`
+- [x] Fix build error in `google_auth_service.dart` (nullable Future)
+- [x] Fix missing import in `main.dart`
+- [ ] Verify build and persistent login

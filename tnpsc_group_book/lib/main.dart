@@ -4,11 +4,8 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:tnpsc_group_book/screens/subject_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/books_screen.dart';
-import 'screens/settings_screen.dart';
 import 'screens/leaderboard_screen.dart';
 import 'screens/profile_screen.dart';
-import 'screens/quiz_screen.dart';
 import 'utils/app_theme.dart';
 import 'utils/app_language.dart';
 import 'utils/app_icons.dart';
@@ -17,7 +14,6 @@ import 'services/hive_service.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter/services.dart';
 import 'services/tts_service.dart';
 import 'services/reward_service.dart';
@@ -26,6 +22,7 @@ import 'firebase_options.dart';
 import 'services/firestore_service.dart';
 import 'services/version_service.dart';
 import 'services/deep_link_service.dart';
+import 'services/google_auth_service.dart';
 import 'utils/app_log.dart';
 import 'widgets/lazy_indexed_stack.dart';
 
@@ -33,7 +30,7 @@ import 'widgets/error_state_widget.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
-void main() {
+void main() async {
   // 1. Core Flutter initialization (Instant)
   WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
 
@@ -50,51 +47,49 @@ void main() {
     return true; // Prevent app from terminating
   };
 
-  // 3. Start UI immediately
+  // 3. Early Core Services Initialization
+  // This ensures Firebase and Hive are ready BEFORE the first frame of the app is rendered.
+  await initializeServices();
+
+  // 4. Start UI immediately
   runApp(const TNPSCPrepApp());
 }
 
 // Background initializations triggered by SplashScreen
 Future<void> initializeServices() async {
-  // AI_DEBUG: Start critical services immediately
-  
   // Lock orientation to portrait
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
   
-  // 1. Critical initializations (Must be ready before Home screen)
+  // Strictly sequential for stability
   try {
-    // Run Firebase and Hive init in parallel to speed up startup
-    await Future.wait([
-      (() async {
-        try {
-          await Firebase.initializeApp(
-            options: DefaultFirebaseOptions.currentPlatform,
-          );
-        } catch (e) {
-          AppLog.e("AI_DEBUG: Firebase init error: $e");
-        }
-      })(),
-      HiveService.init(),
-    ]);
+    AppLog.d("AI_DEBUG: [Init] Initializing Firebase...");
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    AppLog.d("AI_DEBUG: [Init] Firebase Initialized.");
+
+    AppLog.d("AI_DEBUG: [Init] Initializing Hive...");
+    await HiveService.init();
+    AppLog.d("AI_DEBUG: [Init] Hive Initialized.");
   } catch (e) {
-    AppLog.e("AI_DEBUG: Service init error: $e");
+    AppLog.e("AI_DEBUG: [Init] Critical service init error: $e");
   }
 
   // Load preferences from Hive (Requires Hive boxes to be open)
   AppLanguage.init();
   AppTheme.init();
-  
-  // All other services are moved to background to not block launch
-  _initServicesInBackground();
+
+  // Initialize Google Sign-In early to prevent late-initialization popups
+  await GoogleAuthService.initializePlugin();
 }
 
-// Lazy initializations to speed up startup
-Future<void> _initServicesInBackground() async {
-  // AI_DEBUG: Increased delay to ensure UI is fully interactive before heavy init
-  await Future.delayed(const Duration(milliseconds: 1200));
+// Lazy initializations to speed up startup - Made public to call from SplashScreen
+Future<void> initializeBackgroundServices() async {
+  // AI_DEBUG: Using a delay to ensure UI transition is smooth
+  await Future.delayed(const Duration(milliseconds: 1000));
 
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,

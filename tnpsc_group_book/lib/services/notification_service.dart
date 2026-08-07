@@ -368,6 +368,11 @@ class NotificationService {
 
   static tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
     try {
+      // Ensure timezones are initialized even if called out of order
+      if (!_isInitialized) {
+        tz.initializeTimeZones();
+      }
+
       final tz.Location india = tz.getLocation('Asia/Kolkata');
       final tz.TZDateTime now = tz.TZDateTime.now(india);
       tz.TZDateTime scheduledDate =
@@ -383,7 +388,13 @@ class NotificationService {
       if (scheduledDate.isBefore(now)) {
         scheduledDate = scheduledDate.add(const Duration(days: 1));
       }
-      return tz.TZDateTime.from(scheduledDate, tz.local);
+      
+      try {
+        return tz.TZDateTime.from(scheduledDate, tz.local);
+      } catch (_) {
+        // Absolute fallback if tz.local is also not ready
+        return tz.TZDateTime.now(tz.UTC).add(const Duration(hours: 5, minutes: 30));
+      }
     }
   }
 }

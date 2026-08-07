@@ -493,6 +493,14 @@ class HiveService {
   }
 
   // ------------------- User Profile -------------------
+  static Future<void> setLoggedIn(bool value) async {
+    await Hive.box(userBoxName).put('is_user_logged_in', value);
+  }
+
+  static bool isLoggedIn() {
+    return Hive.box(userBoxName).get('is_user_logged_in', defaultValue: false) as bool;
+  }
+
   static Future<void> updateUserName(String name) async {
     await Hive.box(userBoxName).put('user_display_name', name);
     await Hive.box(userBoxName).put('last_name_update_date', AppDate.getISTNow().toIso8601String());
@@ -727,5 +735,31 @@ class HiveService {
       return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
     }
     return null;
+  }
+
+  // ------------------- Active Room Persistence -------------------
+  static Future<void> saveActiveRoom(String roomCode, bool isHost) async {
+    await Hive.box(userBoxName).put('active_room_code', roomCode);
+    await Hive.box(userBoxName).put('active_room_is_host', isHost);
+    await Hive.box(userBoxName).put('active_room_date', _todayDate());
+  }
+
+  static Map<String, dynamic>? getActiveRoom() {
+    var box = Hive.box(userBoxName);
+    String? code = box.get('active_room_code');
+    bool? isHost = box.get('active_room_is_host');
+    String? date = box.get('active_room_date');
+
+    if (code != null && isHost != null && date == _todayDate()) {
+      return {'roomCode': code, 'isHost': isHost};
+    }
+    return null;
+  }
+
+  static Future<void> clearActiveRoom() async {
+    var box = Hive.box(userBoxName);
+    await box.delete('active_room_code');
+    await box.delete('active_room_is_host');
+    await box.delete('active_room_date');
   }
 }

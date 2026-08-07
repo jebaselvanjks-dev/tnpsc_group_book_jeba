@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../services/room_service.dart';
 import '../services/reward_service.dart';
 import '../services/hive_service.dart';
+import '../utils/app_log.dart';
 import '../utils/app_language.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_icons.dart';
@@ -29,6 +30,19 @@ class _RoomLeaderboardScreenState extends State<RoomLeaderboardScreen> {
   final ScreenshotController _screenshotController = ScreenshotController();
   bool _rewardFlowStarted = false;
   bool _claimingReward = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _clearRoomCache();
+  }
+
+  Future<void> _clearRoomCache() async {
+    // If we've reached the leaderboard, the room session is effectively over
+    // for this user. Clear the auto-redirect cache.
+    await HiveService.clearActiveRoom();
+    AppLog.d("AI_DEBUG: [RoomLeaderboard] Cleared active room cache.");
+  }
 
   void _shareResults() async {
     final image = await _screenshotController.capture();

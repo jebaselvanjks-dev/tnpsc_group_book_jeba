@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import '../utils/app_log.dart';
@@ -10,6 +9,8 @@ import '../main.dart';
 import 'login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/notification_service.dart';
+import '../services/google_auth_service.dart';
+import '../services/hive_service.dart';
 
 
 class SplashScreen extends StatefulWidget {
@@ -31,28 +32,58 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _navigateToHome() async {
     try {
-      // 1. Run all critical services in background
-      // AI_DEBUG: Using a reduced timeout to prevent hanging
-      await initializeServices().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => AppLog.e("AI_DEBUG: Service initialization timed out!"),
-      );
+      // 1. Core Services Setup
+      // Note: Core initializeServices() is now called in main() for faster startup,
+      // but we wait a bit here to ensure the Splash UI is actually visible to the user.
+      AppLog.d("AI_DEBUG: [Splash] Services initialized in main. Ensuring UI visibility...");
+      await Future.delayed(const Duration(milliseconds: 800));
 
-      // AI_DEBUG: Wait a moment for the system splash to feel "fitted" before removing
-      await Future.delayed(const Duration(seconds: 1));
-      FlutterNativeSplash.remove();
-    } catch (e) {
-      AppLog.e("AI_DEBUG: Error during splash initialization: $e");
-      FlutterNativeSplash.remove();
-    }
-
-    if (!mounted) return;
-    
-    try {
-      User? user = FirebaseAuth.instance.currentUser;
+      // 2. Auth Session Check
+      AppLog.d("AI_DEBUG: [Splash] Waiting for Firebase Auth Session...");
       
-      // Navigate using a custom smooth Fade transition instead of default Slide
-      final nextScreen = user != null ? const MainWrapper() : const LoginScreen();
+      // Step A: Check local persistence flag
+      final bool wasLoggedIn = HiveService.isLoggedIn();
+      AppLog.d("AI_DEBUG: [Splash] Local login status: $wasLoggedIn");
+
+      // Step B: Give Firebase ample time (up to 5 seconds) to restore its session.
+      // Firebase Auth is very good at persisting sessions on its own if valid.
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        user = await FirebaseAuth.instance.authStateChanges().firstWhere(
+          (u) => u != null,
+          orElse: () => null,
+        ).timeout(
+          const Duration(seconds: 5), 
+          onTimeout: () => null,
+        );
+      }
+
+      // Step C: Decision Logic
+      // We ONLY attempt manual Google restoration if Firebase failed AND we have no other choice.
+      // To avoid the popup you mentioned, we skip this if Hive says we were logged in,
+      // trusting that Firebase will eventually sync or the user can re-log manually if needed.
+      if (user == null && wasLoggedIn) {
+        AppLog.d("AI_DEBUG: [Splash] Firebase null but Hive true. Entering app as guest/cached user.");
+      }
+
+      bool shouldAllowEntry = user != null || wasLoggedIn;
+
+      AppLog.d("AI_DEBUG: [Splash] Decision: user=${user?.email}, wasLoggedIn=$wasLoggedIn -> entry=$shouldAllowEntry");
+
+      // 3. Conditional Background Tasks
+      if (user != null) {
+        AppLog.d("AI_DEBUG: [Splash] Triggering background services for logged-in user...");
+        initializeBackgroundServices(); // Non-blocking
+      }
+
+      // 4. Smooth Transition
+      await Future.delayed(const Duration(milliseconds: 500));
+      FlutterNativeSplash.remove();
+
+      if (!mounted) return;
+
+      final nextScreen = shouldAllowEntry ? const MainWrapper() : const LoginScreen();
+      AppLog.d("AI_DEBUG: [Splash] Navigating to ${nextScreen.runtimeType}");
       
       Navigator.pushReplacement(
         context,
@@ -64,8 +95,9 @@ class _SplashScreenState extends State<SplashScreen> {
           transitionDuration: const Duration(milliseconds: 600),
         ),
       );
-    } catch (e) {
-      AppLog.e("AI_DEBUG: Navigation error in SplashScreen: $e");
+    } catch (e, stack) {
+      AppLog.e("AI_DEBUG: [Splash] Fatal startup error: $e", e, stack);
+      FlutterNativeSplash.remove();
       if (mounted) {
         Navigator.pushReplacement(
           context,

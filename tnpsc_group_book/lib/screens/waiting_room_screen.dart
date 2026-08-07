@@ -2516,44 +2516,17 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                               : Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (_canSelfStart)
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton(
-                                          onPressed: _startExam,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppTheme.secondaryColor,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(
-                                                12,
-                                              ),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            AppLanguage.languageNotifier.value == 'ta' ? "தேர்வைத் தொடங்கு" : "Start Quiz Now",
-                                            style: AppTheme.getStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18,
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    else
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 10),
-                                        child: Text(
-                                          AppLanguage.getString('waiting_for_host'),
-                                          textAlign: TextAlign.center,
-                                          style: AppTheme.getStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey,
-                                          ).copyWith(fontStyle: FontStyle.italic),
-                                        ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      child: Text(
+                                        AppLanguage.getString('waiting_for_host'),
+                                        textAlign: TextAlign.center,
+                                        style: AppTheme.getStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey,
+                                        ).copyWith(fontStyle: FontStyle.italic),
                                       ),
+                                    ),
                                   ],
                                 ),
                         ],
