@@ -1,0 +1,5 @@
+- [x] Update `RoomService` logic for `last_joined_room`
+    - [x] Update `joinRoom` to save `last_joined_room`
+    - [x] Update `getActiveJoinedRoom` to use `last_joined_room`
+- [x] Verify `RoomSetupScreen` fetches both rooms correctly
+- [x] Verify persistence after app restart

@@ -54,22 +54,28 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
   void initState() {
     super.initState();
     
-    // Initialize with a safe future time (5 mins from now) to avoid immediate validation error
-    final now = AppDate.getISTNow().add(const Duration(minutes: 5));
+    final now = AppDate.getISTNow();
     _startTime = AppDate.getISTTimeOfDay(now);
     
-    // Load persisted end time or default to +1 hour
+    // Load persisted end time or default to +2 hours
     final prefEnd = HiveService.getRoomTimePreference();
     if (prefEnd != null) {
       _endTime = prefEnd;
-      // Safety: Ensure end time is at least 1 hour after start
+    } else {
+      // Default to 2 hours after start
+      int endHour = (now.hour + 2) % 24;
+      _endTime = TimeOfDay(hour: endHour, minute: now.minute);
+    }
+
+    // CAP: All tests must end by 11:59 PM today
+    if (_startTime.hour >= 21) { // 9 PM or later
+      _endTime = const TimeOfDay(hour: 23, minute: 59);
+    } else {
       final startDT = AppDate.getISTTodayWithTime(_startTime.hour, _startTime.minute);
       final endDT = AppDate.getISTTodayWithTime(_endTime.hour, _endTime.minute);
-      if (endDT.isBefore(startDT.add(const Duration(hours: 1)))) {
-         _endTime = TimeOfDay(hour: (_startTime.hour + 1) % 24, minute: _startTime.minute);
+      if (endDT.isBefore(startDT)) {
+        _endTime = const TimeOfDay(hour: 23, minute: 59);
       }
-    } else {
-      _endTime = TimeOfDay(hour: (_startTime.hour + 1) % 24, minute: _startTime.minute);
     }
 
     _loadTeaserQuestions();
@@ -299,19 +305,6 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
       return;
     }
 
-    if (joinedData != null) {
-       final code = joinedData['roomCode'];
-       final isHost = joinedData['isHost'] ?? false;
-       _showError(AppLanguage.languageNotifier.value == 'ta' 
-          ? "நீங்கள் ஏற்கனவே ஒரு தேர்வில் இணைந்துள்ளீர்கள் ($code)" 
-          : "You are already in an active room ($code)");
-       Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => WaitingRoomScreen(roomCode: code, isHost: isHost)),
-      );
-      return;
-    }
-
     // 4. Check Points
     if (!_hasEnoughPointsForRoom()) {
       setState(() => _isCreatingProcess = false);
@@ -321,14 +314,24 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
     // 5. If all checks pass, validate time BEFORE showing ad
     final nowAtClick = AppDate.getISTNow();
+    
+    // Block creation after 11:55 PM IST
+    if (nowAtClick.hour == 23 && nowAtClick.minute >= 55) {
+      _showError(AppLanguage.languageNotifier.value == 'ta' 
+        ? "இன்று தேர்வு எழுத முடியாது (நேரம் கடந்துவிட்டது)" 
+        : "Cannot write today's test (too late)");
+      setState(() => _isCreatingProcess = false);
+      return;
+    }
+
     final startDateTime = AppDate.getISTTodayWithTime(_startTime.hour, _startTime.minute);
     final endDateTime = AppDate.getISTTodayWithTime(_endTime.hour, _endTime.minute);
     
-    // Validation: Start time must be in future (at least 2 mins from now)
-    if (startDateTime.isBefore(nowAtClick.add(const Duration(minutes: 2)))) {
+    // Validation: Start time must not be in the past
+    if (startDateTime.isBefore(nowAtClick.subtract(const Duration(minutes: 1)))) {
       _showError(AppLanguage.languageNotifier.value == 'ta' 
-        ? "தொடக்க நேரம் குறைந்தது 2 நிமிடங்கள் எதிர்காலத்தில் இருக்க வேண்டும்" 
-        : "Start time must be at least 2 minutes in the future");
+        ? "கடந்த கால நேரத்தைத் தேர்ந்தெடுக்க முடியாது" 
+        : "Cannot select past time");
       setState(() => _isCreatingProcess = false);
       return;
     }
@@ -344,11 +347,11 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
     final diffInMinutes = endDateTime.difference(startDateTime).inMinutes;
 
-    // Validation: At least 1 hour difference
-    if (diffInMinutes < 60) {
+    // Validation: At least 5 minutes difference (Reduced from 1 hour as per request to allow late starts)
+    if (diffInMinutes < 5) {
       _showError(AppLanguage.languageNotifier.value == 'ta' 
-        ? "குறைந்தது 1 மணிநேர இடைவெளி தேவை (எ.கா: 5:40 PM - 6:40 PM)" 
-        : "Minimum 1 hour duration required (e.g., 5:40 PM - 6:40 PM)");
+        ? "குறைந்தது 5 நிமிடங்கள் இடைவெளி தேவை" 
+        : "Minimum 5 minutes duration required");
       setState(() => _isCreatingProcess = false);
       return;
     }
@@ -1495,16 +1498,30 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
 
                                 setState(() {
                                   _startTime = picked;
-                                  // Auto increment end time by 1 hour and save preference
-                                  _endTime = TimeOfDay(
-                                    hour: (picked.hour + 1) % 24,
-                                    minute: picked.minute,
-                                  );
-                                  // If end time reaches next day (00:xx), cap at 23:59
-                                  if (_endTime.hour == 0 && picked.hour > 0) {
-                                    _endTime = const TimeOfDay(hour: 23, minute: 59);
+                                  
+                                  // Default logic: End time = Start + 2 hours
+                                  int endHour = (picked.hour + 2);
+                                  int endMin = picked.minute;
+                                  
+                                  // Apply preference if it exists and is valid (after start)
+                                  final prefEnd = HiveService.getRoomTimePreference();
+                                  if (prefEnd != null) {
+                                     final startDT = AppDate.getISTTodayWithTime(picked.hour, picked.minute);
+                                     final prefDT = AppDate.getISTTodayWithTime(prefEnd.hour, prefEnd.minute);
+                                     if (prefDT.isAfter(startDT.add(const Duration(minutes: 5)))) {
+                                       endHour = prefEnd.hour;
+                                       endMin = prefEnd.minute;
+                                     }
                                   }
-                                  HiveService.saveRoomTimePreference(_endTime.hour, _endTime.minute);
+
+                                  // CAP at 11:59 PM today
+                                  if (picked.hour >= 21) { // 9 PM or later
+                                    _endTime = const TimeOfDay(hour: 23, minute: 59);
+                                  } else if (endHour >= 24 || (endHour == 23 && endMin > 59)) {
+                                    _endTime = const TimeOfDay(hour: 23, minute: 59);
+                                  } else {
+                                    _endTime = TimeOfDay(hour: endHour, minute: endMin);
+                                  }
                                 });
                               }
                             },
@@ -1585,11 +1602,11 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                                   return;
                                 }
 
-                                if (pickedDT.difference(startDT).inMinutes < 60) {
+                                if (pickedDT.difference(startDT).inMinutes < 5) {
                                   if (mounted) {
                                     _showError(AppLanguage.languageNotifier.value == 'ta' 
-                                      ? "முடிவு நேரம் தொடக்க நேரத்திலிருந்து குறைந்தது 1 மணிநேரம் தள்ளி இருக்க வேண்டும்" 
-                                      : "End time must be at least 1 hour after start time");
+                                      ? "முடிவு நேரம் தொடக்க நேரத்திலிருந்து குறைந்தது 5 நிமிடங்கள் தள்ளி இருக்க வேண்டும்" 
+                                      : "End time must be at least 5 minutes after start time");
                                   }
                                   return;
                                 }
@@ -1621,8 +1638,8 @@ class _RoomSetupScreenState extends State<RoomSetupScreen> {
                     const SizedBox(height: 10),
                     Text(
                       AppLanguage.languageNotifier.value == 'ta' 
-                        ? "* தொடக்க நேரத்திற்கும் முடிவு நேரத்திற்கும் குறைந்தது 1 மணிநேரம் வித்தியாசம் இருக்க வேண்டும்." 
-                        : "* Minimum 1 hour difference between start and end time.",
+                        ? "* அனைத்து தேர்வுகளும் இன்று இரவு 11:59 PM உடன் முடிவடைய வேண்டும்." 
+                        : "* All tests must end by 11:59 PM IST today.",
                       style: AppTheme.getStyle(fontSize: 11, color: Colors.grey),
                     ),
                     const SizedBox(height: 10),

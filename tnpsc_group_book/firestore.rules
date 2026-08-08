@@ -40,6 +40,8 @@ service cloud.firestore {
 
     // Existing rules retained for compatibility
     match /auth_users/{docId} { allow read, write: if request.auth != null; }
+
+    // Support both legacy and new daily nested rooms
     match /rooms/{roomCode} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null;
@@ -48,12 +50,27 @@ service cloud.firestore {
         allow create, update: if request.auth != null && request.auth.uid == playerId;
       }
     }
+
+    match /rooms/daily_{date}/matches/{roomCode} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+      match /players/{playerId} {
+        allow read: if request.auth != null;
+        allow create, update: if request.auth != null && request.auth.uid == playerId;
+      }
+    }
+
     match /daily_room_attempts/{dateDoc} {
       allow read, write: if request.auth != null;
       match /attempts/{uid} {
         allow read, write: if request.auth != null && request.auth.uid == uid;
       }
     }
+
+    match /room_predefined_quizzes/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
     match /subject_questions/{document=**} { allow read, write: if request.auth != null; }
     match /quizzes/{document=**} { allow read, write: if request.auth != null; }
     match /mock_tests/{document=**} { allow read, write: if request.auth != null; }

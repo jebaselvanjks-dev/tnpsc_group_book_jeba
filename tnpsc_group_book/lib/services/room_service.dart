@@ -516,6 +516,7 @@ class RoomService {
           'points': currentPointsAlt - cost,
           'room_history': "$roomCode|$today",
           'last_room_played': roomCode,
+          'last_joined_room': roomCode,
           'last_room_at': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
@@ -874,14 +875,17 @@ class RoomService {
     try {
       String today = AppDate.getTodayString();
       final userDoc = await _db.collection('users').doc(uid).get();
-      final lastRoomPlayed = userDoc.data()?['last_room_played'] as String?;
+      final lastJoinedRoom = userDoc.data()?['last_joined_room'] as String?;
       
-      if (lastRoomPlayed != null) {
-        final roomDoc = await _getRoomRef(lastRoomPlayed).get();
+      if (lastJoinedRoom != null) {
+        final roomDoc = await _getRoomRef(lastJoinedRoom).get();
         if (roomDoc.exists) {
           final roomData = roomDoc.data() as Map<String, dynamic>;
           final status = roomData['status'];
           
+          // Verify it's not the same room as the one hosted (though last_joined_room should handle this)
+          if (roomData['hostId'] == uid) return null;
+
           if (status == 'waiting' || status == 'active') {
              // Verify user is actually a player
              final playerDoc = await roomDoc.reference.collection('players').doc(uid).get();
@@ -889,10 +893,10 @@ class RoomService {
                 final playerData = playerDoc.data() as Map<String, dynamic>;
                 if (playerData['hasFinished'] != true) {
                    return {
-                     'roomCode': lastRoomPlayed,
+                     'roomCode': lastJoinedRoom,
                      'status': status,
                      'subject': roomData['subject'],
-                     'isHost': roomData['hostId'] == uid,
+                     'isHost': false,
                    };
                 }
              }
